@@ -100,6 +100,8 @@ model Device {
   name            String?   @map("nombre")
   lastConnectedAt DateTime? @map("ultima_conexion") @db.Timestamptz()
   firmwareVersion String?   @map("version_firmware")
+  // Reset to false on server start: no connection survives a restart.
+  online          Boolean   @default(false) @map("en_linea")
 
   enrollments Enrollment[]
   slots       DeviceSlot[]

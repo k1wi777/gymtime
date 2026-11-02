@@ -8,6 +8,7 @@ import type { Env } from '../../config/env.schema.js';
 export const REDACT_PATHS = [
   'req.headers.authorization',
   'req.headers["x-admin-key"]',
+  'req.headers["x-api-key"]',
   'req.headers["x-device-token"]',
   'req.headers.cookie',
   '*.token',

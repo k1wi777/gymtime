@@ -29,6 +29,7 @@ describe('logger redaction', () => {
         headers: {
           authorization: 'Bearer secret-1',
           'x-admin-key': 'secret-2',
+          'x-api-key': 'secret-4',
           'x-device-token': 'secret-3',
         },
       },

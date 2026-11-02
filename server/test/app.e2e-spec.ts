@@ -17,6 +17,14 @@ const testEnv = {
 Object.assign(process.env, testEnv);
 const { AppModule } = await import('./../src/app.module.js');
 const { PrismaService } = await import('./../src/database/prisma.service.js');
+const { DEVICES_REPOSITORY } =
+  await import('./../src/devices/domain/devices.repository.js');
+const { PROCESSED_MESSAGES_REPOSITORY } =
+  await import('./../src/devices/domain/processed-messages.repository.js');
+const { InMemoryDevicesRepository } =
+  await import('./../src/devices/infrastructure/in-memory-devices.repository.js');
+const { InMemoryProcessedMessagesRepository } =
+  await import('./../src/devices/infrastructure/in-memory-processed-messages.repository.js');
 
 async function createApp(query: () => Promise<unknown>) {
   const moduleRef = await Test.createTestingModule({
@@ -24,6 +32,10 @@ async function createApp(query: () => Promise<unknown>) {
   })
     .overrideProvider(PrismaService)
     .useValue({ $queryRaw: query })
+    .overrideProvider(DEVICES_REPOSITORY)
+    .useValue(new InMemoryDevicesRepository())
+    .overrideProvider(PROCESSED_MESSAGES_REPOSITORY)
+    .useValue(new InMemoryProcessedMessagesRepository())
     .compile();
   const app = moduleRef.createNestApplication();
   setupSwagger(app);

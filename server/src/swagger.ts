@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-export const ADMIN_KEY_HEADER = 'x-admin-key';
+export const ADMIN_KEY_HEADER = 'x-api-key';
 
 /** Publishes Swagger UI at /docs and the OpenAPI JSON at /docs-json. */
 export function setupSwagger(app: INestApplication): void {

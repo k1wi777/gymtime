@@ -15,6 +15,12 @@ Este documento es la referencia completa para implementar el cliente del lector 
 
 Cualquier mensaje distinto de `hello` antes de autenticarse recibe `ack` de error `NOT_AUTHENTICATED`.
 
+Aclaraciones de implementación (servidor):
+
+- **`hello` repetido:** una vez autenticada la conexión, un nuevo `hello` válido recibe de nuevo `hello.ok` sin duplicar el estado. Un `hello` no se registra como mensaje procesado (su respuesta es `hello.ok`, no `ack`, y es idempotente por naturaleza).
+- **Mensaje inválido sin `id`:** si el mensaje no pasa la validación y su `id` no es un UUID recuperable, el servidor no puede construir un `ack` válido (`ref` es obligatorio): lo registra en el log y lo ignora, sin responder. Si el `id` sí es recuperable, responde `ack` con el error correspondiente (`INVALID_MESSAGE`, `UNSUPPORTED_VERSION` o `UNKNOWN_TYPE`).
+- **Segunda conexión del mismo `deviceId`:** el servidor cierra la anterior y conserva la nueva.
+
 ## 2. Sobre de todo mensaje
 
 ```json
