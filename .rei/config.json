@@ -1,0 +1,10 @@
+{
+  "checks": [
+    { "id": "V1", "description": "Linter (oxlint)", "command": ["npm", "--prefix", "server", "run", "lint"] },
+    { "id": "V2", "description": "Tests unitarios (vitest)", "command": ["npm", "--prefix", "server", "test"] },
+    { "id": "V3", "description": "Typecheck (tsc --noEmit)", "command": ["node_modules/.bin/tsc", "--noEmit", "-p", "server/tsconfig.json"] }
+  ],
+  "viewer": {
+    "autoOpenOnReady": true
+  }
+}

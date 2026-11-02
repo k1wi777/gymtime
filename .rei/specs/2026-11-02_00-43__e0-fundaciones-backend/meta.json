@@ -1,0 +1,10 @@
+{
+  "id": "2026-11-02_00-43__e0-fundaciones-backend",
+  "title": "E0 Fundaciones del backend",
+  "description": "Primer paso del hito H1 (Conexión) de la iteración 1: dejar las fundaciones del backend en /server para que las siguientes tareas (protocolo y gateway WebSocket) se construyan encima. Cubre las tareas E0-1 a E0-6 de backlog_iteracion_1_backend.md §6: monorepo con versión de Node fija, gestor de paquetes, lint y formato (E0-1); docker-compose.yml con PostgreSQL (E0-2); configuración por .env validada al arrancar con .env.example, que falla diciendo qué variable falta (E0-3); Prisma, migración inicial y esquema de datos de la sección 7 del backlog (E0-4); logging estructurado y legible en terminal (E0-5); endpoint /health y Swagger en /docs (E0-6). Parte del proyecto NestJS por defecto ya creado en /server. Fuera de alcance: esquemas zod del protocolo, gateway WebSocket, módulos de dominio, CLI y simulador. Decisiones fijas: PostgreSQL en Docker, Prisma, cifrado AES-256-GCM con clave en .env (solo su variable de configuración, no el servicio), token del dispositivo y clave de administrador en .env, ws:// sin TLS en red local.",
+  "type": "feature",
+  "status": "done",
+  "created_at": "2026-11-02T00:43:00-05:00",
+  "base_commit": "",
+  "last_review_commit": ""
+}
