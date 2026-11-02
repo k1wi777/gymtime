@@ -457,4 +457,77 @@ describe('DeviceClient', () => {
       ).toBe(true);
     });
   });
+
+  describe('interactive scan and connection (R19)', () => {
+    it('sends a fingerprint.scan with the slot and a fixed confidence', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      client.scan(7);
+      await vi.waitFor(() =>
+        expect(received.some((m) => m.type === 'fingerprint.scan')).toBe(true),
+      );
+      expect(received.find((m) => m.type === 'fingerprint.scan')).toMatchObject({
+        payload: { slot: 7, confidence: 90 },
+      });
+    });
+
+    it('sends button.pressed', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      client.pressButton();
+      await vi.waitFor(() =>
+        expect(received.some((m) => m.type === 'button.pressed')).toBe(true),
+      );
+      expect(
+        received.find((m) => m.type === 'button.pressed')?.payload,
+      ).toEqual({});
+    });
+
+    it('shows a scan.result and acks it', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = frame(
+        'scan.result',
+        {
+          result: 'denied',
+          studentName: 'Ana',
+          reason: 'NOT_IN_SCHEDULE',
+          display: {
+            line1: 'Acceso denegado',
+            line2: 'Ana: fuera del horario',
+            color: 'red',
+          },
+        },
+        { ref: randomUUID() },
+      );
+      sockets[0].send(JSON.stringify(msg));
+      await vi.waitFor(() => {
+        expect(
+          received.filter((m) => m.type === 'ack' && m.ref === msg.id),
+        ).toHaveLength(1);
+        expect(
+          logs.some(
+            (l) =>
+              l.includes('scan.result denied: Ana (NOT_IN_SCHEDULE)') &&
+              l.includes('Acceso denegado') &&
+              l.includes('red'),
+          ),
+        ).toBe(true);
+      });
+    });
+
+    it('stops reconnecting on disconnect and resumes on reconnect', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      client.disconnect();
+      await vi.waitFor(() => expect(client.state).toBe('backoff'));
+      await new Promise((r) => setTimeout(r, 150));
+      expect(sockets).toHaveLength(1);
+      expect(logs.some((l) => l.includes('disconnected manually'))).toBe(true);
+
+      client.reconnect();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      expect(sockets).toHaveLength(2);
+    });
+  });
 });

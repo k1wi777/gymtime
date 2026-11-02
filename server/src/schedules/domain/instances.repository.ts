@@ -15,6 +15,8 @@ export interface InstancesRepository {
     to: Date,
     scheduleIds?: string[],
   ): Promise<ScheduleInstance[]>;
+  /** Occurrences with those ids, in no particular order. */
+  findByIds(ids: string[]): Promise<ScheduleInstance[]>;
 }
 
 export const INSTANCES_REPOSITORY = Symbol('INSTANCES_REPOSITORY');

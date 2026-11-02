@@ -1,6 +1,8 @@
+import { createInterface } from 'node:readline';
+import { COMMAND_HELP, parseCommand } from './commands.js';
 import { ConfigError, loadConfig } from './config.js';
 import { DeviceClient } from './device-client.js';
-import { createConsoleLogger } from './logger.js';
+import { createConsoleLogger, type Logger } from './logger.js';
 
 function main(): void {
   let config;
@@ -31,7 +33,42 @@ function main(): void {
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
+  listen(client, logger);
   client.start();
+}
+
+/** Reads the interactive commands from stdin; an unknown one never exits. */
+function listen(client: DeviceClient, logger: Logger): void {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  logger.state('Type `help` for the interactive commands.');
+  rl.setPrompt('sim> ');
+  rl.prompt();
+  rl.on('line', (line) => {
+    const command = parseCommand(line);
+    switch (command.kind) {
+      case 'scan':
+        client.scan(command.slot);
+        break;
+      case 'button':
+        client.pressButton();
+        break;
+      case 'disconnect':
+        client.disconnect();
+        break;
+      case 'reconnect':
+        client.reconnect();
+        break;
+      case 'help':
+        logger.state(COMMAND_HELP);
+        break;
+      case 'invalid':
+        logger.warn(`${command.reason} (input: "${command.input}")`);
+        break;
+      case 'empty':
+        break;
+    }
+    rl.prompt();
+  });
 }
 
 main();

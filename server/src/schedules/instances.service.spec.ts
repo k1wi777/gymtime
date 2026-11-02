@@ -124,6 +124,40 @@ describe('InstancesService.listRelevant (R9 input)', () => {
   });
 });
 
+describe('InstancesService.listActive (R5, R8)', () => {
+  it('includes occurrences from entry opening until they end, with students', async () => {
+    const f = buildSchedulesFixture();
+    const a = await f.weekly('A', '10:00', '11:00');
+    const ana = await f.newStudent('1');
+    await f.schedules.assignStudent(a.schedule.id, ana.id);
+
+    expect(await f.instances.listActive(bogota('09:40'))).toHaveLength(0);
+    const early = await f.instances.listActive(bogota('09:55'));
+    expect(early.map((o) => o.schedule.name)).toEqual(['A']);
+    expect(early[0].studentIds).toEqual([ana.id]);
+    expect(early[0].window.opensAt).toEqual(bogota('09:50'));
+    expect(await f.instances.listActive(bogota('10:57'))).toHaveLength(1);
+    expect(await f.instances.listActive(bogota('11:00'))).toHaveLength(0);
+  });
+});
+
+describe('InstancesService.getByIds (R15)', () => {
+  it('returns each occurrence with its schedule and entry window', async () => {
+    const f = buildSchedulesFixture();
+    const a = await f.weekly('A', '10:00', '11:00');
+    const instances = await f.instancesRepo.findInRange(
+      bogota('00:00'),
+      bogota('23:59'),
+    );
+    const found = await f.instances.getByIds([instances[0].id, 'missing']);
+    expect(found.size).toBe(1);
+    const occurrence = found.get(instances[0].id);
+    expect(occurrence?.schedule.id).toBe(a.schedule.id);
+    expect(occurrence?.window.closesAt).toEqual(bogota('10:55'));
+    expect((await f.instances.getByIds([])).size).toBe(0);
+  });
+});
+
 describe('InstancesService.listWithEdgesBetween', () => {
   it('finds the lead trigger and the end inside the interval only', async () => {
     const f = buildSchedulesFixture();

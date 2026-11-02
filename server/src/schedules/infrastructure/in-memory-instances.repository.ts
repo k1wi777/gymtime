@@ -36,4 +36,9 @@ export class InMemoryInstancesRepository implements InstancesRepository {
       )
       .map((r) => ({ ...r }));
   }
+
+  async findByIds(ids: string[]) {
+    const wanted = new Set(ids);
+    return this.rows.filter((r) => wanted.has(r.id)).map((r) => ({ ...r }));
+  }
 }

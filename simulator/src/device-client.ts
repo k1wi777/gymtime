@@ -32,6 +32,21 @@ type FrameInput = Pick<DeviceMessage, 'type' | 'payload'> & {
   ref?: string | null;
 };
 
+/** Fixed match score reported by the simulated AS608. */
+export const SCAN_CONFIDENCE = 90;
+
+/** Operator-facing line for a `scan.result` (the reader's display). */
+export function describeScanResult(
+  payload: Extract<ServerMessage, { type: 'scan.result' }>['payload'],
+): string {
+  const who = payload.studentName ?? 'unknown student';
+  const reason = payload.reason ? ` (${payload.reason})` : '';
+  return (
+    `scan.result ${payload.result}: ${who}${reason} | ` +
+    `${payload.display.line1} / ${payload.display.line2} [${payload.display.color}]`
+  );
+}
+
 /**
  * Simulated ESP32: speaks protocol v0 with the gateway, keeps itself online
  * and reconnects. It has no process side effects (see `main.ts`).
@@ -47,8 +62,10 @@ export class DeviceClient {
   private readonly startedAt: number;
   private socket: WebSocket | null = null;
   private heartbeat: NodeJS.Timeout | null = null;
-  private reconnect: NodeJS.Timeout | null = null;
+  private reconnectTimer: NodeJS.Timeout | null = null;
   private stopped = false;
+  /** Set by `disconnect()`: close the socket and do not schedule a retry. */
+  private manual = false;
   private currentState: ClientState = 'backoff';
 
   constructor(
@@ -78,6 +95,48 @@ export class DeviceClient {
     return this.currentState;
   }
 
+  /** Simulates a matched fingerprint: the reader reports a slot. */
+  scan(slot: number): void {
+    this.sendTracked({
+      type: 'fingerprint.scan',
+      payload: { slot, confidence: SCAN_CONFIDENCE },
+    });
+  }
+
+  /** Simulates the reader's physical button. */
+  pressButton(): void {
+    this.sendTracked({ type: 'button.pressed', payload: {} });
+  }
+
+  /** Closes the socket and stops automatic reconnection, as a lost network. */
+  disconnect(): void {
+    this.manual = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    const socket = this.socket;
+    if (!socket || socket.readyState === WebSocket.CLOSED) {
+      this.setState('backoff', 'disconnected manually');
+      return;
+    }
+    if (socket.readyState === WebSocket.CONNECTING) socket.terminate();
+    else socket.close();
+  }
+
+  /** Reconnects now and resumes the automatic reconnection. */
+  reconnect(): void {
+    if (this.stopped) return;
+    this.manual = false;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    if (
+      this.socket?.readyState === WebSocket.CONNECTING ||
+      this.socket?.readyState === WebSocket.OPEN
+    ) {
+      return;
+    }
+    this.connect();
+  }
+
   start(): void {
     this.stopped = false;
     this.connect();
@@ -105,7 +164,7 @@ export class DeviceClient {
   }
 
   private connect(): void {
-    this.reconnect = null;
+    this.reconnectTimer = null;
     this.setState('connecting', this.config.url);
     const socket = new WebSocket(this.config.url);
     this.socket = socket;
@@ -139,19 +198,23 @@ export class DeviceClient {
       this.logger.state(`disconnected (code ${code})`);
       return;
     }
+    if (this.manual) {
+      this.setState('backoff', `disconnected manually (code ${code})`);
+      return;
+    }
     const delay = this.backoff.next();
     this.setState(
       'backoff',
       `disconnected (code ${code}), retry in ${delay} ms`,
     );
-    this.reconnect = setTimeout(() => this.connect(), delay);
+    this.reconnectTimer = setTimeout(() => this.connect(), delay);
   }
 
   private clearTimers(): void {
     if (this.heartbeat) clearInterval(this.heartbeat);
-    if (this.reconnect) clearTimeout(this.reconnect);
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.heartbeat = null;
-    this.reconnect = null;
+    this.reconnectTimer = null;
   }
 
   private onMessage(raw: string): void {
@@ -233,6 +296,9 @@ export class DeviceClient {
       case 'schedule.set':
         this.reader.onSchedule(message.payload);
         this.logger.state(describeSchedule(message.payload));
+        break;
+      case 'scan.result':
+        this.logger.state(describeScanResult(message.payload));
         break;
     }
   }

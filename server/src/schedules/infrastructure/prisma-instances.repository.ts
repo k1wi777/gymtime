@@ -44,4 +44,12 @@ export class PrismaInstancesRepository implements InstancesRepository {
     });
     return rows.map(toDomain);
   }
+
+  async findByIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.scheduleInstance.findMany({
+      where: { id: { in: ids } },
+    });
+    return rows.map(toDomain);
+  }
 }

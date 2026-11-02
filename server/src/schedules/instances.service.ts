@@ -93,6 +93,43 @@ export class InstancesService {
   }
 
   /**
+   * Occurrences whose entry window is open at `at` and that have not ended,
+   * with their assigned students. This is what an attendance scan can act on.
+   */
+  async listActive(at: Date): Promise<RelevantOccurrence[]> {
+    const reach = new Date(
+      at.getTime() + MAX_ENTRY_MARGIN_MINUTES * MS_PER_MINUTE,
+    );
+    const found = await this.instances.findInRange(at, reach);
+    const occurrences = await this.withStudents(found);
+    return occurrences.filter(
+      (o) => o.window.opensAt <= at && at < o.instance.endsAt,
+    );
+  }
+
+  /** Occurrences by id with their schedule and entry window, keyed by instance id. */
+  async getByIds(ids: string[]): Promise<Map<string, Occurrence>> {
+    const result = new Map<string, Occurrence>();
+    if (ids.length === 0) return result;
+    const found = await this.instances.findByIds(ids);
+    const scheduleIds = [...new Set(found.map((i) => i.scheduleId))];
+    const schedules = await Promise.all(
+      scheduleIds.map((id) => this.schedules.findById(id)),
+    );
+    const byId = new Map(
+      schedules.flatMap((s) => (s ? [[s.id, s] as const] : [])),
+    );
+    for (const instance of found) {
+      const occurrence = this.occurrence(
+        instance,
+        byId.get(instance.scheduleId),
+      );
+      if (occurrence) result.set(instance.id, occurrence);
+    }
+    return result;
+  }
+
+  /**
    * Occurrences in progress or starting within `leadMin` minutes, with their
    * assigned students, ordered by start. One query for students (no N+1).
    */
