@@ -1,6 +1,6 @@
 # Guía de integración del ESP32 con el backend
 
-Esta guía permite conectar el ESP32 (o el simulador) al backend de GymTime sin preguntar nada a nadie. Cubre la puesta en marcha, la red, el token, la secuencia de conexión, cómo comprobarla y qué hacer si falla. El detalle de cada mensaje no se repite aquí: está en [`protocolo_v0.md`](./protocolo_v0.md), que es la referencia.
+Esta guía permite conectar el ESP32 (o el simulador) al backend de GymTime sin preguntar nada a nadie. Cubre la puesta en marcha, la red, el token, la secuencia de conexión, cómo comprobarla y qué hacer si falla. El detalle de cada mensaje no se repite aquí: está en [`protocolo_v0.md`](./protocolo_v0.md), que es la referencia. Para saber qué mensajes y endpoints están disponibles hoy y cuáles faltan, consulta [`estado_firmware.md`](./estado_firmware.md).
 
 ## 1. Qué se necesita
 

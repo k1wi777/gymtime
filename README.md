@@ -2,9 +2,21 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
+**Estado:** hitos H1 (conexión) y H2 (enrolamiento) cerrados. Falta el reconocimiento por huella, la sincronización de plantillas, los horarios y la alarma; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+
+## Estructura
+
+| Carpeta | Contenido |
+|---|---|
+| `server/` | Backend NestJS (REST, WebSocket `/device`, Prisma). |
+| `shared/` | Protocolo y esquemas compartidos. |
+| `simulator/` | ESP32 simulado. |
+| `cli/` | Comando `gym`. |
+| `docs/` | Documentación para firmware y protocolo. |
+
 ## Puesta en marcha
 
-Requisitos: Node 24 (`.nvmrc`), npm y Docker.
+Requisitos: Node 24 (`.nvmrc`), npm y Docker con Compose.
 
 ```bash
 nvm use                      # Node 24
@@ -12,8 +24,11 @@ npm install                  # instala dependencias y genera el cliente Prisma
 cp .env.example .env         # reemplaza DEVICE_TOKEN, ADMIN_API_KEY y ENCRYPTION_KEY
 docker compose up -d         # PostgreSQL con volumen y healthcheck
 npm run migrate              # aplica las migraciones (prisma migrate dev)
+npm run build                # compila los workspaces
 npm run start:dev -w server  # API en http://0.0.0.0:3000
 ```
+
+Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/main`). Si hace falta regenerar el cliente Prisma: `npm run db:generate`.
 
 - `ENCRYPTION_KEY` debe ser base64 de exactamente 32 bytes: `openssl rand -base64 32`.
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
@@ -50,6 +65,22 @@ npm run gym -- enroll start --student 123
 ```
 
 Al reenrolar a un estudiante la huella anterior se borra (no se conserva inactiva).
+
+## Checks y pruebas
+
+```bash
+npm run lint
+npm run format:check
+npm test            # pruebas unitarias de todos los workspaces
+npm run test:e2e    # pruebas e2e (lentas)
+```
+
+## Documentación
+
+- [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
+- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador.
+- [`docs/protocolo_v0.md`](docs/protocolo_v0.md): protocolo.
+- [`backlog_iteracion_1_backend.md`](backlog_iteracion_1_backend.md): backlog e hitos.
 
 ## Scripts (raíz)
 
