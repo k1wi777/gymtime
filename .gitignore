@@ -6,3 +6,7 @@ coverage/
 .env.*
 !.env.example
 server/src/generated/
+
+# REI harness and Claude Code local files (kept out of version control)
+.rei/
+.claude/

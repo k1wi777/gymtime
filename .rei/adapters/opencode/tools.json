@@ -1,8 +1,0 @@
-{
-  "read": { "permission": ["read"] },
-  "write": { "permission": ["edit"] },
-  "edit": { "permission": ["edit"] },
-  "search": { "permission": ["glob", "grep"] },
-  "shell": { "permission": ["bash"] },
-  "subagent": { "permission": ["task"] }
-}
