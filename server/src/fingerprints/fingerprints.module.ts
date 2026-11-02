@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { StudentsModule } from '../students/students.module.js';
-import { CLOCK, systemClock } from './clock.js';
+import { CLOCK, systemClock } from '../common/time/clock.js';
 import { TemplateCipher } from './crypto/template-cipher.service.js';
 import { ENROLLMENTS_REPOSITORY } from './domain/enrollments.repository.js';
 import { FINGERPRINTS_REPOSITORY } from './domain/fingerprints.repository.js';
 import { EnrollmentEventsRegistrar } from './enrollment-events.registrar.js';
 import { EnrollmentExpirer } from './enrollment-expirer.js';
 import { EnrollmentService } from './enrollment.service.js';
+import { FingerprintsService } from './fingerprints.service.js';
 import { EnrollmentsController } from './enrollments.controller.js';
 import {
   FINGERPRINTS_CONFIG,
@@ -34,8 +35,10 @@ import { PrismaFingerprintsRepository } from './infrastructure/prisma-fingerprin
     ApiKeyGuard,
     TemplateCipher,
     EnrollmentService,
+    FingerprintsService,
     EnrollmentEventsRegistrar,
     EnrollmentExpirer,
   ],
+  exports: [FingerprintsService, EnrollmentService],
 })
 export class FingerprintsModule {}

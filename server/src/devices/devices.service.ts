@@ -1,15 +1,47 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { DeviceStatus } from './domain/device.js';
 import {
   DEVICES_REPOSITORY,
   type DevicesRepository,
 } from './domain/devices.repository.js';
 
+export type ConnectedListener = (deviceId: string) => Promise<void> | void;
+
 @Injectable()
 export class DevicesService {
+  private readonly logger = new Logger(DevicesService.name);
+  private readonly connectedListeners: ConnectedListener[] = [];
+
   constructor(
     @Inject(DEVICES_REPOSITORY) private readonly repository: DevicesRepository,
   ) {}
+
+  /**
+   * Extension point so other modules react to a device being accepted
+   * (authenticated and registered) without `devices` depending on them.
+   */
+  onConnected(listener: ConnectedListener): void {
+    this.connectedListeners.push(listener);
+  }
+
+  /**
+   * Runs the connected listeners one after another. A failing listener is
+   * logged and never stops the others nor the caller, who should not await
+   * it: `hello.ok` must not wait for them.
+   */
+  async notifyConnected(deviceId: string): Promise<void> {
+    for (const listener of this.connectedListeners) {
+      try {
+        await listener(deviceId);
+      } catch (error) {
+        this.logger.error({
+          event: 'connected_listener_failed',
+          deviceId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
 
   markOnline(
     deviceId: string,

@@ -38,7 +38,7 @@ const GLOBAL_HELP = [
 
 /** Runs one invocation and returns the process exit code (no process effects). */
 export async function run(argv: string[], runtime: Runtime): Promise<number> {
-  const { group, command } = route(argv);
+  const { group, command, args } = route(argv);
   try {
     if (group === undefined) {
       runtime.out(rootHelp());
@@ -48,32 +48,42 @@ export async function run(argv: string[], runtime: Runtime): Promise<number> {
       runtime.out(groupHelp(group));
       return EXIT_OK;
     }
-    return await execute(command, argv.slice(2), runtime);
+    return await execute(command, args, runtime);
   } catch (error) {
     return report(error, runtime, command, group);
   }
 }
 
 type Route =
-  | { group: undefined; command?: undefined }
-  | { group: string; command: 'group-help' | Command };
+  | { group: undefined; command?: undefined; args: string[] }
+  | { group: string; command: 'group-help' | Command; args: string[] };
 
 function route(argv: string[]): Route {
   const [group, action] = argv;
   if (group === undefined || isHelp(group)) {
-    return { group: undefined, command: undefined };
+    return { group: undefined, command: undefined, args: [] };
   }
   const known = COMMANDS.filter((c) => c.group === group);
   if (known.length === 0) {
-    return { group, command: unknown(`Unknown command group "${group}"`) };
+    return {
+      group,
+      command: unknown(`Unknown command group "${group}"`),
+      args: [],
+    };
+  }
+  // A group with a single action-less command (`gym sync`) takes options directly.
+  const direct = known.find((c) => c.action === '');
+  if (direct && (action === undefined || action.startsWith('-'))) {
+    return { group, command: direct, args: argv.slice(1) };
   }
   if (action === undefined || isHelp(action)) {
-    return { group, command: 'group-help' };
+    return { group, command: 'group-help', args: [] };
   }
   const command = known.find((c) => c.action === action);
   return {
     group,
     command: command ?? unknown(`Unknown action "${action}" for "${group}"`),
+    args: argv.slice(2),
   };
 }
 
@@ -105,7 +115,10 @@ async function execute(
     // The parseArgs message names the offending flag, never a value.
     throw new UsageError((error as Error).message);
   }
-  const values = parsed.values as Record<string, string | boolean | undefined>;
+  const values = parsed.values as Record<
+    string,
+    string | boolean | string[] | undefined
+  >;
   if (values['help']) {
     runtime.out(commandHelp(command));
     return EXIT_OK;

@@ -103,7 +103,9 @@ export const templatesSyncSchema = message(
         index: positiveInt,
         total: positiveInt,
       }),
-      templates: z.array(syncTemplateSchema).min(1).max(SYNC_CHUNK_MAX),
+      // An empty list is only valid as a single 1-of-1 chunk: it tells the reader
+      // to wipe its templates when nobody has to be loaded.
+      templates: z.array(syncTemplateSchema).max(SYNC_CHUNK_MAX),
     })
     .superRefine((payload, ctx) => {
       if (payload.chunk.index > payload.chunk.total) {
@@ -111,6 +113,14 @@ export const templatesSyncSchema = message(
           code: 'custom',
           path: ['chunk', 'index'],
           message: 'chunk.index must be between 1 and chunk.total',
+        });
+      }
+      const { index, total } = payload.chunk;
+      if (payload.templates.length === 0 && !(index === 1 && total === 1)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['templates'],
+          message: 'templates may be empty only when chunk is 1 of 1',
         });
       }
       const slots = new Set<number>();

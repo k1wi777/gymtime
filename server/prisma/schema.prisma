@@ -144,15 +144,17 @@ model DeviceSlot {
 }
 
 model Schedule {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String    @map("nombre")
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String    @map("nombre")
   // Exactly one of weekday / date is set (CHECK in the migration).
-  weekday            Int?      @map("dia_semana")
-  date               DateTime? @map("fecha") @db.Date
-  startTime          DateTime  @map("inicio") @db.Time()
-  endTime            DateTime  @map("fin") @db.Time()
-  // Minutes before startTime during which entry is accepted.
-  entryMarginMinutes Int       @default(0) @map("margen_ingreso")
+  weekday           Int?      @map("dia_semana")
+  date              DateTime? @map("fecha") @db.Date
+  startTime         DateTime  @map("inicio") @db.Time()
+  endTime           DateTime  @map("fin") @db.Time()
+  // Entry window overrides: minutes before startTime when entry opens and
+  // before endTime when it closes. NULL = use ENTRY_OPEN_MINUTES / ENTRY_CLOSE_MINUTES.
+  entryOpenMinutes  Int?      @map("margen_ingreso")
+  entryCloseMinutes Int?      @map("margen_cierre_ingreso")
 
   students  ScheduleStudent[]
   instances ScheduleInstance[]

@@ -154,7 +154,28 @@ Todos los mensajes son JSON de texto, uno por trama, con el sobre `{v, id, type,
 }
 ```
 
-   Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican.
+   Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican. Tres puntos que el firmware debe cumplir:
+
+   - Al recibir el **primer bloque de una sincronización nueva** (`syncId` distinto del anterior), borra todas las plantillas locales y carga las recibidas en los slots indicados; los bloques siguientes del mismo `syncId` solo añaden. Cada bloque se confirma con su `ack`.
+   - Un bloque único 1 de 1 con `templates` vacío significa «borra todo y no cargues nada». Se confirma con `ack` como cualquier otro:
+
+<!-- example: templates.sync -->
+```json
+{
+  "v": 1,
+  "id": "a1b2c3d4-0007-4000-8000-000000000007",
+  "type": "templates.sync",
+  "ts": 1760000004,
+  "ref": null,
+  "payload": {
+    "syncId": "a1b2c3d4-0008-4000-8000-000000000008",
+    "chunk": { "index": 1, "total": 1 },
+    "templates": []
+  }
+}
+```
+
+   - `schedule.set` llega después del último bloque; guárdalo como horario vigente y confírmalo. Los slots son temporales: el servidor los reasigna en cada sincronización y usa 1..161 (el 162 es el slot de trabajo del enrolamiento).
 
 7. **Reintentos:** si el servidor no confirma un mensaje tuyo en 5 s, reenvíalo **idéntico, con el mismo `id`**, hasta 3 veces. Si tras el último reenvío sigue sin `ack`, cierra la conexión y reconecta. En sentido contrario, si recibes un `id` que ya procesaste, no lo reprocesas pero **vuelves a enviar su `ack`**.
 8. **Reconexión:** si la conexión cae, reconecta con espera creciente (1 s, 2 s, 4 s, ... hasta 30 s) y empieza de nuevo por `hello`. El servidor reenvía las órdenes que no llegaron a confirmarse. Si abres una segunda conexión con el mismo `deviceId`, el servidor cierra la anterior.
@@ -223,6 +244,15 @@ El simulador atiende `enroll.start` y `enroll.cancel` sin lector real. En modo `
 ```bash
 gym student add --document 123 --name "Ana"
 gym enroll start --student 123      # ver README: CLI `gym`
+```
+
+### Sincronización simulada
+
+El simulador hace de lector: al recibir `templates.sync` guarda cada plantilla en su slot (borra todo si el `syncId` es nuevo), confirma cada bloque con `ack` y registra solo slots y conteos (`sync 1/3: reader wiped, 10 template(s) stored (slots 1..10), 10 in reader`), nunca las plantillas. Al recibir `schedule.set` lo guarda y lo muestra en hora de Bogotá, y el `status` informa `fingerprintCount`. Para verlo con el backend en marcha:
+
+```bash
+gym schedule create --name Prueba --ends-in 3m --student 123
+gym sync
 ```
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.

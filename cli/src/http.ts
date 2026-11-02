@@ -22,8 +22,18 @@ export interface HttpClientOptions {
   timeoutMs?: number;
 }
 
+export interface RequestOptions {
+  /** Overrides the client timeout for slow operations such as `sync`. */
+  timeoutMs?: number;
+}
+
 export interface HttpClient {
-  request<T>(method: string, path: string, body?: unknown): Promise<T>;
+  request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<T>;
 }
 
 export const DEFAULT_TIMEOUT_MS = 10_000;
@@ -35,7 +45,12 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
-    async request<T>(method: string, path: string, body?: unknown) {
+    async request<T>(
+      method: string,
+      path: string,
+      body?: unknown,
+      requestOptions?: RequestOptions,
+    ) {
       const headers: Record<string, string> = {
         'x-api-key': options.apiKey,
         accept: 'application/json',
@@ -48,7 +63,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
           method,
           headers,
           body: body === undefined ? undefined : JSON.stringify(body),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: AbortSignal.timeout(requestOptions?.timeoutMs ?? timeoutMs),
         });
       } catch {
         // The low-level cause (ECONNREFUSED, timeout) is not useful to the operator.

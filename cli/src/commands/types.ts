@@ -10,7 +10,7 @@ export interface CommandContext {
   http: HttpClient;
   io: Io;
   /** Parsed option values of the command (global ones included). */
-  values: Record<string, string | boolean | undefined>;
+  values: Record<string, string | boolean | string[] | undefined>;
   positionals: string[];
   /** Aborted when the operator interrupts the process (Ctrl+C). */
   signal: AbortSignal;
@@ -23,6 +23,7 @@ export interface CommandContext {
 
 export interface Command {
   group: string;
+  /** Empty for a command invoked as just `gym <group>` (e.g. `gym sync`). */
   action: string;
   summary: string;
   /** Usage without the leading `gym `, e.g. `student add --document <doc>`. */

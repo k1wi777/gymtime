@@ -38,3 +38,23 @@ describe('logger', () => {
     expect(lines[2]).toBe('10:20:30.123 ::: online');
   });
 });
+
+describe('logger templates.sync (R23)', () => {
+  it('masks every template of a sync chunk but keeps the slots', () => {
+    const raw = JSON.stringify({
+      type: 'templates.sync',
+      payload: {
+        syncId: 's',
+        chunk: { index: 1, total: 1 },
+        templates: [
+          { slot: 1, template: 'QUJDREVGRw==' },
+          { slot: 2, template: 'SElKS0xNTg==' },
+        ],
+      },
+    });
+    const masked = redact(raw);
+    expect(masked).not.toContain('QUJDREVGRw==');
+    expect(masked).not.toContain('SElKS0xNTg==');
+    expect(masked).toContain('"slot":2');
+  });
+});

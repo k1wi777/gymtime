@@ -99,7 +99,7 @@ const serverCases: Case[] = [
       chunk: { index: 1, total: 1 },
       templates: [{ slot: 1, template: TEMPLATE }],
     },
-    bad: { syncId: REF, chunk: { index: 1, total: 1 }, templates: [] },
+    bad: { syncId: REF, chunk: { index: 1, total: 2 }, templates: [] },
   },
   {
     type: 'schedule.set',
@@ -298,6 +298,12 @@ describe('templates.sync limits (R8)', () => {
     });
     const over = sync({ index: 3, total: 2 }, entries(1));
     expect((over as { reason: string }).reason).toContain('chunk.index');
+  });
+
+  it('accepts an empty list only as a single 1-of-1 chunk (R15)', () => {
+    expect(sync({ index: 1, total: 1 }, [])).toMatchObject({ ok: true });
+    expect(sync({ index: 1, total: 2 }, [])).toMatchObject({ ok: false });
+    expect(sync({ index: 2, total: 2 }, [])).toMatchObject({ ok: false });
   });
 
   it('rejects repeated slots, out-of-range slots and bad templates', () => {

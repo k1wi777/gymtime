@@ -28,7 +28,8 @@ curl -H "x-api-key: <ADMIN_API_KEY>" http://localhost:3000/devices/status
 | `enroll.progress`, `enroll.done`, `enroll.failed` | dispositivo | Disponible | Únicos mensajes del dispositivo con lógica en el servidor. |
 | `fingerprint.scan`, `fingerprint.unknown`, `alarm.state`, `button.pressed` | dispositivo | Sin lógica | Un mensaje válido recibe `ack` con `ok:true` y solo se registra en el log; no produce efecto. |
 | `scan.result` | servidor | Pendiente (H3) | Aún no se envía. |
-| `templates.sync`, `schedule.set` | servidor | Pendiente (H3) | Aún no se envían. |
+| `templates.sync` | servidor | Disponible | Bloques de hasta 10 plantillas con `ack` por bloque; un bloque único 1 de 1 con `templates: []` vacía el lector. Slots 1..161 (el 162 es el de trabajo del enrolamiento). Se envía al conectarse, al terminar un enrolamiento, 15 min antes de cada horario, al terminar cada horario y con `gym sync`. |
+| `schedule.set` | servidor | Disponible | Tras la sincronización, con el horario en curso o el más próximo (segundos Unix). Si no hay ninguno, no se envía. |
 | `alarm.set` | servidor | Pendiente (H4) | Aún no se envía. |
 | `display.message` | servidor | Pendiente (hitos posteriores) | El backlog no fija el hito; aún no se envía. |
 
@@ -45,6 +46,10 @@ Todas las rutas de estudiantes, enrolamientos y `/devices/status` exigen la cabe
 | `POST /students/:id/enrollments` | Inicia un enrolamiento. |
 | `GET /enrollments/:id` | Consulta su estado. |
 | `POST /enrollments/:id/cancel` | Lo cancela. |
+| `POST /schedules`, `GET /schedules`, `GET /schedules/:id` | Crea, lista y consulta horarios. |
+| `PUT /schedules/:id/students/:studentId`, `DELETE ...` | Asigna o quita un estudiante. |
+| `GET /schedules/resolve?studentId&at` | Horario que corresponde a un estudiante en un instante. |
+| `POST /sync` | Sincroniza el lector en línea (409 si no hay). |
 
 CLI `gym` (opciones y configuración en el [README](../README.md#cli-gym)):
 
@@ -52,6 +57,8 @@ CLI `gym` (opciones y configuración en el [README](../README.md#cli-gym)):
 |---|---|
 | `gym student add`, `gym student list`, `gym student remove` | Gestiona estudiantes. |
 | `gym enroll start`, `gym enroll cancel` | Inicia o cancela un enrolamiento. |
+| `gym schedule create/assign/list/show` | Gestiona horarios. |
+| `gym sync` | Dispara la sincronización. |
 
 ## El simulador como referencia
 
@@ -60,6 +67,7 @@ El simulador (`simulator/`) habla el mismo protocolo que el ESP32 y sirve para p
 - `simulator/src/device-client.ts`: conexión, `hello`, latido, `ack` de los mensajes del servidor (sin repetir el procesamiento de un `id` ya visto) y reconexión.
 - `simulator/src/sender.ts`: reenvío del mismo `id` hasta 3 veces si no llega `ack` (a los 5 s).
 - `simulator/src/enrollment-simulator.ts`: respuesta a `enroll.start` y `enroll.cancel`.
+- `simulator/src/reader-simulator.ts`: memoria del lector; guarda el mapa slot -> plantilla de `templates.sync`, borra todo al llegar un `syncId` nuevo y guarda `schedule.set`. Un `ack` por bloque; `status.fingerprintCount` informa cuántas plantillas hay.
 
 Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
 
@@ -79,9 +87,9 @@ Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
 | Alta y baja de estudiantes (REST y CLI) | Disponible |
 | Enrolamiento de huella completo | Disponible |
 | Escaneo de huella y control de entrada/salida | Pendiente (H3) |
-| Sincronización de plantillas | Pendiente (H3) |
-| Horarios | Pendiente (H3) |
+| Sincronización de plantillas (`templates.sync`, `schedule.set`) | Disponible |
+| Horarios | Disponible |
 | Alarma | Pendiente (H4) |
 | Mensajes de pantalla (`display.message`) | Pendiente (hitos posteriores) |
 
-Mientras tanto el firmware puede enviar `fingerprint.scan`, `alarm.state` o `button.pressed` y recibirá `ack`, pero sin respuesta ni efecto. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.
+Mientras tanto el firmware debe implementar `templates.sync` y `schedule.set` tal como se describe en la guía (sección 5, punto 6) y puede enviar `fingerprint.scan`, `alarm.state` o `button.pressed` y recibirá `ack`, pero sin respuesta ni efecto. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.

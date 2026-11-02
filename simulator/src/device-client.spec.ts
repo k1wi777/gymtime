@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { Backoff } from './backoff.js';
 import { DeviceClient } from './device-client.js';
-import type { Logger } from './logger.js';
+import { createConsoleLogger, type Logger } from './logger.js';
 
 const config = (port: number) => ({
   url: `ws://127.0.0.1:${port}/device`,
@@ -351,6 +351,110 @@ describe('DeviceClient', () => {
       const count = received.length;
       await new Promise((r) => setTimeout(r, 100));
       expect(received).toHaveLength(count);
+    });
+  });
+  describe('reader sync (R23, R24)', () => {
+    const S1 = '00000000-0000-4000-8000-0000000000a1';
+    const S2 = '00000000-0000-4000-8000-0000000000a2';
+    const syncFrame = (
+      syncId: string,
+      index: number,
+      total: number,
+      slots: number[],
+    ) =>
+      frame('templates.sync', {
+        syncId,
+        chunk: { index, total },
+        templates: slots.map((slot) => ({
+          slot,
+          template: Buffer.from(`secret-template-${slot}`).toString('base64'),
+        })),
+      });
+    const ackFor = (id: string) =>
+      received.filter((m) => m.type === 'ack' && m.ref === id);
+    const lastStatus = () => received.filter((m) => m.type === 'status').at(-1);
+
+    it('acks each chunk, stores the templates and reports them in status', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const first = syncFrame(S1, 1, 2, [1, 2]);
+      const second = syncFrame(S1, 2, 2, [3]);
+      sockets[0].send(JSON.stringify(first));
+      sockets[0].send(JSON.stringify(second));
+      await vi.waitFor(() => {
+        expect(ackFor(first.id)).toHaveLength(1);
+        expect(ackFor(second.id)).toHaveLength(1);
+      });
+      expect(
+        logs.some((l) => l.includes('sync 2/2') && l.includes('3 in reader')),
+      ).toBe(true);
+      // the next heartbeat carries the count
+      await vi.waitFor(
+        () => expect(lastStatus()?.payload.fingerprintCount).toBe(3),
+        {
+          timeout: 3000,
+        },
+      );
+    });
+
+    it('wipes the reader on a new syncId and ignores a repeated frame', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const a = syncFrame(S1, 1, 1, [1, 2, 3]);
+      const b = syncFrame(S2, 1, 1, [1]);
+      sockets[0].send(JSON.stringify(a));
+      sockets[0].send(JSON.stringify(a));
+      sockets[0].send(JSON.stringify(b));
+      await vi.waitFor(() => expect(ackFor(b.id)).toHaveLength(1));
+      expect(ackFor(a.id)).toHaveLength(2);
+      await vi.waitFor(
+        () => expect(lastStatus()?.payload.fingerprintCount).toBe(1),
+        {
+          timeout: 3000,
+        },
+      );
+    });
+
+    it('never prints templates in the console output', async () => {
+      const lines: string[] = [];
+      const client = new DeviceClient(
+        config(port),
+        createConsoleLogger((l) => lines.push(l)),
+        {
+          backoff: new Backoff(20, 80),
+        },
+      );
+      clients.push(client);
+      client.start();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = syncFrame(S1, 1, 1, [1, 2]);
+      sockets[0].send(JSON.stringify(msg));
+      await vi.waitFor(() => expect(ackFor(msg.id)).toHaveLength(1));
+      const output = lines.join('\n');
+      expect(output).toContain('templates.sync');
+      expect(output).toContain('2 template(s) stored (slots 1..2)');
+      for (const slot of [1, 2]) {
+        expect(output).not.toContain(
+          Buffer.from(`secret-template-${slot}`).toString('base64'),
+        );
+      }
+    });
+
+    it('acks schedule.set and logs it in Bogota time', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = frame('schedule.set', {
+        scheduleId: 'sch1',
+        start: Date.parse('2026-11-02T15:00:00Z') / 1000,
+        end: Date.parse('2026-11-02T16:00:00Z') / 1000,
+        entryOpensAt: Date.parse('2026-11-02T14:50:00Z') / 1000,
+        entryClosesAt: Date.parse('2026-11-02T15:55:00Z') / 1000,
+      });
+      sockets[0].send(JSON.stringify(msg));
+      await vi.waitFor(() => expect(ackFor(msg.id)).toHaveLength(1));
+      expect(
+        logs.some((l) => l.includes('2026-11-02 10:00:00 to 11:00:00')),
+      ).toBe(true);
     });
   });
 });

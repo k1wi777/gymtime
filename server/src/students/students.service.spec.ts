@@ -22,6 +22,13 @@ describe('StudentsService', () => {
     expect(await service.findById(student.id)).toEqual(student);
   });
 
+  it('finds students by ids and ignores unknown ones', async () => {
+    const a = await service.create(data('100'));
+    await service.create(data('101'));
+    expect(await service.findByIds([a.id, 'missing'])).toEqual([a]);
+    expect(await service.findByIds([])).toEqual([]);
+  });
+
   it('rejects a duplicate document without changing data', async () => {
     await service.create(data());
     await expect(

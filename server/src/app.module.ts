@@ -3,8 +3,10 @@ import { AppConfigModule } from './config/app-config.module.js';
 import { AppLoggerModule } from './common/logging/app-logger.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DevicesModule } from './devices/devices.module.js';
+import { SyncModule } from './sync/sync.module.js';
 import { FingerprintsModule } from './fingerprints/fingerprints.module.js';
 import { HealthModule } from './health/health.module.js';
+import { SchedulesModule } from './schedules/schedules.module.js';
 import { StudentsModule } from './students/students.module.js';
 
 @Module({
@@ -16,6 +18,8 @@ import { StudentsModule } from './students/students.module.js';
     DevicesModule,
     StudentsModule,
     FingerprintsModule,
+    SchedulesModule,
+    SyncModule,
   ],
 })
 export class AppModule {}

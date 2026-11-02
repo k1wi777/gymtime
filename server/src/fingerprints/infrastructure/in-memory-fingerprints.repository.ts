@@ -9,6 +9,12 @@ export class InMemoryFingerprintsRepository implements FingerprintsRepository {
     return this.rows.find((f) => f.studentId === studentId && f.active) ?? null;
   }
 
+  async findActiveByStudents(studentIds: string[]) {
+    return this.rows.filter(
+      (f) => f.active && studentIds.includes(f.studentId),
+    );
+  }
+
   async deleteByStudent(studentId: string) {
     return this.deleteRows(studentId);
   }

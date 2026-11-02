@@ -30,6 +30,10 @@ export class PrismaStudentsRepository implements StudentsRepository {
     return this.prisma.student.findUnique({ where: { id } });
   }
 
+  findByIds(ids: string[]) {
+    return this.prisma.student.findMany({ where: { id: { in: ids } } });
+  }
+
   findAll(filter: { active?: boolean }) {
     return this.prisma.student.findMany({
       where: filter.active === undefined ? {} : { active: filter.active },

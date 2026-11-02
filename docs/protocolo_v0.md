@@ -345,7 +345,7 @@ Campos del payload: `enrollmentId` UUID.
 
 Bloque de plantillas a cargar en el lector (ver notas de firmware).
 
-Campos del payload: `syncId` UUID; `chunk.index` desde 1 hasta `chunk.total`; `templates` de 1 a 10 entradas `{slot, template}` con slots 1..162 sin repetir en el bloque.
+Campos del payload: `syncId` UUID; `chunk.index` desde 1 hasta `chunk.total`; `templates` de 1 a 10 entradas `{slot, template}` con slots 1..162 sin repetir en el bloque. **Excepción:** `templates` puede ser un arreglo vacío solo cuando `chunk` es 1 de 1; es la orden de dejar el lector sin plantillas (nadie debe estar cargado). Con `chunk.total` mayor que 1 ningún bloque puede venir vacío.
 
 <!-- example: templates.sync -->
 ```json
@@ -371,6 +371,27 @@ Campos del payload: `syncId` UUID; `chunk.index` desde 1 hasta `chunk.total`; `t
         "template": "AAECAwQFBgcICQoLDA0ODw=="
       }
     ]
+  }
+}
+```
+
+Ejemplo de sincronización vacía (el lector borra todo y no carga nada):
+
+<!-- example: templates.sync -->
+```json
+{
+  "v": 1,
+  "id": "0000001b-1111-4222-8333-00000000001b",
+  "type": "templates.sync",
+  "ts": 1760000000,
+  "ref": null,
+  "payload": {
+    "syncId": "000000c9-1111-4222-8333-0000000000c9",
+    "chunk": {
+      "index": 1,
+      "total": 1
+    },
+    "templates": []
   }
 }
 ```
@@ -503,7 +524,8 @@ Ejemplo de `ack` negativo:
 
 ## 8. Notas para firmware
 
-- **`templates.sync`**: al recibirlo, el lector debe **borrar todas sus plantillas** y cargar las recibidas en los slots indicados. Cada bloque (`chunk`) se confirma por separado con su `ack`. El servidor envía bloques de **10 plantillas** como máximo para no desbordar la memoria del ESP32; el primer bloque (`chunk.index` = 1) inicia la carga y el último (`index` = `total`) la completa. Los bloques de una misma sincronización comparten `syncId`.
+- **`templates.sync`**: al recibirlo, el lector debe **borrar todas sus plantillas** y cargar las recibidas en los slots indicados. Cada bloque (`chunk`) se confirma por separado con su `ack`. El servidor envía bloques de **10 plantillas** como máximo para no desbordar la memoria del ESP32; el primer bloque (`chunk.index` = 1) inicia la carga y el último (`index` = `total`) la completa. Los bloques de una misma sincronización comparten `syncId`. Un único bloque 1 de 1 con `templates: []` significa «borrar todo y no cargar nada»: el lector debe vaciarse y confirmar con `ack` igualmente.
+- **`schedule.set`**: el servidor lo envía después del último bloque de una sincronización, cuando hay un horario en curso o próximo. El lector lo guarda como horario vigente (inicio, fin y límites de ingreso, en segundos Unix) y lo confirma con `ack`. Si no hay horario relevante, no se envía ninguno y el lector conserva el anterior.
 - **Plantilla**: es el modelo de ~512 bytes que genera el AS608, en base64.
 - **`status`**: enviarlo cada `heartbeatSec` segundos (valor recibido en `hello.ok`).
 - **`alarm.set`**: con `durationSec` numérico, el dispositivo apaga la alarma por sí mismo al cumplirse ese tiempo y envía `alarm.state`. Con `durationSec` en `null`, la mantiene hasta recibir `alarm.set` con `on: false`. El botón físico la apaga en ambos casos y envía `button.pressed`.

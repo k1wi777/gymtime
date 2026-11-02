@@ -13,6 +13,7 @@ import { Backoff, Dedupe } from './backoff.js';
 import type { SimulatorConfig } from './config.js';
 import { EnrollmentSimulator } from './enrollment-simulator.js';
 import type { Logger } from './logger.js';
+import { ReaderSimulator, describeSchedule } from './reader-simulator.js';
 import { Sender } from './sender.js';
 
 export type ClientState =
@@ -41,6 +42,8 @@ export class DeviceClient {
   private readonly processed = new Dedupe();
   private readonly sender: Sender;
   private readonly enrollment: EnrollmentSimulator;
+  /** Templates and schedule held by the reader; they survive reconnections. */
+  readonly reader = new ReaderSimulator();
   private readonly startedAt: number;
   private socket: WebSocket | null = null;
   private heartbeat: NodeJS.Timeout | null = null;
@@ -224,7 +227,29 @@ export class DeviceClient {
       case 'enroll.cancel':
         this.enrollment.cancel(message.payload);
         break;
+      case 'templates.sync':
+        this.onTemplatesSync(message.payload);
+        break;
+      case 'schedule.set':
+        this.reader.onSchedule(message.payload);
+        this.logger.state(describeSchedule(message.payload));
+        break;
     }
+  }
+
+  /** Shows slots and counts only; the templates are never printed. */
+  private onTemplatesSync(
+    payload: Extract<ServerMessage, { type: 'templates.sync' }>['payload'],
+  ): void {
+    const { chunk } = payload;
+    const outcome = this.reader.onSync(payload);
+    const wiped = outcome.cleared ? 'reader wiped, ' : '';
+    const slots = outcome.slots.length
+      ? `slots ${outcome.slots[0]}..${outcome.slots[outcome.slots.length - 1]}`
+      : 'no slots';
+    this.logger.state(
+      `sync ${chunk.index}/${chunk.total}: ${wiped}${outcome.slots.length} template(s) stored (${slots}), ${outcome.total} in reader`,
+    );
   }
 
   private rejectInvalid(raw: string, code: AckError, reason: string): void {
@@ -241,7 +266,12 @@ export class DeviceClient {
     const uptime = Math.floor((this.now() - this.startedAt) / 1000);
     this.sendTracked({
       type: 'status',
-      payload: { uptime, heap: 180_000, rssi: -55, fingerprintCount: 0 },
+      payload: {
+        uptime,
+        heap: 180_000,
+        rssi: -55,
+        fingerprintCount: this.reader.count,
+      },
     });
   }
 

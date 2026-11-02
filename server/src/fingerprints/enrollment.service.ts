@@ -5,7 +5,7 @@ import { DevicesService } from '../devices/devices.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { Student } from '../students/domain/student.js';
 import { StudentsService } from '../students/students.service.js';
-import { CLOCK, type Clock } from './clock.js';
+import { CLOCK, type Clock } from '../common/time/clock.js';
 import { TemplateCipher } from './crypto/template-cipher.service.js';
 import { isOpen, OPEN_STATUSES, type Enrollment } from './domain/enrollment.js';
 import {
@@ -21,10 +21,20 @@ import {
   FINGERPRINTS_CONFIG,
   type FingerprintsConfig,
 } from './fingerprints.config.js';
-import { KeyedMutex } from './keyed-mutex.js';
+import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { validateTemplate } from './template-validator.js';
 
 const IN_PROGRESS = ['in_progress'] as const;
+
+export interface EnrollmentCompletedEvent {
+  deviceId: string;
+  studentId: string;
+  enrollmentId: string;
+}
+
+export type CompletedListener = (
+  event: EnrollmentCompletedEvent,
+) => Promise<void> | void;
 
 /**
  * Enrollment rules and state machine. Valid transitions only:
@@ -37,6 +47,7 @@ export class EnrollmentService {
   private readonly logger = new Logger(EnrollmentService.name);
   // One reader has one work slot: starts and device events of a device are serialized.
   private readonly deviceLock = new KeyedMutex();
+  private readonly completedListeners: CompletedListener[] = [];
 
   constructor(
     private readonly students: StudentsService,
@@ -50,6 +61,14 @@ export class EnrollmentService {
     @Inject(FINGERPRINTS_CONFIG) private readonly config: FingerprintsConfig,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
+
+  /**
+   * Extension point so other modules react to a stored fingerprint without
+   * `fingerprints` depending on them.
+   */
+  onCompleted(listener: CompletedListener): void {
+    this.completedListeners.push(listener);
+  }
 
   /** Starts enrolling a student on `deviceId`, or on the only online device. */
   async start(studentId: string, deviceId?: string): Promise<Enrollment> {
@@ -129,9 +148,9 @@ export class EnrollmentService {
     enrollmentId: string,
     template: string,
   ): Promise<void> {
-    await this.deviceLock.run(deviceId, async () => {
+    const completed = await this.deviceLock.run(deviceId, async () => {
       const enrollment = await this.findForEvent(deviceId, enrollmentId);
-      if (!enrollment) return;
+      if (!enrollment) return null;
       const checked = validateTemplate(template, this.config);
       if (!checked.ok) {
         await this.enrollments.transition(enrollment.id, IN_PROGRESS, {
@@ -143,7 +162,7 @@ export class EnrollmentService {
           enrollmentId,
           code: checked.code,
         });
-        return;
+        return null;
       }
       const encrypted = this.cipher.encrypt(checked.bytes);
       const done = await this.enrollments.completeWithFingerprint(
@@ -156,8 +175,26 @@ export class EnrollmentService {
           enrollmentId,
           studentId: done.studentId,
         });
+        return { deviceId, studentId: done.studentId, enrollmentId };
       }
+      return null;
     });
+    // Outside the device lock and not awaited by the ack path of the event.
+    if (completed) await this.notifyCompleted(completed);
+  }
+
+  private async notifyCompleted(event: EnrollmentCompletedEvent) {
+    for (const listener of this.completedListeners) {
+      try {
+        await listener(event);
+      } catch (error) {
+        this.logger.error({
+          event: 'completed_listener_failed',
+          enrollmentId: event.enrollmentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   async handleFailed(

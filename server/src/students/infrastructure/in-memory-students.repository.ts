@@ -25,6 +25,13 @@ export class InMemoryStudentsRepository implements StudentsRepository {
     return student ? { ...student } : null;
   }
 
+  async findByIds(ids: string[]) {
+    return ids.flatMap((id) => {
+      const student = this.students.get(id);
+      return student ? [{ ...student }] : [];
+    });
+  }
+
   async findAll(filter: { active?: boolean }) {
     return [...this.students.values()]
       .filter((s) => filter.active === undefined || s.active === filter.active)

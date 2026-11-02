@@ -32,6 +32,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 
 - `ENCRYPTION_KEY` debe ser base64 de exactamente 32 bytes: `openssl rand -base64 32`.
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
+- Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector. Las horas de los horarios son de America/Bogota (UTC-5 fijo).
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
@@ -40,6 +41,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 
 - `SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator` conecta un ESP32 simulado al backend (opciones `SIM_URL`, `SIM_DEVICE_ID`, `SIM_FW` o `--url`, `--device-id`, `--token`, `--fw`).
 - Enrolamiento simulado: el simulador responde `enroll.start` sin hardware. Opciones `SIM_ENROLL_MODE` (`ok`|`fail`|`silent`), `SIM_ENROLL_STEP_MS`, `SIM_ENROLL_FAIL_REASON`, `SIM_TEMPLATE_BYTES` o `--enroll-mode`, `--enroll-step-ms`, `--enroll-fail-reason`, `--template-bytes` (detalle en la guía).
+- Lector simulado: guarda las plantillas de `templates.sync` (borra todo al llegar un `syncId` nuevo), confirma cada bloque, muestra `schedule.set` en hora de Bogotá e informa su conteo en `status.fingerprintCount`. Solo imprime slots y conteos, nunca plantillas.
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token, secuencia, problemas comunes). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
 
 ## CLI `gym`
@@ -55,6 +57,13 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 | `gym student remove <documento>` | Desactiva al estudiante (borra su huella). |
 | `gym enroll start --student <documento> [--device <id>]` | Inicia el enrolamiento y muestra cada paso del dispositivo hasta `done`, `failed`, `expired` o `cancelled` (código 0 solo en `done`). Ctrl+C lo cancela. |
 | `gym enroll cancel <enrollmentId>` | Cancela el enrolamiento con el id que imprime `start`. |
+| `gym schedule create --name <n> (--weekday 1-7 \| --date YYYY-MM-DD) --start HH:mm --end HH:mm [--student <doc>]... [--entry-open <min>] [--entry-close <min>]` | Crea un horario recurrente (1 = lunes ... 7 = domingo) o de una fecha, en hora de Bogotá; `--student` es repetible. |
+| `gym schedule create --name <n> --ends-in 3m [--student <doc>]...` | Horario de prueba: hoy, empieza ahora y termina en N minutos (el margen de cierre de ingreso queda en 0). |
+| `gym schedule assign --schedule <id> --student <doc>` | Asigna un estudiante a un horario. |
+| `gym schedule list`, `gym schedule show --schedule <id>` | Lista los horarios; detalle con estudiantes y próximas fechas en hora de Bogotá. |
+| `gym sync` | Carga en el lector en línea las plantillas y el horario vigentes; muestra bloques y plantillas enviados (nunca su contenido). Código 1 si falla; 409 si no hay dispositivo. |
+
+La sincronización es automática al conectarse el dispositivo, al terminar un enrolamiento y 15 minutos antes de cada horario y al terminar. Un horario creado con `--ends-in` o que empieza dentro de esos 15 minutos ya pasó su disparador: `gym schedule create` lo avisa y hay que ejecutar `gym sync` a mano. Quitar un estudiante de un horario solo existe en REST (`DELETE /schedules/:id/students/:studentId`). Capacidad: 161 plantillas por sincronización, porque el slot 162 es el de trabajo del enrolamiento.
 
 Ejemplo sin hardware (backend y simulador en marcha, ver «Simulador y firmware»):
 
@@ -62,6 +71,8 @@ Ejemplo sin hardware (backend y simulador en marcha, ver «Simulador y firmware�
 export GYM_API_KEY=<ADMIN_API_KEY>
 npm run gym -- student add --document 123 --name "Ana" --consented
 npm run gym -- enroll start --student 123
+npm run gym -- schedule create --name Prueba --ends-in 3m --student 123
+npm run gym -- sync        # el simulador recibe templates.sync y schedule.set
 ```
 
 Al reenrolar a un estudiante la huella anterior se borra (no se conserva inactiva).

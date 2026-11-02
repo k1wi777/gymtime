@@ -6,7 +6,7 @@ import type { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { Env } from '../config/env.schema.js';
 import { InMemoryStudentsRepository } from '../students/infrastructure/in-memory-students.repository.js';
 import { StudentsService } from '../students/students.service.js';
-import type { Clock } from './clock.js';
+import type { Clock } from '../common/time/clock.js';
 import { TemplateCipher } from './crypto/template-cipher.service.js';
 import { EnrollmentService } from './enrollment.service.js';
 import { defaultFingerprintsConfig } from './fingerprints.config.js';

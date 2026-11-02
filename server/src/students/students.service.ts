@@ -26,6 +26,11 @@ export class StudentsService {
     return this.repository.findById(id);
   }
 
+  /** Existing students among `ids`, any state, in no particular order. */
+  findByIds(ids: string[]): Promise<Student[]> {
+    return this.repository.findByIds(ids);
+  }
+
   list(filter: { active?: boolean } = {}): Promise<Student[]> {
     return this.repository.findAll(filter);
   }

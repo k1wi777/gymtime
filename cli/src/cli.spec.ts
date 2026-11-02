@@ -11,6 +11,11 @@ describe('gym routing and help', () => {
       'student remove',
       'enroll start',
       'enroll cancel',
+      'schedule create',
+      'schedule assign',
+      'schedule list',
+      'schedule show',
+      'sync',
     ]) {
       expect(out).toContain(usage);
     }

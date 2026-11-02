@@ -127,6 +127,10 @@ export class DeviceGateway
     try {
       const actions = await this.processor.process(session, raw);
       for (const action of actions) this.execute(action, session, connection);
+      // After the loop: hello.ok is already out and the connection registered.
+      if (actions.some((a) => a.kind === 'authenticated') && session.deviceId) {
+        void this.devices.notifyConnected(session.deviceId);
+      }
     } catch (error) {
       this.logger.error({
         event: 'frame_failed',

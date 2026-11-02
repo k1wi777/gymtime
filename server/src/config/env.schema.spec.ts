@@ -16,7 +16,18 @@ describe('validateEnv', () => {
       HOST: '0.0.0.0',
       PORT: 3000,
       LOG_LEVEL: 'info',
+      ENTRY_OPEN_MINUTES: 10,
+      ENTRY_CLOSE_MINUTES: 5,
+      SYNC_LEAD_MINUTES: 15,
     });
+  });
+
+  it('reads the schedule and sync minutes and rejects negatives', () => {
+    const env = validateEnv({ ...valid(), ENTRY_OPEN_MINUTES: '20' });
+    expect(env.ENTRY_OPEN_MINUTES).toBe(20);
+    expect(() => validateEnv({ ...valid(), SYNC_LEAD_MINUTES: '-1' })).toThrow(
+      /SYNC_LEAD_MINUTES/,
+    );
   });
 
   it('names the missing variable', () => {

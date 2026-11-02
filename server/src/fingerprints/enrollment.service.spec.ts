@@ -130,6 +130,34 @@ describe('EnrollmentService events', () => {
     ).toBe(template);
   });
 
+  it('notifies the completed listeners once, surviving a failing one (R17)', async () => {
+    const fx = await started();
+    const events: unknown[] = [];
+    fx.service.onCompleted(() => {
+      throw new Error('boom');
+    });
+    fx.service.onCompleted((event) => {
+      events.push(event);
+    });
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    expect(events).toEqual([
+      {
+        deviceId: 'd1',
+        studentId: fx.student.id,
+        enrollmentId: fx.enrollment.id,
+      },
+    ]);
+  });
+
+  it('does not notify when the template is rejected', async () => {
+    const fx = await started();
+    const listener = vi.fn();
+    fx.service.onCompleted(listener);
+    await fx.service.handleDone('d1', fx.enrollment.id, 'AAAA');
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('fails the enrollment with the reason when the template is invalid', async () => {
     const fx = await started();
     await fx.service.handleDone('d1', fx.enrollment.id, 'AAAA');

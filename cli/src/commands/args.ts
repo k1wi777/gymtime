@@ -6,10 +6,7 @@ export function noPositionals(positionals: string[]): void {
   }
 }
 
-export function required(
-  value: string | boolean | undefined,
-  flag: string,
-): string {
+export function required(value: unknown, flag: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new UsageError(`${flag} is required`);
   }

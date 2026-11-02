@@ -80,3 +80,18 @@ describe('ConnectionRegistry', () => {
     expect(registry.get('d1')).toBeUndefined();
   });
 });
+
+describe('DevicesService.onConnected (R17)', () => {
+  it('runs every listener and survives a failing one', async () => {
+    const service = new DevicesService(new InMemoryDevicesRepository());
+    const calls: string[] = [];
+    service.onConnected(() => {
+      throw new Error('boom');
+    });
+    service.onConnected((deviceId) => {
+      calls.push(deviceId);
+    });
+    await expect(service.notifyConnected('d1')).resolves.toBeUndefined();
+    expect(calls).toEqual(['d1']);
+  });
+});

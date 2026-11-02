@@ -43,6 +43,12 @@ export const envSchema = z.object({
   DEVICE_TOKEN: secret,
   ADMIN_API_KEY: secret,
   ENCRYPTION_KEY: encryptionKey,
+  // Default entry window of a schedule: opens N min before it starts and
+  // closes M min before it ends (a schedule may override both).
+  ENTRY_OPEN_MINUTES: z.coerce.number().int().min(0).max(240).default(10),
+  ENTRY_CLOSE_MINUTES: z.coerce.number().int().min(0).max(240).default(5),
+  // How long before a schedule starts its templates are loaded into the reader.
+  SYNC_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(15),
 });
 
 export type Env = z.infer<typeof envSchema>;
