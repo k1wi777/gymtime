@@ -149,14 +149,14 @@ describe('EnrollmentService events', () => {
     });
   });
 
-  it('replaces the previous fingerprint: only one active ever', async () => {
+  it('re-enrolling erases the previous fingerprint: one row, none inactive', async () => {
     const fx = await started();
     await fx.service.handleDone('d1', fx.enrollment.id, validTemplate(1));
     const second = await fx.service.start(fx.student.id);
     await fx.service.handleDone('d1', second.id, validTemplate(2));
     const rows = fx.fingerprints.all();
-    expect(rows).toHaveLength(2);
-    expect(rows.filter((f) => f.active)).toHaveLength(1);
+    expect(rows).toHaveLength(1);
+    expect(rows.every((f) => f.active)).toBe(true);
     const active = await fx.fingerprints.findActiveByStudent(fx.student.id);
     expect(
       fx.cipher.decrypt({ data: active!.template, iv: active!.iv })[0],
@@ -170,6 +170,7 @@ describe('EnrollmentService events', () => {
     expect((await fx.service.get(fx.enrollment.id)).status).toBe('in_progress');
     await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
     await fx.service.handleDone('d1', fx.enrollment.id, validTemplate(9));
+    // A repeated done is a no-op: it must not erase the stored fingerprint.
     await fx.service.handleFailed('d1', fx.enrollment.id, 'late');
     await fx.service.handleProgress('d1', fx.enrollment.id, 'processing');
     expect(await fx.service.get(fx.enrollment.id)).toMatchObject({

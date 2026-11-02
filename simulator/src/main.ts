@@ -16,6 +16,9 @@ function main(): void {
   logger.state(
     `simulator ${config.deviceId} (fw ${config.fw}) -> ${config.url}`,
   );
+  logger.state(
+    `enrollment: mode ${config.enroll.mode}, ${config.enroll.stepMs} ms per step`,
+  );
   const client = new DeviceClient(config, logger);
 
   let shuttingDown = false;

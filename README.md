@@ -1,6 +1,6 @@
 # GymTime
 
-Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado) y `server/`.
+Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
 ## Puesta en marcha
 
@@ -24,11 +24,36 @@ npm run start:dev -w server  # API en http://0.0.0.0:3000
 ## Simulador y firmware
 
 - `SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator` conecta un ESP32 simulado al backend (opciones `SIM_URL`, `SIM_DEVICE_ID`, `SIM_FW` o `--url`, `--device-id`, `--token`, `--fw`).
+- Enrolamiento simulado: el simulador responde `enroll.start` sin hardware. Opciones `SIM_ENROLL_MODE` (`ok`|`fail`|`silent`), `SIM_ENROLL_STEP_MS`, `SIM_ENROLL_FAIL_REASON`, `SIM_TEMPLATE_BYTES` o `--enroll-mode`, `--enroll-step-ms`, `--enroll-fail-reason`, `--template-bytes` (detalle en la guía).
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token, secuencia, problemas comunes). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
+
+## CLI `gym`
+
+Administración desde la terminal contra la API REST. Se ejecuta con `npm run gym -- <grupo> <acción> [opciones]` (compila `cli/` antes) o, tras `npm run build -w cli`, con `node cli/dist/main.js`. `gym --help` lista todos los comandos; `gym <grupo> --help` los de un grupo.
+
+Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `GYM_URL`/`GYM_API_KEY` > archivo `~/.config/gymtime/cli.json` (`{"url": "...", "apiKey": "..."}`, ruta cambiable con `GYM_CONFIG`) > defecto (solo la URL: `http://localhost:3000`). La clave es el `ADMIN_API_KEY` del `.env`, viaja en la cabecera `x-api-key` y nunca se imprime. Evita `--api-key`: queda en el historial del shell.
+
+| Comando | Efecto |
+|---|---|
+| `gym student add --document <doc> --name <nombre> [--program <p>] [--consented]` | Registra un estudiante. |
+| `gym student list [--active true\|false]` | Tabla de estudiantes. |
+| `gym student remove <documento>` | Desactiva al estudiante (borra su huella). |
+| `gym enroll start --student <documento> [--device <id>]` | Inicia el enrolamiento y muestra cada paso del dispositivo hasta `done`, `failed`, `expired` o `cancelled` (código 0 solo en `done`). Ctrl+C lo cancela. |
+| `gym enroll cancel <enrollmentId>` | Cancela el enrolamiento con el id que imprime `start`. |
+
+Ejemplo sin hardware (backend y simulador en marcha, ver «Simulador y firmware»):
+
+```bash
+export GYM_API_KEY=<ADMIN_API_KEY>
+npm run gym -- student add --document 123 --name "Ana" --consented
+npm run gym -- enroll start --student 123
+```
+
+Al reenrolar a un estudiante la huella anterior se borra (no se conserva inactiva).
 
 ## Scripts (raíz)
 
-`npm run simulator`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`.
+`npm run simulator`, `npm run gym`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`.
 
 ## Notas
 

@@ -9,6 +9,16 @@ describe('logger', () => {
     expect(redact(raw)).not.toContain('secret-x');
   });
 
+  it('masks fingerprint templates', () => {
+    const raw = JSON.stringify({
+      type: 'enroll.done',
+      payload: { enrollmentId: 'e', template: 'QUJDREVGRw==' },
+    });
+    const masked = redact(raw);
+    expect(masked).not.toContain('QUJDREVGRw==');
+    expect(masked).toContain('enrollmentId');
+  });
+
   it('writes time, direction and type', () => {
     const lines: string[] = [];
     const logger = createConsoleLogger(

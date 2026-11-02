@@ -10,6 +10,12 @@ const config = (port: number) => ({
   deviceId: 'sim-test',
   token: 'token-for-tests-1234',
   fw: 'sim-test-1',
+  enroll: {
+    mode: 'ok' as const,
+    stepMs: 5,
+    failReason: 'sim_fail',
+    templateBytes: 512,
+  },
 });
 
 const frame = (
@@ -258,6 +264,93 @@ describe('DeviceClient', () => {
     });
     await vi.waitFor(() => expect(client.state).toBe('online'), {
       timeout: 3000,
+    });
+  });
+
+  describe('enrollment', () => {
+    const enrollmentId = randomUUID();
+    const startFrame = () =>
+      frame('enroll.start', { enrollmentId, scratchSlot: 162, timeoutSec: 60 });
+    const ofType = (type: string) => received.filter((m) => m.type === type);
+
+    it('acks enroll.start and answers with four steps and enroll.done', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = startFrame();
+      sockets[0].send(JSON.stringify(msg));
+      await vi.waitFor(() => expect(ofType('enroll.done')).toHaveLength(1));
+      expect(received.some((m) => m.type === 'ack' && m.ref === msg.id)).toBe(
+        true,
+      );
+      expect(ofType('enroll.progress').map((m) => m.payload.step)).toEqual([
+        'place_finger',
+        'remove_finger',
+        'place_again',
+        'processing',
+      ]);
+      const done = ofType('enroll.done')[0];
+      expect(done.payload.enrollmentId).toBe(enrollmentId);
+      expect(Buffer.from(done.payload.template, 'base64')).toHaveLength(512);
+    });
+
+    it('never logs the template', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      sockets[0].send(JSON.stringify(startFrame()));
+      await vi.waitFor(() => expect(ofType('enroll.done')).toHaveLength(1));
+      const template = ofType('enroll.done')[0].payload.template as string;
+      // The test logger stores raw frames, so redaction is checked in logger.spec;
+      // here only the state log (which the client writes itself) is inspected.
+      expect(logs.filter((l) => !/^(in|out) /.test(l))).not.toEqual(
+        expect.arrayContaining([expect.stringContaining(template)]),
+      );
+    });
+
+    it('stops sending steps after enroll.cancel', async () => {
+      const client = new DeviceClient(
+        {
+          ...config(port),
+          enroll: { ...config(port).enroll, stepMs: 80 },
+        },
+        logger,
+        { backoff: new Backoff(20, 80) },
+      );
+      clients.push(client);
+      client.start();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      sockets[0].send(JSON.stringify(startFrame()));
+      await vi.waitFor(() =>
+        expect(ofType('enroll.progress').length).toBeGreaterThanOrEqual(1),
+      );
+      sockets[0].send(JSON.stringify(frame('enroll.cancel', { enrollmentId })));
+      await new Promise((r) => setTimeout(r, 400));
+      expect(ofType('enroll.progress').length).toBeLessThan(4);
+      expect(ofType('enroll.done')).toHaveLength(0);
+    });
+
+    it('does not restart on a repeated enroll.start frame', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = startFrame();
+      sockets[0].send(JSON.stringify(msg));
+      sockets[0].send(JSON.stringify(msg));
+      await vi.waitFor(() => expect(ofType('enroll.done')).toHaveLength(1));
+      await new Promise((r) => setTimeout(r, 60));
+      expect(ofType('enroll.progress')).toHaveLength(4);
+      expect(ofType('enroll.done')).toHaveLength(1);
+    });
+
+    it('sends nothing after stop', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      sockets[0].send(JSON.stringify(startFrame()));
+      await vi.waitFor(() =>
+        expect(ofType('enroll.progress').length).toBeGreaterThanOrEqual(1),
+      );
+      await client.stop();
+      const count = received.length;
+      await new Promise((r) => setTimeout(r, 100));
+      expect(received).toHaveLength(count);
     });
   });
 });

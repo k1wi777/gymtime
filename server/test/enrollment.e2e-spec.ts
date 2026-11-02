@@ -191,7 +191,7 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
     ).toBe(true);
   });
 
-  it('re-enrolling replaces the previous fingerprint', async () => {
+  it('re-enrolling erases the previous fingerprint', async () => {
     const device = await connectDevice(url, clients);
     const studentId = await createStudent();
     for (const fill of [1, 2]) {
@@ -202,8 +202,8 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
       await device.next();
     }
     const rows = fingerprints.all();
-    expect(rows).toHaveLength(2);
-    expect(rows.filter((f) => f.active)).toHaveLength(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].active).toBe(true);
   });
 
   it('rejects an invalid template: failed, no fingerprint, message still acked', async () => {

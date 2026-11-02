@@ -27,6 +27,20 @@ const { InMemoryProcessedMessagesRepository } =
   await import('./../src/devices/infrastructure/in-memory-processed-messages.repository.js');
 const { OutboundSender } =
   await import('./../src/devices/outbound-sender.service.js');
+const { STUDENTS_REPOSITORY } =
+  await import('./../src/students/domain/students.repository.js');
+const { InMemoryStudentsRepository } =
+  await import('./../src/students/infrastructure/in-memory-students.repository.js');
+const { FINGERPRINTS_REPOSITORY } =
+  await import('./../src/fingerprints/domain/fingerprints.repository.js');
+const { ENROLLMENTS_REPOSITORY } =
+  await import('./../src/fingerprints/domain/enrollments.repository.js');
+const { InMemoryFingerprintsRepository } =
+  await import('./../src/fingerprints/infrastructure/in-memory-fingerprints.repository.js');
+const { InMemoryEnrollmentsRepository } =
+  await import('./../src/fingerprints/infrastructure/in-memory-enrollments.repository.js');
+const { FINGERPRINTS_CONFIG, defaultFingerprintsConfig } =
+  await import('./../src/fingerprints/fingerprints.config.js');
 const { DeviceClient } = await import('@gymtime/simulator');
 
 describe('Simulator against the real gateway (e2e)', () => {
@@ -34,6 +48,7 @@ describe('Simulator against the real gateway (e2e)', () => {
   let httpUrl: string;
   let wsUrl: string;
   let client: InstanceType<typeof DeviceClient> | undefined;
+  let fingerprints: InstanceType<typeof InMemoryFingerprintsRepository>;
   const lines: string[] = [];
   const logger = {
     frame: (direction: string, raw: string) =>
@@ -44,6 +59,7 @@ describe('Simulator against the real gateway (e2e)', () => {
 
   beforeEach(async () => {
     lines.length = 0;
+    fingerprints = new InMemoryFingerprintsRepository();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue({})
@@ -51,6 +67,19 @@ describe('Simulator against the real gateway (e2e)', () => {
       .useValue(new InMemoryDevicesRepository())
       .overrideProvider(PROCESSED_MESSAGES_REPOSITORY)
       .useValue(new InMemoryProcessedMessagesRepository())
+      .overrideProvider(STUDENTS_REPOSITORY)
+      .useValue(new InMemoryStudentsRepository())
+      .overrideProvider(FINGERPRINTS_REPOSITORY)
+      .useValue(fingerprints)
+      .overrideProvider(ENROLLMENTS_REPOSITORY)
+      .useValue(new InMemoryEnrollmentsRepository(fingerprints))
+      .overrideProvider(FINGERPRINTS_CONFIG)
+      .useValue({
+        ...defaultFingerprintsConfig,
+        enrollTimeoutSec: 1,
+        ackMarginSec: 0,
+        expirySweepMs: 50,
+      })
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, '127.0.0.1');
@@ -65,9 +94,20 @@ describe('Simulator against the real gateway (e2e)', () => {
     await app.close();
   });
 
-  const start = (token = TOKEN) => {
+  const start = (token = TOKEN, mode: 'ok' | 'fail' | 'silent' = 'ok') => {
     client = new DeviceClient(
-      { url: wsUrl, deviceId: 'esp32-sim-01', token, fw: 'sim-e2e' },
+      {
+        url: wsUrl,
+        deviceId: 'esp32-sim-01',
+        token,
+        fw: 'sim-e2e',
+        enroll: {
+          mode,
+          stepMs: 10,
+          failReason: 'sim_fail',
+          templateBytes: 512,
+        },
+      },
       logger,
     );
     client.start();
@@ -110,5 +150,69 @@ describe('Simulator against the real gateway (e2e)', () => {
       expect(lines.some((l) => l.includes('UNAUTHORIZED'))).toBe(true),
     );
     expect(client?.state).not.toBe('online');
+  });
+
+  describe('simulated enrollment', () => {
+    const createStudent = async (document: string) => {
+      const res = await request(httpUrl)
+        .post('/students')
+        .set('x-api-key', ADMIN_KEY)
+        .send({ document, name: 'Ana', consented: true })
+        .expect(201);
+      return res.body.id as string;
+    };
+    const enroll = async (studentId: string) => {
+      const res = await request(httpUrl)
+        .post(`/students/${studentId}/enrollments`)
+        .set('x-api-key', ADMIN_KEY)
+        .send({})
+        .expect(201);
+      return res.body.id as string;
+    };
+    const status = async (enrollmentId: string) => {
+      const res = await request(httpUrl)
+        .get(`/enrollments/${enrollmentId}`)
+        .set('x-api-key', ADMIN_KEY)
+        .expect(200);
+      return res.body as { status: string; failureReason: string | null };
+    };
+
+    it('completes an enrollment without hardware and keeps one fingerprint on re-enrolling', async () => {
+      const running = start();
+      await vi.waitFor(() => expect(running.state).toBe('online'));
+      const studentId = await createStudent('111');
+      for (let round = 1; round <= 2; round++) {
+        const id = await enroll(studentId);
+        await vi.waitFor(async () =>
+          expect((await status(id)).status).toBe('done'),
+        );
+        expect(fingerprints.all()).toHaveLength(1);
+      }
+      expect(fingerprints.all()[0]?.active).toBe(true);
+    });
+
+    it('reports a simulated failure with its reason', async () => {
+      const running = start(TOKEN, 'fail');
+      await vi.waitFor(() => expect(running.state).toBe('online'));
+      const id = await enroll(await createStudent('222'));
+      await vi.waitFor(async () =>
+        expect(await status(id)).toMatchObject({
+          status: 'failed',
+          failureReason: 'sim_fail',
+        }),
+      );
+      expect(fingerprints.all()).toHaveLength(0);
+    });
+
+    it('expires when the simulator stays silent', async () => {
+      const running = start(TOKEN, 'silent');
+      await vi.waitFor(() => expect(running.state).toBe('online'));
+      const id = await enroll(await createStudent('333'));
+      await vi.waitFor(
+        async () => expect((await status(id)).status).toBe('expired'),
+        { timeout: 5000 },
+      );
+      expect(fingerprints.all()).toHaveLength(0);
+    });
   });
 });

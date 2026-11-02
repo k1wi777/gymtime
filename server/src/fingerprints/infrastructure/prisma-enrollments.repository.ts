@@ -66,9 +66,10 @@ export class PrismaEnrollmentsRepository implements EnrollmentsRepository {
       const enrollment = await tx.enrollment.findUniqueOrThrow({
         where: { id },
       });
-      await tx.fingerprint.updateMany({
-        where: { studentId: enrollment.studentId, active: true },
-        data: { active: false },
+      // Data minimisation (Ley 1581): the previous template is erased, not
+      // kept inactive. By studentId so legacy inactive rows go too.
+      await tx.fingerprint.deleteMany({
+        where: { studentId: enrollment.studentId },
       });
       await tx.fingerprint.create({
         data: {

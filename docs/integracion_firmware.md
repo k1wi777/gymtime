@@ -197,6 +197,10 @@ SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator
 | `SIM_DEVICE_ID` | `--device-id` | `esp32-sim-01` |
 | `SIM_DEVICE_TOKEN` | `--token` | obligatorio |
 | `SIM_FW` | `--fw` | `sim-1.0.0` |
+| `SIM_ENROLL_MODE` | `--enroll-mode` | `ok` (`ok`, `fail` o `silent`) |
+| `SIM_ENROLL_STEP_MS` | `--enroll-step-ms` | `800` (pausa entre pasos, en ms) |
+| `SIM_ENROLL_FAIL_REASON` | `--enroll-fail-reason` | `simulated_failure` |
+| `SIM_TEMPLATE_BYTES` | `--template-bytes` | `512` (tamaño decodificado de la plantilla falsa) |
 
 Por ejemplo, desde otro equipo de la red: `npm run simulator -- --url ws://192.168.1.50:3000/device --token <DEVICE_TOKEN>`.
 
@@ -210,6 +214,15 @@ Salida esperada (el token nunca se imprime):
 ::: online: heartbeat every 30 s
 --> status           {...}
 <-- ack              {...,"payload":{"ok":true}}
+```
+
+### Enrolamiento simulado
+
+El simulador atiende `enroll.start` y `enroll.cancel` sin lector real. En modo `ok` responde con un `enroll.progress` por paso (`place_finger`, `remove_finger`, `place_again`, `processing`) y termina con `enroll.done` con una plantilla aleatoria nueva de `SIM_TEMPLATE_BYTES` bytes. En modo `fail` envía `place_finger` y luego `enroll.failed` con el motivo configurado. En modo `silent` no responde nada, para comprobar la expiración. `enroll.cancel` detiene los pasos pendientes. Las plantillas nunca se imprimen en la salida (se muestran como `***`). Para registrar una huella de punta a punta, con el simulador en marcha:
+
+```bash
+gym student add --document 123 --name "Ana"
+gym enroll start --student 123      # ver README: CLI `gym`
 ```
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.

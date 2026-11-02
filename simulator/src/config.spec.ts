@@ -1,5 +1,12 @@
 import { ConfigError, loadConfig } from './config.js';
 
+const DEFAULT_ENROLL = {
+  mode: 'ok',
+  stepMs: 800,
+  failReason: 'simulated_failure',
+  templateBytes: 512,
+};
+
 describe('loadConfig', () => {
   it('applies defaults except for the token', () => {
     expect(loadConfig({ SIM_DEVICE_TOKEN: 'tok-123456789012' }, [])).toEqual({
@@ -7,6 +14,7 @@ describe('loadConfig', () => {
       deviceId: 'esp32-sim-01',
       token: 'tok-123456789012',
       fw: 'sim-1.0.0',
+      enroll: DEFAULT_ENROLL,
     });
   });
 
@@ -34,6 +42,7 @@ describe('loadConfig', () => {
       deviceId: 'arg-id',
       token: 'arg-token',
       fw: 'arg-fw',
+      enroll: DEFAULT_ENROLL,
     });
   });
 
@@ -60,5 +69,62 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ SIM_DEVICE_TOKEN: 't' }, ['--bogus'])).toThrow(
       ConfigError,
     );
+  });
+
+  describe('enrollment options', () => {
+    const base = { SIM_DEVICE_TOKEN: 'tok-123456789012' };
+
+    it('reads them from the environment', () => {
+      const config = loadConfig(
+        {
+          ...base,
+          SIM_ENROLL_MODE: 'fail',
+          SIM_ENROLL_STEP_MS: '0',
+          SIM_ENROLL_FAIL_REASON: 'env_reason',
+          SIM_TEMPLATE_BYTES: '300',
+        },
+        [],
+      );
+      expect(config.enroll).toEqual({
+        mode: 'fail',
+        stepMs: 0,
+        failReason: 'env_reason',
+        templateBytes: 300,
+      });
+    });
+
+    it('lets arguments win over the environment', () => {
+      const config = loadConfig({ ...base, SIM_ENROLL_MODE: 'fail' }, [
+        '--enroll-mode',
+        'silent',
+        '--enroll-step-ms',
+        '50',
+        '--enroll-fail-reason',
+        'arg_reason',
+        '--template-bytes',
+        '64',
+      ]);
+      expect(config.enroll).toEqual({
+        mode: 'silent',
+        stepMs: 50,
+        failReason: 'arg_reason',
+        templateBytes: 64,
+      });
+    });
+
+    it.each([
+      [['--enroll-mode', 'loud'], /--enroll-mode \/ SIM_ENROLL_MODE/],
+      [['--enroll-step-ms=-1'], /--enroll-step-ms \/ SIM_ENROLL_STEP_MS/],
+      [['--enroll-step-ms', '1.5'], /--enroll-step-ms/],
+      [['--template-bytes', '0'], /--template-bytes \/ SIM_TEMPLATE_BYTES/],
+      [['--template-bytes', 'abc'], /--template-bytes/],
+      [['--enroll-fail-reason', ''], /--enroll-fail-reason/],
+    ])('rejects %j without echoing secrets', (args, pattern) => {
+      const run = () =>
+        loadConfig({ SIM_DEVICE_TOKEN: 'super-secret-token' }, args);
+      expect(run).toThrow(ConfigError);
+      expect(run).toThrow(pattern);
+      expect(run).not.toThrow(/super-secret-token/);
+    });
   });
 });

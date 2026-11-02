@@ -9,7 +9,8 @@
   "workspaces": [
     "shared",
     "simulator",
-    "server"
+    "server",
+    "cli"
   ],
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
@@ -21,6 +22,7 @@
     "migrate": "npm run migrate --workspace server",
     "migrate:deploy": "npm run migrate:deploy --workspace server",
     "db:generate": "npm run db:generate --workspace server",
-    "simulator": "npm run build -w shared -w simulator && npm start -w simulator --"
+    "simulator": "npm run build -w shared -w simulator && npm start -w simulator --",
+    "gym": "npm run build -w cli --silent && node cli/dist/main.js"
   }
 }

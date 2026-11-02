@@ -10,10 +10,7 @@ export class InMemoryFingerprintsRepository implements FingerprintsRepository {
   }
 
   async deleteByStudent(studentId: string) {
-    const kept = this.rows.filter((f) => f.studentId !== studentId);
-    const removed = this.rows.length - kept.length;
-    this.rows.splice(0, this.rows.length, ...kept);
-    return removed;
+    return this.deleteRows(studentId);
   }
 
   /** Every stored row, active or not (test visibility of the invariant). */
@@ -21,13 +18,9 @@ export class InMemoryFingerprintsRepository implements FingerprintsRepository {
     return this.rows;
   }
 
-  /** Deactivates the previous fingerprint and stores the new active one. */
+  /** Erases every previous row of the student and stores the new active one. */
   replaceActive(studentId: string, template: Buffer, iv: Buffer): Fingerprint {
-    this.rows.forEach((f, i) => {
-      if (f.studentId === studentId && f.active) {
-        this.rows[i] = { ...f, active: false };
-      }
-    });
+    this.deleteRows(studentId);
     const fingerprint: Fingerprint = {
       id: randomUUID(),
       studentId,
@@ -38,5 +31,12 @@ export class InMemoryFingerprintsRepository implements FingerprintsRepository {
     };
     this.rows.push(fingerprint);
     return fingerprint;
+  }
+
+  private deleteRows(studentId: string): number {
+    const kept = this.rows.filter((f) => f.studentId !== studentId);
+    const removed = this.rows.length - kept.length;
+    this.rows.splice(0, this.rows.length, ...kept);
+    return removed;
   }
 }

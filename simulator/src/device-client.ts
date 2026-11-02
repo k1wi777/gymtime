@@ -11,6 +11,7 @@ import {
 } from '@gymtime/shared';
 import { Backoff, Dedupe } from './backoff.js';
 import type { SimulatorConfig } from './config.js';
+import { EnrollmentSimulator } from './enrollment-simulator.js';
 import type { Logger } from './logger.js';
 import { Sender } from './sender.js';
 
@@ -39,6 +40,7 @@ export class DeviceClient {
   private readonly backoff: Backoff;
   private readonly processed = new Dedupe();
   private readonly sender: Sender;
+  private readonly enrollment: EnrollmentSimulator;
   private readonly startedAt: number;
   private socket: WebSocket | null = null;
   private heartbeat: NodeJS.Timeout | null = null;
@@ -62,6 +64,11 @@ export class DeviceClient {
       options.ackTimeoutMs,
       options.maxResends,
     );
+    this.enrollment = new EnrollmentSimulator(
+      (type, payload) => this.sendTracked({ type, payload } as FrameInput),
+      config.enroll,
+      (text) => this.logger.state(text),
+    );
   }
 
   get state(): ClientState {
@@ -78,6 +85,7 @@ export class DeviceClient {
     this.stopped = true;
     this.clearTimers();
     this.sender.clear();
+    this.enrollment.stop();
     const socket = this.socket;
     if (!socket || socket.readyState === WebSocket.CLOSED) return;
     const closed = new Promise<void>((resolve) =>
@@ -123,6 +131,7 @@ export class DeviceClient {
     this.socket = null;
     this.clearTimers();
     this.sender.clear();
+    this.enrollment.stop();
     if (this.stopped) {
       this.logger.state(`disconnected (code ${code})`);
       return;
@@ -193,7 +202,8 @@ export class DeviceClient {
 
   /** Handles any other valid server message: log it and ack it once. */
   private onServerMessage(message: ServerMessage): void {
-    if (this.processed.has(message.id)) {
+    const duplicate = this.processed.has(message.id);
+    if (duplicate) {
       this.logger.state(
         `duplicate ${message.type} ${message.id}, acking again`,
       );
@@ -202,6 +212,19 @@ export class DeviceClient {
       this.logger.state(`received ${message.type} ${message.id}`);
     }
     this.sendAck(message.id, { ok: true });
+    if (!duplicate) this.dispatch(message);
+  }
+
+  /** Reacts to the server messages the simulated device implements. */
+  private dispatch(message: ServerMessage): void {
+    switch (message.type) {
+      case 'enroll.start':
+        this.enrollment.start(message.payload);
+        break;
+      case 'enroll.cancel':
+        this.enrollment.cancel(message.payload);
+        break;
+    }
   }
 
   private rejectInvalid(raw: string, code: AckError, reason: string): void {

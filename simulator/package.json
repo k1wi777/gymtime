@@ -19,6 +19,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"vitest.config.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"vitest.config.ts\"",
     "lint": "oxlint --type-aware src/",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {

@@ -8,14 +8,18 @@ export interface Logger {
 
 const MASK = '***';
 
-/** Re-serialises a frame hiding the hello token; other frames pass untouched. */
+/** Re-serialises a frame hiding the hello token and biometric templates. */
 export function redact(raw: string): string {
   try {
     const parsed = JSON.parse(raw);
-    if (parsed?.payload && typeof parsed.payload.token === 'string') {
-      parsed.payload.token = MASK;
-      return JSON.stringify(parsed);
+    let masked = false;
+    for (const field of ['token', 'template']) {
+      if (typeof parsed?.payload?.[field] === 'string') {
+        parsed.payload[field] = MASK;
+        masked = true;
+      }
     }
+    if (masked) return JSON.stringify(parsed);
   } catch {
     // Not JSON: nothing to mask.
   }
