@@ -1,0 +1,256 @@
+import { EnrollmentError } from './enrollment.errors.js';
+import { defaultFingerprintsConfig } from './fingerprints.config.js';
+import { buildEnrollmentFixture, validTemplate } from './testing.js';
+
+async function started() {
+  const fx = buildEnrollmentFixture();
+  await fx.devices.markOnline('d1', '1.0.0');
+  const student = await fx.newStudent();
+  const enrollment = await fx.service.start(student.id);
+  return { ...fx, student, enrollment };
+}
+
+const sentTypes = (send: { mock: { calls: unknown[][] } }) =>
+  send.mock.calls.map((call) => (call[1] as { type: string }).type);
+
+describe('EnrollmentService.start', () => {
+  it('creates the enrollment, sends enroll.start and goes in_progress on ack', async () => {
+    const { enrollment, send, student } = await started();
+    expect(enrollment).toMatchObject({
+      status: 'in_progress',
+      studentId: student.id,
+      deviceId: 'd1',
+    });
+    expect(send).toHaveBeenCalledWith(
+      'd1',
+      expect.objectContaining({
+        type: 'enroll.start',
+        payload: {
+          enrollmentId: enrollment.id,
+          scratchSlot: defaultFingerprintsConfig.enrollSlot,
+          timeoutSec: defaultFingerprintsConfig.enrollTimeoutSec,
+        },
+      }),
+    );
+    expect(enrollment.expiresAt.getTime()).toBeGreaterThan(
+      new Date('2026-01-01T00:01:00Z').getTime(),
+    );
+  });
+
+  it('fails the enrollment when the device does not ack', async () => {
+    const fx = buildEnrollmentFixture('failed');
+    await fx.devices.markOnline('d1', '1.0.0');
+    const student = await fx.newStudent();
+    await expect(fx.service.start(student.id)).rejects.toMatchObject({
+      code: 'DEVICE_UNAVAILABLE',
+    });
+    expect(await fx.enrollments.findOpenByDevice('d1')).toHaveLength(0);
+  });
+
+  it('rejects when no device is online, without creating anything', async () => {
+    const fx = buildEnrollmentFixture();
+    const student = await fx.newStudent();
+    await expect(fx.service.start(student.id)).rejects.toMatchObject({
+      code: 'DEVICE_UNAVAILABLE',
+    });
+    expect(fx.send).not.toHaveBeenCalled();
+  });
+
+  it('accepts an explicit deviceId', async () => {
+    const fx = buildEnrollmentFixture();
+    const student = await fx.newStudent();
+    const enrollment = await fx.service.start(student.id, 'esp32-9');
+    expect(enrollment.deviceId).toBe('esp32-9');
+  });
+
+  it('rejects unknown and inactive students', async () => {
+    const fx = await started();
+    await expect(fx.service.start(crypto.randomUUID())).rejects.toMatchObject({
+      code: 'STUDENT_NOT_FOUND',
+    });
+    const other = await fx.newStudent('200');
+    await fx.students.deactivate(other.id);
+    await expect(fx.service.start(other.id)).rejects.toMatchObject({
+      code: 'STUDENT_INACTIVE',
+    });
+  });
+
+  it('rejects a second open enrollment on the same device (409)', async () => {
+    const fx = await started();
+    const other = await fx.newStudent('200');
+    await expect(fx.service.start(other.id)).rejects.toMatchObject({
+      code: 'DEVICE_BUSY',
+    });
+  });
+
+  it('serializes two simultaneous starts: only one wins', async () => {
+    const fx = buildEnrollmentFixture();
+    await fx.devices.markOnline('d1', '1.0.0');
+    const a = await fx.newStudent('1');
+    const b = await fx.newStudent('2');
+    const results = await Promise.allSettled([
+      fx.service.start(a.id),
+      fx.service.start(b.id),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(await fx.enrollments.findOpenByDevice('d1')).toHaveLength(1);
+  });
+
+  it('allows a new enrollment once the previous one is terminal', async () => {
+    const fx = await started();
+    await fx.service.cancel(fx.enrollment.id);
+    const other = await fx.newStudent('200');
+    await expect(fx.service.start(other.id)).resolves.toMatchObject({
+      status: 'in_progress',
+    });
+  });
+});
+
+describe('EnrollmentService events', () => {
+  it('records the last progress step', async () => {
+    const fx = await started();
+    await fx.service.handleProgress('d1', fx.enrollment.id, 'place_again');
+    expect(await fx.service.get(fx.enrollment.id)).toMatchObject({
+      status: 'in_progress',
+      step: 'place_again',
+    });
+  });
+
+  it('stores the encrypted template on done and finishes', async () => {
+    const fx = await started();
+    const template = validTemplate();
+    await fx.service.handleDone('d1', fx.enrollment.id, template);
+    expect((await fx.service.get(fx.enrollment.id)).status).toBe('done');
+    const stored = await fx.fingerprints.findActiveByStudent(fx.student.id);
+    expect(stored?.template.toString('base64')).not.toContain(template);
+    expect(
+      fx.cipher
+        .decrypt({ data: stored!.template, iv: stored!.iv })
+        .toString('base64'),
+    ).toBe(template);
+  });
+
+  it('fails the enrollment with the reason when the template is invalid', async () => {
+    const fx = await started();
+    await fx.service.handleDone('d1', fx.enrollment.id, 'AAAA');
+    expect(await fx.service.get(fx.enrollment.id)).toMatchObject({
+      status: 'failed',
+      failureReason: expect.stringContaining('BAD_SIZE'),
+    });
+    expect(fx.fingerprints.all()).toHaveLength(0);
+  });
+
+  it('keeps the failure reason sent by the device', async () => {
+    const fx = await started();
+    await fx.service.handleFailed('d1', fx.enrollment.id, 'FINGERS_MISMATCH');
+    expect(await fx.service.get(fx.enrollment.id)).toMatchObject({
+      status: 'failed',
+      failureReason: 'FINGERS_MISMATCH',
+    });
+  });
+
+  it('replaces the previous fingerprint: only one active ever', async () => {
+    const fx = await started();
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate(1));
+    const second = await fx.service.start(fx.student.id);
+    await fx.service.handleDone('d1', second.id, validTemplate(2));
+    const rows = fx.fingerprints.all();
+    expect(rows).toHaveLength(2);
+    expect(rows.filter((f) => f.active)).toHaveLength(1);
+    const active = await fx.fingerprints.findActiveByStudent(fx.student.id);
+    expect(
+      fx.cipher.decrypt({ data: active!.template, iv: active!.iv })[0],
+    ).toBe(2);
+  });
+
+  it('ignores events for unknown, finished or foreign-device enrollments', async () => {
+    const fx = await started();
+    await fx.service.handleDone('d1', crypto.randomUUID(), validTemplate());
+    await fx.service.handleDone('other', fx.enrollment.id, validTemplate());
+    expect((await fx.service.get(fx.enrollment.id)).status).toBe('in_progress');
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate(9));
+    await fx.service.handleFailed('d1', fx.enrollment.id, 'late');
+    await fx.service.handleProgress('d1', fx.enrollment.id, 'processing');
+    expect(await fx.service.get(fx.enrollment.id)).toMatchObject({
+      status: 'done',
+      failureReason: null,
+    });
+    expect(fx.fingerprints.all()).toHaveLength(1);
+  });
+});
+
+describe('EnrollmentService cancel and expiry', () => {
+  it('cancels an open enrollment and tells the device', async () => {
+    const fx = await started();
+    const cancelled = await fx.service.cancel(fx.enrollment.id);
+    expect(cancelled.status).toBe('cancelled');
+    expect(sentTypes(fx.send)).toEqual(['enroll.start', 'enroll.cancel']);
+  });
+
+  it('answers conflict when cancelling a finished enrollment', async () => {
+    const fx = await started();
+    await fx.service.handleFailed('d1', fx.enrollment.id, 'x');
+    await expect(fx.service.cancel(fx.enrollment.id)).rejects.toMatchObject({
+      code: 'ENROLLMENT_FINISHED',
+    });
+    expect((await fx.service.get(fx.enrollment.id)).status).toBe('failed');
+  });
+
+  it('ignores events after a cancellation', async () => {
+    const fx = await started();
+    await fx.service.cancel(fx.enrollment.id);
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    expect(fx.fingerprints.all()).toHaveLength(0);
+  });
+
+  it('expires overdue enrollments and sends enroll.cancel', async () => {
+    const fx = await started();
+    expect(await fx.service.expireOverdue()).toBe(0);
+    fx.advance(
+      (defaultFingerprintsConfig.enrollTimeoutSec +
+        defaultFingerprintsConfig.ackMarginSec) *
+        1000,
+    );
+    expect(await fx.service.expireOverdue()).toBe(1);
+    expect((await fx.service.get(fx.enrollment.id)).status).toBe('expired');
+    expect(sentTypes(fx.send)).toEqual(['enroll.start', 'enroll.cancel']);
+    expect(await fx.service.expireOverdue()).toBe(0);
+  });
+
+  it('expires lazily on query and frees the device', async () => {
+    const fx = await started();
+    fx.advance(10 * 60 * 1000);
+    expect((await fx.service.get(fx.enrollment.id)).status).toBe('expired');
+    const other = await fx.newStudent('200');
+    await expect(fx.service.start(other.id)).resolves.toBeDefined();
+  });
+
+  it('ignores a done that arrives after expiry', async () => {
+    const fx = await started();
+    fx.advance(10 * 60 * 1000);
+    await fx.service.expireOverdue();
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    expect(fx.fingerprints.all()).toHaveLength(0);
+  });
+
+  it('answers not found for unknown enrollments', async () => {
+    const fx = buildEnrollmentFixture();
+    const id = crypto.randomUUID();
+    await expect(fx.service.get(id)).rejects.toBeInstanceOf(EnrollmentError);
+    await expect(fx.service.cancel(id)).rejects.toMatchObject({
+      code: 'ENROLLMENT_NOT_FOUND',
+    });
+  });
+});
+
+describe('EnrollmentService student deactivation', () => {
+  it('removes the fingerprint and cancels open enrollments', async () => {
+    const fx = await started();
+    await fx.service.handleDone('d1', fx.enrollment.id, validTemplate());
+    const open = await fx.service.start(fx.student.id);
+    await fx.service.onStudentDeactivated(fx.student);
+    expect(fx.fingerprints.all()).toHaveLength(0);
+    expect((await fx.service.get(open.id)).status).toBe('cancelled');
+  });
+});

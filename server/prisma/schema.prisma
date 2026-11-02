@@ -112,11 +112,14 @@ model Device {
 }
 
 model Enrollment {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId String           @map("student_id") @db.Uuid
-  deviceId  String           @map("device_id")
-  status    EnrollmentStatus @default(pending) @map("estado")
-  expiresAt DateTime         @map("expira") @db.Timestamptz()
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String           @map("student_id") @db.Uuid
+  deviceId      String           @map("device_id")
+  status        EnrollmentStatus @default(pending) @map("estado")
+  expiresAt     DateTime         @map("expira") @db.Timestamptz()
+  // Last enroll.progress step and the reason of a failure (device or validation).
+  step          String?          @map("paso")
+  failureReason String?          @map("motivo_fallo")
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   device  Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)

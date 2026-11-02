@@ -43,6 +43,28 @@ describe('DevicesService', () => {
     const statuses = await service.listStatus();
     expect(statuses.every((s) => !s.online)).toBe(true);
   });
+
+  describe('getOnlineDeviceId', () => {
+    it('is null when no device is online', async () => {
+      expect(await service.getOnlineDeviceId()).toBeNull();
+      await service.markOnline('d1', '1.0.0');
+      await service.markOffline('d1');
+      expect(await service.getOnlineDeviceId()).toBeNull();
+    });
+
+    it('returns the only online device', async () => {
+      await service.markOnline('d1', '1.0.0');
+      await service.markOnline('d2', '1.0.0');
+      await service.markOffline('d2');
+      expect(await service.getOnlineDeviceId()).toBe('d1');
+    });
+
+    it('is null when the choice is ambiguous', async () => {
+      await service.markOnline('d1', '1.0.0');
+      await service.markOnline('d2', '1.0.0');
+      expect(await service.getOnlineDeviceId()).toBeNull();
+    });
+  });
 });
 
 describe('ConnectionRegistry', () => {

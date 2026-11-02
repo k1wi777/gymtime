@@ -1,0 +1,89 @@
+import type { ConfigService } from '@nestjs/config';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { ConfigService as Config } from '@nestjs/config';
+import { STUDENTS_REPOSITORY } from './domain/students.repository.js';
+import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
+import { StudentsController } from './students.controller.js';
+import { StudentsService } from './students.service.js';
+import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+
+const KEY = 'admin-key-1234567890';
+const body = { document: '100', name: 'Ana', consented: true };
+
+describe('StudentsController (HTTP)', () => {
+  let app: INestApplication;
+  const http = () => request(app.getHttpServer());
+  const auth = { 'x-api-key': KEY };
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [StudentsController],
+      providers: [
+        StudentsService,
+        ApiKeyGuard,
+        { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
+        {
+          provide: Config,
+          useValue: { get: () => KEY } as unknown as ConfigService,
+        },
+      ],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    await app.init();
+  });
+
+  afterEach(() => app.close());
+
+  it('requires the API key', async () => {
+    await http().get('/students').expect(401);
+    await http().post('/students').send(body).expect(401);
+  });
+
+  it('creates, rejects duplicates and validates the body', async () => {
+    const created = await http()
+      .post('/students')
+      .set(auth)
+      .send(body)
+      .expect(201);
+    expect(created.body).toMatchObject({ document: '100', active: true });
+    await http().post('/students').set(auth).send(body).expect(409);
+    await http().post('/students').set(auth).send({ name: 'x' }).expect(400);
+  });
+
+  it('lists, edits and deactivates', async () => {
+    const { body: s } = await http().post('/students').set(auth).send(body);
+    await http()
+      .patch(`/students/${s.id}`)
+      .set(auth)
+      .send({ name: 'Bea' })
+      .expect(200);
+    await http().patch(`/students/${s.id}`).set(auth).send({}).expect(400);
+    await http()
+      .patch(`/students/${s.id}`)
+      .set(auth)
+      .send({ document: '9' })
+      .expect(400);
+    await http().delete(`/students/${s.id}`).set(auth).expect(200);
+    const active = await http()
+      .get('/students?active=true')
+      .set(auth)
+      .expect(200);
+    expect(active.body).toHaveLength(0);
+    const all = await http().get('/students').set(auth).expect(200);
+    expect(all.body[0]).toMatchObject({ name: 'Bea', active: false });
+  });
+
+  it('answers 404 and 400 for unknown or malformed ids', async () => {
+    await http()
+      .delete(`/students/${crypto.randomUUID()}`)
+      .set(auth)
+      .expect(404);
+    await http()
+      .patch('/students/nope')
+      .set(auth)
+      .send({ name: 'x' })
+      .expect(400);
+  });
+});

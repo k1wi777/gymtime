@@ -36,4 +36,13 @@ export class DevicesService {
       firmwareVersion: device.firmwareVersion,
     }));
   }
+
+  /**
+   * Id of the only device currently online. Null when none is online or when
+   * several are (ambiguous: the caller must name the device).
+   */
+  async getOnlineDeviceId(): Promise<string | null> {
+    const online = (await this.repository.findAll()).filter((d) => d.online);
+    return online.length === 1 ? (online[0]?.id ?? null) : null;
+  }
 }
