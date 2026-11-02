@@ -317,9 +317,68 @@ describe('AttendanceService.recordUnknown / recordButton', () => {
     expect(f.service.recordUnknown('dev')).toEqual(bogota('10:30'));
   });
 
-  it('records a button press without touching sessions', async () => {
+  it('records a button press, delegates it to the alarm and keeps sessions', async () => {
     const f = buildAttendanceFixture();
-    f.service.recordButton('dev');
+    await f.service.recordButton('dev');
+    expect(f.onButtonPressed).toHaveBeenCalledWith('dev');
     expect(await f.repository.list()).toHaveLength(0);
+  });
+
+  it('does not break the ack when the alarm port fails', async () => {
+    const f = buildAttendanceFixture();
+    f.onButtonPressed.mockRejectedValue(new Error('alarm down'));
+    await expect(f.service.recordButton('dev')).resolves.toBeUndefined();
+  });
+
+  it('closes every open session of an occurrence as no_registrada (E8-4, E8-6)', async () => {
+    const f = buildAttendanceFixture();
+    const schedule = await f.weekly('A', '10:00', '11:00');
+    const ana = await f.newStudent('1');
+    const luis = await f.newStudent('2');
+    await f.schedules.assignStudent(schedule.schedule.id, ana.id);
+    await f.schedules.assignStudent(schedule.schedule.id, luis.id);
+    const [instance] = await f.instancesRepo.findInRange(
+      bogota('00:00'),
+      bogota('23:59'),
+    );
+    for (const student of [ana, luis]) {
+      await f.repository.create({
+        studentId: student.id,
+        instanceId: instance.id,
+        enteredAt: bogota('10:00'),
+        entrySource: 'device',
+      });
+    }
+
+    expect(await f.service.countOpenByInstance(instance.id)).toBe(2);
+    expect(
+      await f.service.markUnregisteredByInstance(instance.id, 'timeout'),
+    ).toBe(2);
+    expect(await f.service.countOpenByInstance(instance.id)).toBe(0);
+    const rows = await f.repository.list({ instanceId: instance.id });
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'no_registrada',
+          exitedAt: null,
+          exitSource: null,
+          manualReason: 'timeout',
+        }),
+      ]),
+    );
+    expect(rows).toHaveLength(2);
+    expect(f.onInstanceEmptied).not.toHaveBeenCalled();
+  });
+
+  it('replaces the initial port through setAlarmPort (E8-4)', async () => {
+    const f = buildAttendanceFixture();
+    const onInstanceEmptied = vi.fn();
+    const onButtonPressed = vi.fn();
+    f.service.setAlarmPort({ onInstanceEmptied, onButtonPressed });
+
+    await f.service.recordButton('dev');
+
+    expect(onButtonPressed).toHaveBeenCalledWith('dev');
+    expect(f.onButtonPressed).not.toHaveBeenCalled();
   });
 });

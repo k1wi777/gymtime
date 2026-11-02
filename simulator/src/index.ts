@@ -7,3 +7,5 @@ export type { Logger } from './logger.js';
 export { EnrollmentSimulator, ENROLL_MODES } from './enrollment-simulator.js';
 export type { EnrollMode, EnrollmentOptions } from './enrollment-simulator.js';
 export { ReaderSimulator } from './reader-simulator.js';
+export { AlarmSimulator } from './alarm-simulator.js';
+export type { AlarmPayload, AlarmReason } from './alarm-simulator.js';

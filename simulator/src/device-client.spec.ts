@@ -458,6 +458,69 @@ describe('DeviceClient', () => {
     });
   });
 
+  describe('alarm (R13)', () => {
+    const ackFor = (id: string) =>
+      received.filter((m) => m.type === 'ack' && m.ref === id);
+
+    it('shows a continuous alarm and its clearing on the console', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+
+      const on = frame('alarm.set', {
+        on: true,
+        durationSec: null,
+        reason: 'PENDING_EXIT',
+      });
+      sockets[0].send(JSON.stringify(on));
+      await vi.waitFor(() => expect(ackFor(on.id)).toHaveLength(1));
+      expect(
+        logs.some((l) => l.includes('ALARM ON (PENDING_EXIT) continua')),
+      ).toBe(true);
+
+      const off = frame('alarm.set', {
+        on: false,
+        durationSec: null,
+        reason: 'CLEARED',
+      });
+      sockets[0].send(JSON.stringify(off));
+      await vi.waitFor(() => expect(ackFor(off.id)).toHaveLength(1));
+      expect(logs.some((l) => l.includes('ALARM OFF (CLEARED)'))).toBe(true);
+      expect(client.alarm.current).toMatchObject({
+        on: false,
+        reason: 'CLEARED',
+      });
+    });
+
+    it('turns itself off after a numeric duration and reports alarm.state', async () => {
+      const client = newClient();
+      await vi.waitFor(() => expect(client.state).toBe('online'));
+      const msg = frame('alarm.set', {
+        on: true,
+        durationSec: 1,
+        reason: 'END_BEEP',
+      });
+
+      sockets[0].send(JSON.stringify(msg));
+
+      await vi.waitFor(() => expect(ackFor(msg.id)).toHaveLength(1));
+      expect(logs.some((l) => l.includes('ALARM ON (END_BEEP) 1 s'))).toBe(true);
+      await vi.waitFor(
+        () =>
+          expect(
+            received.some(
+              (m) =>
+                m.type === 'alarm.state' &&
+                m.payload.on === false &&
+                m.payload.source === 'local',
+            ),
+          ).toBe(true),
+        { timeout: 3000 },
+      );
+      expect(logs.some((l) => l.includes('alarm auto-off'))).toBe(true);
+      expect(client.alarm.current).toMatchObject({ on: false });
+    });
+  });
+
   describe('interactive scan and connection (R19)', () => {
     it('sends a fingerprint.scan with the slot and a fixed confidence', async () => {
       const client = newClient();

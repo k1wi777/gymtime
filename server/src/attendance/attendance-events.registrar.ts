@@ -51,7 +51,7 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
 
     this.processor.registerHandler('button.pressed', (deviceId, message) => {
       if (message.type !== 'button.pressed') return;
-      this.attendance.recordButton(deviceId);
+      return this.attendance.recordButton(deviceId);
     });
 
     this.sync.setOpenSessionsProvider({

@@ -65,6 +65,25 @@ export class InMemoryAttendanceRepository implements AttendanceRepository {
     ).length;
   }
 
+  async closeOpenByInstance(
+    instanceId: string,
+    data: { manualReason: string },
+  ) {
+    let count = 0;
+    for (const row of this.rows.values()) {
+      if (row.instanceId !== instanceId || row.status !== 'abierta') continue;
+      this.rows.set(row.id, {
+        ...row,
+        status: 'no_registrada',
+        exitedAt: null,
+        exitSource: null,
+        manualReason: data.manualReason,
+      });
+      count++;
+    }
+    return count;
+  }
+
   async listOpenStudentIds() {
     return [
       ...new Set(

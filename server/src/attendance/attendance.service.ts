@@ -70,9 +70,14 @@ export class AttendanceService {
     private readonly sync: SyncService,
     private readonly instances: InstancesService,
     private readonly students: StudentsService,
-    @Inject(ALARM_PORT) private readonly alarm: AlarmPort,
+    @Inject(ALARM_PORT) private alarm: AlarmPort,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
+
+  /** The alarm module replaces the initial no-op once it is wired. */
+  setAlarmPort(port: AlarmPort): void {
+    this.alarm = port;
+  }
 
   /** Resolves the slot, decides and, when accepted, persists the session. */
   async recordScan(
@@ -106,9 +111,21 @@ export class AttendanceService {
     return at;
   }
 
-  /** `button.pressed` is only recorded (R12). */
-  recordButton(deviceId: string): void {
+  /**
+   * `button.pressed` is recorded and delegated to the alarm, which silences a
+   * running siren. A failing port is logged and never breaks the ack.
+   */
+  async recordButton(deviceId: string): Promise<void> {
     this.logger.log({ event: 'button_pressed', deviceId });
+    try {
+      await this.alarm.onButtonPressed(deviceId);
+    } catch (error) {
+      this.logger.error({
+        event: 'alarm_button_failed',
+        deviceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /** Manual entry with a mandatory reason (R13). */
@@ -175,6 +192,26 @@ export class AttendanceService {
   /** Student ids with an open session, for the sync's open-sessions provider (R17). */
   listOpenStudentIds(): Promise<string[]> {
     return this.sessions.listOpenStudentIds();
+  }
+
+  /** Open sessions of one occurrence, used by the alarm at its end (E8-1). */
+  countOpenByInstance(instanceId: string): Promise<number> {
+    return this.sessions.countOpenByInstance(instanceId);
+  }
+
+  /**
+   * Closes every open session of an occurrence as `no_registrada` with the
+   * given reason (`alarm_off_button`, `alarm_off_cli`, `timeout`). Used by the
+   * alarm when it is silenced manually or by the timeout; it does not notify
+   * the port, because the alarm itself orchestrates the `CLEARED`.
+   */
+  markUnregisteredByInstance(
+    instanceId: string,
+    reason: string,
+  ): Promise<number> {
+    return this.sessions.closeOpenByInstance(instanceId, {
+      manualReason: reason,
+    });
   }
 
   private async withStudent<T>(

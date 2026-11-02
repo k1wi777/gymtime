@@ -241,9 +241,11 @@ model ProcessedMessage {
 model AlarmEvent {
   id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   instanceId String         @map("instance_id") @db.Uuid
-  startedAt  DateTime       @map("inicio") @db.Timestamptz()
-  endedAt    DateTime?      @map("fin") @db.Timestamptz()
-  closedBy   AlarmClosedBy? @map("cerrada_por")
+  startedAt      DateTime       @map("inicio") @db.Timestamptz()
+  endedAt        DateTime?      @map("fin") @db.Timestamptz()
+  closedBy       AlarmClosedBy? @map("cerrada_por")
+  // Open sessions marked no_registrada when the alarm was silenced manually.
+  closedSessions Int            @default(0) @map("sesiones_cerradas")
 
   instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 

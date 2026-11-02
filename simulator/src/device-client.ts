@@ -10,6 +10,7 @@ import {
   type ServerMessage,
 } from '@gymtime/shared';
 import { Backoff, Dedupe } from './backoff.js';
+import { AlarmSimulator } from './alarm-simulator.js';
 import type { SimulatorConfig } from './config.js';
 import { EnrollmentSimulator } from './enrollment-simulator.js';
 import type { Logger } from './logger.js';
@@ -59,10 +60,13 @@ export class DeviceClient {
   private readonly enrollment: EnrollmentSimulator;
   /** Templates and schedule held by the reader; they survive reconnections. */
   readonly reader = new ReaderSimulator();
+  /** Siren state of the simulated device. */
+  readonly alarm = new AlarmSimulator();
   private readonly startedAt: number;
   private socket: WebSocket | null = null;
   private heartbeat: NodeJS.Timeout | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private alarmTimer: NodeJS.Timeout | null = null;
   private stopped = false;
   /** Set by `disconnect()`: close the socket and do not schedule a retry. */
   private manual = false;
@@ -213,8 +217,10 @@ export class DeviceClient {
   private clearTimers(): void {
     if (this.heartbeat) clearInterval(this.heartbeat);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.alarmTimer) clearTimeout(this.alarmTimer);
     this.heartbeat = null;
     this.reconnectTimer = null;
+    this.alarmTimer = null;
   }
 
   private onMessage(raw: string): void {
@@ -300,7 +306,28 @@ export class DeviceClient {
       case 'scan.result':
         this.logger.state(describeScanResult(message.payload));
         break;
+      case 'alarm.set':
+        this.onAlarm(message.payload);
+        break;
     }
+  }
+
+  /** Shows the order; a numeric duration turns the siren off by itself. */
+  private onAlarm(
+    payload: Extract<ServerMessage, { type: 'alarm.set' }>['payload'],
+  ): void {
+    if (this.alarmTimer) clearTimeout(this.alarmTimer);
+    this.alarmTimer = null;
+    this.logger.state(this.alarm.onSet(payload));
+    if (!payload.on || payload.durationSec === null) return;
+    this.alarmTimer = setTimeout(() => {
+      this.alarmTimer = null;
+      this.logger.state(this.alarm.autoOff());
+      this.sendTracked({
+        type: 'alarm.state',
+        payload: { on: false, source: 'local' },
+      });
+    }, payload.durationSec * 1000);
   }
 
   /** Shows slots and counts only; the templates are never printed. */

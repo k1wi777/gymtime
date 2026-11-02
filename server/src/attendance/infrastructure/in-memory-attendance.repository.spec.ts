@@ -75,6 +75,48 @@ describe('InMemoryAttendanceRepository', () => {
     expect(await repo.listClosedInstanceIds('s2')).toEqual([]);
   });
 
+  it('closes all open sessions of an occurrence as no_registrada', async () => {
+    const { repo } = build();
+    await repo.create({
+      studentId: 's1',
+      instanceId: 'i1',
+      enteredAt: at('10:00'),
+      entrySource: 'device',
+    });
+    await repo.create({
+      studentId: 's2',
+      instanceId: 'i1',
+      enteredAt: at('10:05'),
+      entrySource: 'device',
+    });
+    const other = await repo.create({
+      studentId: 's3',
+      instanceId: 'i2',
+      enteredAt: at('11:00'),
+      entrySource: 'device',
+    });
+
+    expect(
+      await repo.closeOpenByInstance('i1', {
+        manualReason: 'alarm_off_button',
+      }),
+    ).toBe(2);
+    expect(await repo.countOpenByInstance('i1')).toBe(0);
+    expect(await repo.findOpenByStudent('s3')).toMatchObject({ id: other.id });
+    const closed = await repo.list({ instanceId: 'i1' });
+    expect(closed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'no_registrada',
+          exitedAt: null,
+          exitSource: null,
+          manualReason: 'alarm_off_button',
+        }),
+      ]),
+    );
+    expect(closed.every((row) => row.status === 'no_registrada')).toBe(true);
+  });
+
   it('filters by student, occurrence, status and entry range, with limit', async () => {
     const { repo } = build();
     await repo.create({

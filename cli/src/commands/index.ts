@@ -1,4 +1,5 @@
 import { attendanceCommands } from './attendance.js';
+import { alarmCommands } from './alarm.js';
 import { enrollCommands } from './enroll.js';
 import { scheduleCommands } from './schedule.js';
 import { sessionsCommands } from './sessions.js';
@@ -13,6 +14,7 @@ export const COMMANDS: readonly Command[] = [
   ...syncCommands,
   ...sessionsCommands,
   ...attendanceCommands,
+  ...alarmCommands,
 ];
 
 export const GROUP_SUMMARIES: Record<string, string> = {
@@ -22,4 +24,5 @@ export const GROUP_SUMMARIES: Record<string, string> = {
   sync: 'Load templates and the current schedule into the reader',
   sessions: 'Inspect attendance sessions',
   attendance: 'Register entries and exits manually',
+  alarm: 'Control the siren and silence the end-of-schedule alarm',
 };

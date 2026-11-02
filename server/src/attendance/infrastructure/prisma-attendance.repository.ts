@@ -88,6 +88,22 @@ export class PrismaAttendanceRepository implements AttendanceRepository {
     });
   }
 
+  async closeOpenByInstance(
+    instanceId: string,
+    data: { manualReason: string },
+  ): Promise<number> {
+    const { count } = await this.prisma.attendanceSession.updateMany({
+      where: { instanceId, status: 'abierta' },
+      data: {
+        status: 'no_registrada',
+        exitedAt: null,
+        exitSource: null,
+        manualReason: data.manualReason,
+      },
+    });
+    return count;
+  }
+
   async listOpenStudentIds() {
     const rows = await this.prisma.attendanceSession.findMany({
       where: { status: 'abierta' },

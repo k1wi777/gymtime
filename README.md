@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
-**Estado:** hitos H1 (conexión) y H2 (enrolamiento) cerrados. Falta el reconocimiento por huella, la sincronización de plantillas, los horarios y la alarma; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios) y H4 (alarma y vencimientos) cerrados. Falta el panel web y los hitos posteriores; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
@@ -33,6 +33,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - `ENCRYPTION_KEY` debe ser base64 de exactamente 32 bytes: `openssl rand -base64 32`.
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
 - Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector. Las horas de los horarios son de America/Bogota (UTC-5 fijo).
+- Alarma: `ALARM_BEEP_SECONDS` (5) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
@@ -42,6 +43,8 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - `SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator` conecta un ESP32 simulado al backend (opciones `SIM_URL`, `SIM_DEVICE_ID`, `SIM_FW` o `--url`, `--device-id`, `--token`, `--fw`).
 - Enrolamiento simulado: el simulador responde `enroll.start` sin hardware. Opciones `SIM_ENROLL_MODE` (`ok`|`fail`|`silent`), `SIM_ENROLL_STEP_MS`, `SIM_ENROLL_FAIL_REASON`, `SIM_TEMPLATE_BYTES` o `--enroll-mode`, `--enroll-step-ms`, `--enroll-fail-reason`, `--template-bytes` (detalle en la guía).
 - Lector simulado: guarda las plantillas de `templates.sync` (borra todo al llegar un `syncId` nuevo), confirma cada bloque, muestra `schedule.set` en hora de Bogotá e informa su conteo en `status.fingerprintCount`. Solo imprime slots y conteos, nunca plantillas.
+- Alarma simulada: muestra cada `alarm.set` como `ALARM ON (motivo) continua` o `ALARM ON (motivo) N s` / `ALARM OFF (motivo)`; con una duración numérica se apaga sola y reporta `alarm.state` con origen `local`.
+- Comandos interactivos del simulador (`sim>`): `scan <slot>` envía una huella leída, `button` pulsa el botón físico, `disconnect`/`reconnect` cortan y retoman la conexión, y `help` muestra la ayuda.
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token, secuencia, problemas comunes). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
 
 ## CLI `gym`
@@ -62,6 +65,13 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 | `gym schedule assign --schedule <id> --student <doc>` | Asigna un estudiante a un horario. |
 | `gym schedule list`, `gym schedule show --schedule <id>` | Lista los horarios; detalle con estudiantes y próximas fechas en hora de Bogotá. |
 | `gym sync` | Carga en el lector en línea las plantillas y el horario vigentes; muestra bloques y plantillas enviados (nunca su contenido). Código 1 si falla; 409 si no hay dispositivo. |
+| `gym sessions open` | Lista quién está dentro ahora mismo. |
+| `gym sessions list [--student <doc>] [--status abierta\|cerrada\|no_registrada] [--limit <n>]` | Historial de sesiones; la hora se muestra en Bogotá. |
+| `gym attendance entry --student <doc> --reason <texto>` | Registra una entrada manual (el motivo es obligatorio). |
+| `gym attendance exit --student <doc> --reason <texto>` | Registra una salida manual (el motivo es obligatorio); si era la última, apaga la alarma. |
+| `gym alarm status` | Muestra si la sirena está encendida, su motivo, la ocurrencia, la duración y las sesiones abiertas. |
+| `gym alarm on` / `gym alarm test` | Enciende la sirena de forma continua (`MANUAL`) o con el pitido corto de prueba (`TEST`); 409 si no hay dispositivo en línea. |
+| `gym alarm off` | Silencia la sirena, marca como `no_registrada` las sesiones abiertas de la ocurrencia alarmada e informa cuántas cerró; 409 si no estaba encendida. |
 
 La sincronización es automática al conectarse el dispositivo, al terminar un enrolamiento y 15 minutos antes de cada horario y al terminar. Un horario creado con `--ends-in` o que empieza dentro de esos 15 minutos ya pasó su disparador: `gym schedule create` lo avisa y hay que ejecutar `gym sync` a mano. Quitar un estudiante de un horario solo existe en REST (`DELETE /schedules/:id/students/:studentId`). Capacidad: 161 plantillas por sincronización, porque el slot 162 es el de trabajo del enrolamiento.
 

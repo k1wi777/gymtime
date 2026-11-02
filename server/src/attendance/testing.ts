@@ -19,7 +19,8 @@ export function buildAttendanceFixture(start: Date = MONDAY_9AM_BOGOTA) {
   const clock: Clock = { now: () => new Date(current) };
   const repository = new InMemoryAttendanceRepository();
   const onInstanceEmptied = vi.fn();
-  const alarm: AlarmPort = { onInstanceEmptied };
+  const onButtonPressed = vi.fn();
+  const alarm: AlarmPort = { onInstanceEmptied, onButtonPressed };
   const findStudentBySlot = vi.fn();
   const sync = { findStudentBySlot } as unknown as SyncService;
   const service = new AttendanceService(
@@ -37,6 +38,7 @@ export function buildAttendanceFixture(start: Date = MONDAY_9AM_BOGOTA) {
     repository,
     alarm,
     onInstanceEmptied,
+    onButtonPressed,
     findStudentBySlot,
     setNow: (date: Date) => {
       current = new Date(date);

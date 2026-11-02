@@ -19,6 +19,8 @@ describe('validateEnv', () => {
       ENTRY_OPEN_MINUTES: 10,
       ENTRY_CLOSE_MINUTES: 5,
       SYNC_LEAD_MINUTES: 15,
+      ALARM_BEEP_SECONDS: 5,
+      ALARM_TIMEOUT_MINUTES: 30,
     });
   });
 
@@ -28,6 +30,22 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...valid(), SYNC_LEAD_MINUTES: '-1' })).toThrow(
       /SYNC_LEAD_MINUTES/,
     );
+  });
+
+  it('reads the alarm settings and rejects out-of-range values', () => {
+    const env = validateEnv({
+      ...valid(),
+      ALARM_BEEP_SECONDS: '3',
+      ALARM_TIMEOUT_MINUTES: '10',
+    });
+    expect(env.ALARM_BEEP_SECONDS).toBe(3);
+    expect(env.ALARM_TIMEOUT_MINUTES).toBe(10);
+    expect(() =>
+      validateEnv({ ...valid(), ALARM_BEEP_SECONDS: '0' }),
+    ).toThrow(/ALARM_BEEP_SECONDS/);
+    expect(() =>
+      validateEnv({ ...valid(), ALARM_TIMEOUT_MINUTES: '0' }),
+    ).toThrow(/ALARM_TIMEOUT_MINUTES/);
   });
 
   it('names the missing variable', () => {

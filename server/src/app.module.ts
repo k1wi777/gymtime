@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppConfigModule } from './config/app-config.module.js';
+import { AlarmModule } from './alarm/alarm.module.js';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { AppLoggerModule } from './common/logging/app-logger.module.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -22,6 +23,7 @@ import { StudentsModule } from './students/students.module.js';
     SchedulesModule,
     SyncModule,
     AttendanceModule,
+    AlarmModule,
   ],
 })
 export class AppModule {}

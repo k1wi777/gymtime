@@ -30,6 +30,14 @@ export interface AttendanceRepository {
   /** Instances where the student already has a closed session. */
   listClosedInstanceIds(studentId: string): Promise<string[]>;
   countOpenByInstance(instanceId: string): Promise<number>;
+  /**
+   * Closes every open session of an occurrence as `no_registrada` without an
+   * exit time, storing the reason; returns how many were closed.
+   */
+  closeOpenByInstance(
+    instanceId: string,
+    data: { manualReason: string },
+  ): Promise<number>;
   listOpenStudentIds(): Promise<string[]>;
   /** Sessions matching the filter, oldest entry first. */
   list(filter?: AttendanceFilter): Promise<AttendanceSession[]>;
