@@ -1,6 +1,6 @@
 # Estado del backend para firmware
 
-Qué puede probar hoy el equipo de firmware y qué falta. Hitos cerrados: **H1 (conexión)**, **H2 (enrolamiento)**, **H3 (escaneo, asistencia y horarios)**, **H4 (alarma y vencimientos)** y **H5 (órdenes con confirmación, heartbeat y eventos en vivo)**. Este documento no repite el protocolo: el formato de cada mensaje está en [`protocolo_v0.md`](./protocolo_v0.md) y la puesta en marcha detallada en [`integracion_firmware.md`](./integracion_firmware.md).
+Qué puede probar hoy el equipo de firmware y qué falta. Hitos cerrados: **H1 (conexión)**, **H2 (enrolamiento)**, **H3 (escaneo, asistencia y horarios)**, **H4 (alarma y vencimientos)** y **H5 (órdenes con confirmación, heartbeat y eventos en vivo)**. Este documento no repite el protocolo: el formato de cada mensaje está en [`protocolo_v0.md`](./protocolo_v0.md) y la puesta en marcha detallada en [`integracion_firmware.md`](./integracion_firmware.md). Si algo falla, la sección 8 de esa guía recoge los problemas comunes con su síntoma, causa, verificación y solución.
 
 ## Cómo trabajar en local
 

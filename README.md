@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
-**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat y eventos en vivo) cerrados. Faltan las pruebas integrales, la guía de problemas comunes y el panel web; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat y eventos en vivo) cerrados. Faltan las pruebas integrales y el panel web; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
@@ -47,7 +47,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Lector simulado: guarda las plantillas de `templates.sync` (borra todo al llegar un `syncId` nuevo), confirma cada bloque, muestra `schedule.set` en hora de Bogotá e informa su conteo en `status.fingerprintCount`. Solo imprime slots y conteos, nunca plantillas.
 - Alarma simulada: muestra cada `alarm.set` como `ALARM ON (motivo) continua` o `ALARM ON (motivo) N s` / `ALARM OFF (motivo)`; con una duración numérica se apaga sola y reporta `alarm.state` con origen `local`.
 - Comandos interactivos del simulador (`sim>`): `scan <slot>` envía una huella leída, `button` pulsa el botón físico, `disconnect`/`reconnect` cortan y retoman la conexión, y `help` muestra la ayuda.
-- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token, secuencia, problemas comunes). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
+- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token y secuencia) y guía de problemas comunes con síntoma, causa, verificación y solución (sección 8). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
 
 ## CLI `gym`
 
@@ -134,7 +134,7 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 ## Documentación
 
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
-- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador.
+- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar los problemas comunes (sección 8).
 - [`docs/protocolo_v0.md`](docs/protocolo_v0.md): protocolo.
 - [`backlog_iteracion_1_backend.md`](backlog_iteracion_1_backend.md): backlog e hitos.
 

@@ -257,19 +257,247 @@ gym sync
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.
 
-## 8. Problemas comunes de la primera conexión
+## 8. Problemas comunes
 
-| Síntoma | Causa probable | Solución |
-|---|---|---|
-| El ESP32 no logra abrir el WebSocket (timeout o conexión rechazada), pero `curl` funciona desde el propio PC | Firewall del PC bloquea el puerto 3000 | Permite el puerto: `sudo ufw allow 3000/tcp` (Linux/ufw), `sudo firewall-cmd --add-port=3000/tcp` (firewalld) o una regla de entrada TCP 3000 en el Firewall de Windows. |
-| Conexión rechazada o sin respuesta desde cualquier equipo de la red | IP errónea o cambiada, o el firmware usa `localhost`/`127.0.0.1` | Vuelve a obtener la IP del PC (sección 3) y usa `ws://<ip>:3000/device`. Reserva una IP fija en el router. |
-| El PC responde a `curl` desde otro equipo pero el ESP32 no llega | Red aislada: el punto de acceso aísla clientes (modo "AP isolation"/"guest") o están en subredes distintas | Conecta ambos a la misma red sin aislamiento de clientes. Prueba con `ping` desde otro equipo de la misma Wi-Fi. |
-| Llega `ack` con `ok: false` y `error: UNAUTHORIZED`, y el servidor cierra la conexión | El token de `hello` no coincide con `DEVICE_TOKEN` | Copia exactamente el valor del `.env` (sin espacios ni comillas). Si lo cambiaste, reinicia el backend y reflashea el firmware. El simulador lo registra como "hello rejected: UNAUTHORIZED". |
-| Se abre la conexión y el servidor la cierra a los 5 s sin respuesta | El `hello` llegó tarde o no se envió (plazo de 5 s tras abrir) | Envía `hello` inmediatamente al abrir el WebSocket, antes de cualquier otra cosa. |
-| Llega `ack` con `error: NOT_AUTHENTICATED` | Se envió otro mensaje antes de un `hello` válido | `hello` debe ser siempre el primer mensaje de cada conexión, también tras reconectar. |
-| `ack` con `error: INVALID_MESSAGE` | JSON mal formado, campo faltante o desconocido, `id` que no es UUID, `ts` en milisegundos, o tipos incorrectos (el esquema es estricto) | Compara con los ejemplos del [protocolo](./protocolo_v0.md). `ts` va en **segundos** y `ref` debe ser `null` salvo en respuestas. |
-| `ack` con `error: UNSUPPORTED_VERSION` o `UNKNOWN_TYPE` | `v` distinto de `1` o `type` inexistente | Usa `"v": 1` y los tipos del protocolo. |
-| El ESP32 no tiene hora correcta | Sin NTP el reloj arranca en 1970 | No impide conectar. Ajusta el reloj con `serverTime` de `hello.ok` y envía siempre `ts` en segundos. La hora que manda es la del servidor. |
-| El dispositivo se desconecta cada vez que se conecta otro cliente | Dos conexiones con el mismo `deviceId` (por ejemplo el simulador y el ESP32): el servidor conserva solo la más reciente | Usa un solo cliente por `deviceId`, o `SIM_DEVICE_ID` distinto para el simulador. |
-| Falla el handshake con `wss://` | El backend usa `ws://` sin TLS en esta etapa | Usa `ws://`, no `wss://`. |
-| Cualquier otro fallo | | Revisa el log del backend: cada rechazo queda registrado con su causa. |
+Esta sección diagnostica los fallos más probables, primero en la conexión y después en la operación normal. Cada bloque sigue el mismo orden: **qué se ve**, **por qué**, **cómo confirmarlo** y **qué cambiar**. El contrato de cada mensaje sigue en el [protocolo](./protocolo_v0.md); aquí solo se interpreta.
+
+Triaje, en este orden: ¿abre el WebSocket? (8.1) ¿autentica con `hello`? (8.2) ¿late con `status`? (8.3) ¿recibe y aplica órdenes? (8.6 a 8.8). Si el dispositivo no aparece en `gym device status`, el fallo está antes del `hello`; si aparece con `online: no`, se cayó después de autenticar.
+
+| Síntoma | Bloque |
+|---|---|
+| El ESP32 no abre el WebSocket pero `curl` funciona en el PC | [8.1.1](#firewall) |
+| Conexión rechazada o sin respuesta desde cualquier equipo | [8.1.2](#ip-puerto) |
+| Responde a un equipo pero no al ESP32 | [8.1.3](#ap-isolation) |
+| Falla el handshake TLS | [8.1.4](#wss) |
+| `ack` con `UNAUTHORIZED` y cierre | [8.2.1](#token) |
+| La conexión se cierra a los 5 s sin respuesta | [8.2.2](#hello-tardio) |
+| `ack` con `NOT_AUTHENTICATED` | [8.2.3](#orden-antes-de-hello) |
+| `ack` con `INVALID_MESSAGE` | [8.2.4](#mensaje-invalido) |
+| `ack` con `UNSUPPORTED_VERSION` o `UNKNOWN_TYPE` | [8.2.5](#version-tipo) |
+| El firmware o el contrato no son los esperados | [8.2.6](#firmware-contrato) |
+| El dispositivo se cae solo a los ~60 s (4402) | [8.3.1](#heartbeat) |
+| Los `status` se confirman con error | [8.3.2](#status-invalido) |
+| Reloj en 1970 o `ts` que no cuadran | [8.4](#hora) |
+| Cortes intermitentes o RSSI bajo | [8.5](#rssi) |
+| No vuelve tras un corte o vuelve sin autenticar | [8.6.1](#reconexion) |
+| Órdenes que no llegan al lector | [8.6.2](#ordenes-pendientes) |
+| Mensajes duplicados | [8.6.3](#duplicados) |
+| Se desconecta al conectar otro cliente (4409) | [8.6.4](#reemplazado) |
+| Quedan huellas viejas tras sincronizar | [8.7.1](#sync-nuevo) |
+| Llega un bloque `templates.sync` vacío | [8.7.2](#sync-vacio) |
+| Faltan estudiantes en el lector | [8.7.3](#capacidad) |
+| Una plantilla no carga | [8.7.4](#plantilla) |
+| El horario no se aplica | [8.7.5](#schedule-set) |
+| La sirena no suena | [8.8.1](#alarma-no-suena) |
+| La sirena suena y no se apaga | [8.8.2](#alarma-no-se-apaga) |
+| `alarm.state` no cambia nada en el servidor | [8.8.3](#alarm-state) |
+| Se aplica una orden de alarma vieja | [8.8.4](#alarma-ultima-gana) |
+| Cualquier otro fallo | [8.9](#otro-fallo) |
+
+### 8.1 Red y alcance
+
+#### 8.1.1 El ESP32 no abre el WebSocket, pero el backend responde <a id="firewall"></a>
+
+- **Síntoma** — timeout o «connection refused» al conectar desde el ESP32, mientras el backend responde en el PC.
+- **Causa probable** — el firewall del PC bloquea el puerto 3000 entrante; el `curl` local no pasa por él.
+- **Verificación** — desde otro equipo de la red: `curl -H "x-api-key: <ADMIN_API_KEY>" http://<ip-del-pc>:3000/devices/status`, o `ping <ip-del-pc>`. En el PC, `sudo ufw status` (ufw), `sudo firewall-cmd --list-ports` (firewalld) o las reglas de entrada del Firewall de Windows.
+- **Solución** — permite TCP 3000 solo en la red local: `sudo ufw allow 3000/tcp`, `sudo firewall-cmd --add-port=3000/tcp` o una regla de entrada en el Firewall de Windows.
+
+#### 8.1.2 IP o puerto erróneos <a id="ip-puerto"></a>
+
+- **Síntoma** — conexión rechazada o sin respuesta desde cualquier equipo; a veces funcionó y dejó de hacerlo tras reiniciar el router.
+- **Causa probable** — la URL apunta a una IP equivocada o cambiada por DHCP, o el firmware usa `localhost`/`127.0.0.1`, que apuntan al propio ESP32. El servidor escucha en `0.0.0.0` (sección 3), así que el bind no es la causa.
+- **Verificación** — en el PC, `hostname -I` y compara con la URL del firmware (`ws://<ip>:3000/device`, con la ruta `/device` obligatoria: sin ella el upgrade responde 404). Comprueba que `PORT` en `.env` es 3000 y que `ping <ip-del-pc>` responde desde otro equipo.
+- **Solución** — corrige la URL, reserva la IP del PC en el router y reflashea el firmware con la IP correcta.
+
+#### 8.1.3 El PC responde a `curl` desde otro equipo, pero el ESP32 no llega <a id="ap-isolation"></a>
+
+- **Síntoma** — desde un portátil de la misma Wi-Fi el backend responde; el ESP32 se queda en timeout.
+- **Causa probable** — el punto de acceso aísla clientes («AP isolation» o red de invitados) o el ESP32 y el PC están en subredes o VLAN distintas.
+- **Verificación** — `ping <ip-del-pc>` desde otro equipo conectado a la misma red que el ESP32; si funciona desde una red y no desde la otra, es aislamiento o subred.
+- **Solución** — conecta ambos a la misma red sin aislamiento de clientes, sin red de invitados, y permite el tráfico entre VLAN si las hay.
+
+#### 8.1.4 Falla el handshake al usar `wss://` <a id="wss"></a>
+
+- **Síntoma** — el socket no completa la conexión y no hay tráfico en el backend.
+- **Causa probable** — el backend de esta etapa sirve `ws://` sin TLS.
+- **Verificación** — la URL del firmware empieza por `wss://` y en el log del backend no aparece `connection_opened`.
+- **Solución** — usa `ws://<ip-del-pc>:3000/device`; el TLS llega en producción (`wss://`/HTTPS).
+
+### 8.2 Autenticación y contrato
+
+#### 8.2.1 `ack` con `UNAUTHORIZED` y cierre de la conexión <a id="token"></a>
+
+- **Síntoma** — llega un `ack` con `ok: false` y `error: UNAUTHORIZED`; el servidor cierra con 4401 y en `gym watch` no aparece `device.connected`.
+- **Causa probable** — el token de `hello` no coincide con `DEVICE_TOKEN` (espacios, comillas, `.env` de otro entorno).
+- **Verificación** — el log del backend muestra `auth_failed` con el `deviceId` y el `id` del `hello`; compara el token del firmware con el valor de `DEVICE_TOKEN` sin copiarlo a logs ni informes.
+- **Solución** — copia el valor exacto; si lo cambiaste en `.env`, reinicia el backend y reflashea el firmware.
+
+#### 8.2.2 La conexión se cierra a los 5 s sin respuesta <a id="hello-tardio"></a>
+
+- **Síntoma** — el socket abre y el servidor lo cierra con 4408 «hello timeout» antes de cualquier `hello.ok`.
+- **Causa probable** — el `hello` llegó tarde o no se envió: hay 5 s desde que abre la conexión.
+- **Verificación** — en el log del backend, `connection_opened` seguido de `hello_timeout` y `closed`, sin `auth_ok`; en `gym watch` no hay `device.connected`.
+- **Solución** — envía `hello` en el momento en que abre el socket, antes de temporizadores, escaneos o tareas de red.
+
+#### 8.2.3 `ack` con `NOT_AUTHENTICATED` <a id="orden-antes-de-hello"></a>
+
+- **Síntoma** — un mensaje distinto de `hello` recibe `ack` con `error: NOT_AUTHENTICATED`.
+- **Causa probable** — se envió `status` u otro mensaje antes de un `hello` válido, o tras reconectar sin volver a autenticar.
+- **Verificación** — el `ref` del `ack` identifica el mensaje adelantado; en el log, ese `type` aparece en `message_received` antes de cualquier `auth_ok`.
+- **Solución** — `hello` es siempre el primer mensaje de cada conexión, también después de una reconexión.
+
+#### 8.2.4 `ack` con `INVALID_MESSAGE` <a id="mensaje-invalido"></a>
+
+- **Síntoma** — el mensaje se rechaza con `ack` `ok: false` y `error: INVALID_MESSAGE`; si su `id` no es un UUID recuperable, no hay `ack` y el fallo solo queda en el log.
+- **Causa probable** — JSON mal formado, campo faltante o extra (el esquema es estricto), `id` que no es UUID, `ts` en milisegundos o tipos incorrectos.
+- **Verificación** — compara el mensaje con los ejemplos del [protocolo](./protocolo_v0.md); el log muestra `message_invalid` con `code` y `reason`.
+- **Solución** — `ts` en segundos, `ref: null` salvo en respuestas y un `id` UUID v4 nuevo por mensaje (el mismo solo al reenviar).
+
+#### 8.2.5 `ack` con `UNSUPPORTED_VERSION` o `UNKNOWN_TYPE` <a id="version-tipo"></a>
+
+- **Síntoma** — el mensaje se rechaza con uno de esos dos códigos.
+- **Causa probable** — `v` distinto de `1` o un `type` inexistente (errata en el nombre).
+- **Verificación** — contrasta `v` y `type` con las secciones 5 y 6 del [protocolo](./protocolo_v0.md); el log indica el código.
+- **Solución** — envía `"v": 1` y los tipos exactos del protocolo.
+
+#### 8.2.6 El firmware o el contrato no son los esperados <a id="firmware-contrato"></a>
+
+- **Síntoma** — el dispositivo conecta, pero se comporta distinto de lo documentado o aparece con una versión de firmware que no es la desplegada.
+- **Causa probable** — el binario flasheado es antiguo o habla una versión anterior del contrato (campos o mensajes que cambiaron).
+- **Verificación** — `gym device status` (columna `firmware`) o `curl -H "x-api-key: <ADMIN_API_KEY>" http://<ip-del-pc>:3000/devices/status` (`firmwareVersion`); `gym watch` lo muestra al conectar: `device <id> connected (fw <versión>)`. Contrasta con la versión de `shared/` y del [protocolo](./protocolo_v0.md).
+- **Solución** — reflashea el firmware esperado y, si el contrato cambió, actualiza el cliente antes de desplegarlo.
+
+### 8.3 Conexión viva (heartbeat)
+
+#### 8.3.1 El dispositivo se cae solo a los ~60 s (cierre 4402) <a id="heartbeat"></a>
+
+- **Síntoma** — el dispositivo queda fuera de línea al minuto de conectar; código de cierre 4402 «heartbeat timeout» y `online: no`.
+- **Causa probable** — no se envía `status` cada `heartbeatSec` (30 s por defecto): dos intervalos sin ningún mensaje del dispositivo (60 s) marcan el enlace como muerto aunque el TCP siga abierto.
+- **Verificación** — `gym watch`: `device <id> disconnected (heartbeat_timeout)`; log del backend con `heartbeat_timeout`; `gym device status` con `online: no` y la última conexión.
+- **Solución** — envía un `status` inmediato tras `hello.ok` y reprograma el temporizador con cada `heartbeatSec` recibido.
+
+#### 8.3.2 Los `status` se confirman con error <a id="status-invalido"></a>
+
+- **Síntoma** — el dispositivo sigue en línea, pero cada `status` recibe `ack` con `INVALID_MESSAGE` y el estado no se actualiza.
+- **Causa probable** — el payload no cumple el esquema: `uptime`, `heap` o `fingerprintCount` negativos o no enteros, o `rssi` no entero.
+- **Verificación** — lee el `ack` cuyo `ref` es el `id` del `status` y compara con el ejemplo del [protocolo](./protocolo_v0.md); el log muestra `message_invalid`.
+- **Solución** — envía enteros: `uptime` en segundos, `heap` en bytes, `rssi` en dBm (negativo) y `fingerprintCount` con las plantillas realmente cargadas. Un `rssi` positivo o en 0 delata una lectura mal hecha.
+
+### 8.4 Hora del dispositivo <a id="hora"></a>
+
+- **Síntoma** — el reloj arranca en 1970 y los `ts` no cuadran con los del servidor; la conexión funciona igual.
+- **Causa probable** — no hay NTP ni RTC con batería; no es un fallo de conexión, pero un `ts` mal calculado sí invalida los mensajes.
+- **Verificación** — compara el `ts` enviado con `serverTime` de `hello.ok`; si el `ts` va en milisegundos (13 dígitos), el mensaje se rechaza con `INVALID_MESSAGE`.
+- **Solución** — ajusta el reloj con `serverTime` al recibir `hello.ok`, envía `ts` en segundos y usa la hora del servidor para mostrar; la tuya es solo referencia.
+
+### 8.5 Wifi y RSSI <a id="rssi"></a>
+
+- **Síntoma** — desconexiones intermitentes, `hello` que nunca llega o latidos perdidos; en `gym watch` se alternan conexiones y cortes.
+- **Causa probable** — RSSI débil, canal saturado o roaming entre AP con el mismo SSID; con mala señal el TCP se cae y no se cumplen los plazos de 5 s.
+- **Verificación** — `status.rssi` en dBm: alrededor de -50 es bueno, -70 usable y por debajo de -80 el enlace no es fiable. `gym watch` y el log muestran los cortes; revisa en el router canal y potencia.
+- **Solución** — acerca el ESP32 al AP, fija canal o BSSID, evita la banda saturada, reserva la IP y añade antena externa si hace falta.
+
+### 8.6 Reconexión y órdenes pendientes
+
+#### 8.6.1 No vuelve tras un corte, o vuelve sin autenticar <a id="reconexion"></a>
+
+- **Síntoma** — tras una caída no hay conexión nueva, o hay `ack` con `NOT_AUTHENTICATED` al reconectar.
+- **Causa probable** — no hay bucle de reconexión, o se reabre el socket sin repetir `hello`.
+- **Verificación** — `gym watch`: no aparece un `device.connected` nuevo tras el corte; en el log, `connection_opened` sin `auth_ok` posterior (o con mensajes rechazados por `NOT_AUTHENTICATED`).
+- **Solución** — reconecta con espera creciente (1, 2, 4… hasta 30 s) y empieza cada conexión por `hello`, con un `id` nuevo.
+
+#### 8.6.2 Órdenes que no llegan al lector <a id="ordenes-pendientes"></a>
+
+- **Síntoma** — el operador lanza `gym enroll start` o `gym alarm on` y el lector no reacciona hasta que se reconecta.
+- **Causa probable** — el dispositivo estaba fuera de línea: la orden quedó guardada en `device_commands` para entregarse al reconectar.
+- **Verificación** — `gym device status`, columna `pending`; `gym watch` muestra la orden con su `id` y estado `pending` y después `sent` o `acked`.
+- **Solución** — en el firmware no hay nada que hacer: el servidor reenvía las órdenes en orden al reconectar. Si no llegan, comprueba que la conexión completó `hello`.
+
+#### 8.6.3 Mensajes duplicados <a id="duplicados"></a>
+
+- **Síntoma** — llega dos veces el mismo mensaje, con el mismo `id`.
+- **Causa probable** — el emisor no recibió el `ack` a tiempo (5 s) y reenvió; el servidor hace lo mismo hasta 3 veces.
+- **Verificación** — compara los `id`; en `gym watch` se ven dos `sent` con el mismo `commandId` y `attempts` creciente.
+- **Solución** — si el `id` ya se procesó, no repitas el efecto (no cargues dos veces ni suenes dos veces) y **vuelve a enviar el `ack`**; el emisor lo toma como confirmación.
+
+#### 8.6.4 Se desconecta al conectar otro cliente (cierre 4409) <a id="reemplazado"></a>
+
+- **Síntoma** — el dispositivo se cae justo cuando conecta otro cliente, con código 4409 «replaced by a new connection».
+- **Causa probable** — dos conexiones con el mismo `deviceId` (simulador y ESP32 a la vez); el servidor conserva la más reciente y cierra la anterior.
+- **Verificación** — `gym watch`: dos `device.connected` seguidos para el mismo `deviceId` y `device <id> disconnected (replaced)`.
+- **Solución** — un solo cliente por `deviceId`; detén el simulador antes de conectar el ESP32 o usa `SIM_DEVICE_ID` distinto.
+
+### 8.7 Sincronización y slots
+
+#### 8.7.1 Quedan huellas viejas tras sincronizar <a id="sync-nuevo"></a>
+
+- **Síntoma** — un estudiante que ya no está en el horario sigue abriendo, o los slots quedan mezclados.
+- **Causa probable** — no se borró el lector al recibir el primer bloque de un `syncId` nuevo; el servidor reasigna los slots en cada sincronización.
+- **Verificación** — `gym sync` muestra los bloques y slots enviados (nunca el contenido); `status.fingerprintCount` no baja al número esperado y el log del simulador solo imprime `reader wiped` si el borrado está implementado.
+- **Solución** — en el primer bloque de un `syncId` distinto al anterior, borra todas las plantillas locales y carga las del bloque; los bloques siguientes del mismo `syncId` solo añaden.
+
+#### 8.7.2 Llega un bloque `templates.sync` vacío <a id="sync-vacio"></a>
+
+- **Síntoma** — llega un bloque 1 de 1 con `templates: []` y el firmware lo trata como error o no hace nada.
+- **Causa probable** — no hay nadie asignado: el servidor ordena dejar el lector sin plantillas.
+- **Verificación** — `chunk.index` 1 y `chunk.total` 1 con arreglo vacío; `gym sync` informa 0 plantillas.
+- **Solución** — borra todas las plantillas, deja `fingerprintCount` en 0 y confirma con `ack` como cualquier bloque. No es un error.
+
+#### 8.7.3 Faltan estudiantes en el lector <a id="capacidad"></a>
+
+- **Síntoma** — algunos estudiantes del horario no están cargados y no pueden entrar.
+- **Causa probable** — la sincronización supera las 161 plantillas; el slot 162 está reservado al enrolamiento.
+- **Verificación** — `gym sync` informa cuántas plantillas envió y avisa de los estudiantes que quedaron fuera por falta de slots (`left out for lack of reader slots`); el log del backend muestra `sync_over_capacity` con `capacity` y `omitted`.
+- **Solución** — reduce los estudiantes por horario o reparte en varios horarios; el firmware no debe truncar en silencio: si recibe más de 161 slots, registra el aviso.
+
+#### 8.7.4 Una plantilla no carga <a id="plantilla"></a>
+
+- **Síntoma** — el bloque se confirma con `ok: false` o el lector falla al decodificar, y ese estudiante no queda cargado.
+- **Causa probable** — base64 corrupto o plantilla mayor de lo que admite el AS608 (unos 512 B decodificados por plantilla).
+- **Verificación** — el `ref` del `ack` negativo es el `id` del bloque; `status.fingerprintCount` queda por debajo del esperado; compara el tamaño decodificado con 512 B.
+- **Solución** — confirma el bloque con `ack` `ok: false` para no bloquear el resto y vuelve a lanzar la sincronización con `gym sync`: el servidor da el bloque por confirmado y no lo repite solo.
+
+#### 8.7.5 El horario no se aplica <a id="schedule-set"></a>
+
+- **Síntoma** — el lector tiene las huellas, pero rechaza los escaneos con `NO_ACTIVE_SCHEDULE` o usa un horario anterior.
+- **Causa probable** — no se guardó el `schedule.set` que llega tras el último bloque, o no se confirmó y el lector conserva el horario previo.
+- **Verificación** — `gym sync` muestra el horario enviado; en el dispositivo, imprime inicio, fin y ventana de ingreso en hora de Bogotá.
+- **Solución** — guarda `schedule.set` como horario vigente y confírmalo con `ack`. Si no llega ninguno, conserva el anterior: no lo borres.
+
+### 8.8 Alarma y botón
+
+#### 8.8.1 La sirena no suena <a id="alarma-no-suena"></a>
+
+- **Síntoma** — termina el horario y la sirena no suena, aunque `gym alarm status` diga `ON`.
+- **Causa probable** — no se confirmó el `alarm.set` (se reenviará), un `durationSec` numérico ya la apagó sola o el GPIO del buzzer no está activo.
+- **Verificación** — `gym watch` muestra `alarm on (END_BEEP)` o `alarm on (PENDING_EXIT)`; `gym device status` con `pending` mayor que 0 indica órdenes sin confirmar; `gym alarm status` da motivo, duración e instancia.
+- **Solución** — confirma `alarm.set` en menos de 5 s; si `durationSec` es numérico, programa el apagado y envía `alarm.state`; revisa el GPIO y la alimentación del buzzer.
+
+#### 8.8.2 La sirena suena y no se apaga <a id="alarma-no-se-apaga"></a>
+
+- **Síntoma** — la sirena sigue sonando después de salir el último o de pulsar el botón.
+- **Causa probable** — con `durationSec: null` la sirena suena hasta otra orden; el botón no envía `button.pressed` o el firmware no aplica el `alarm.set` de apagado.
+- **Verificación** — `gym alarm status` sigue en `ON`; en `gym watch`, busca `alarm off (CLEARED) by button`; el log del backend registra la orden y su confirmación.
+- **Solución** — el botón debe silenciar localmente y enviar `button.pressed`; el servidor lo confirma, marca las sesiones abiertas como `no_registrada` y manda el `alarm.set` con `on: false`. Aplica siempre el último `alarm.set`.
+
+#### 8.8.3 `alarm.state` no cambia nada en el servidor <a id="alarm-state"></a>
+
+- **Síntoma** — el dispositivo envía `alarm.state` y el estado del servidor no cambia.
+- **Causa probable** — es informativo (origen `server`, `button` o `local`); el servidor es la fuente de verdad y no lo altera.
+- **Verificación** — `gym alarm status` no cambia tras el `alarm.state`; el log lo registra y el servidor lo confirma.
+- **Solución** — úsalo para reflejar en la pantalla el estado real del dispositivo; no esperes que encienda ni apague nada en el servidor.
+
+#### 8.8.4 Se aplica una orden de alarma vieja <a id="alarma-ultima-gana"></a>
+
+- **Síntoma** — tras varias órdenes de alarma seguidas, el dispositivo obedece una anterior.
+- **Causa probable** — se procesan en desorden o se guardan todas; el servidor descarta las anteriores sin confirmar y reenvía solo la vigente.
+- **Verificación** — `gym watch` muestra los `alarm.set` con su `id` y estado; `gym alarm status` indica la instancia y el motivo vigentes.
+- **Solución** — aplica el `alarm.set` más reciente y confírmalo; al reconectar recibirás solo la última orden.
+
+### 8.9 Cualquier otro fallo <a id="otro-fallo"></a>
+
+- **Síntoma** — un fallo que no aparece en esta sección.
+- **Causa probable** — desconocida; el log del backend casi siempre la acota.
+- **Verificación** — revisa el log del backend (`connection_opened`, `message_received`, `message_invalid`, `auth_failed`, `heartbeat_timeout`, `resend`, `closed`) y `gym watch`, que muestra en vivo conexiones, escaneos, órdenes y alarma.
+- **Solución** — adjunta al reporte el `deviceId`, el `fw`, el `id` del mensaje que falla y las líneas del log de ese instante.
