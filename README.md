@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
-**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat y eventos en vivo) cerrados. Faltan las pruebas integrales y el panel web; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** iteración 1 completa: hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat, eventos en vivo y pruebas integrales A1–A12) cerrados. El panel web queda para la siguiente iteración; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
