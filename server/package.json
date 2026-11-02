@@ -20,6 +20,7 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "test:scenarios": "vitest run --config ./vitest.config.scenarios.ts",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"prisma.config.ts\"",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",

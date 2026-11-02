@@ -23,10 +23,18 @@ const { DEVICES_REPOSITORY } =
   await import('./../src/devices/domain/devices.repository.js');
 const { PROCESSED_MESSAGES_REPOSITORY } =
   await import('./../src/devices/domain/processed-messages.repository.js');
+const { DEVICE_COMMANDS_REPOSITORY } =
+  await import('./../src/devices/domain/device-commands.repository.js');
 const { InMemoryDevicesRepository } =
   await import('./../src/devices/infrastructure/in-memory-devices.repository.js');
 const { InMemoryProcessedMessagesRepository } =
   await import('./../src/devices/infrastructure/in-memory-processed-messages.repository.js');
+const { InMemoryDeviceCommandsRepository } =
+  await import('./../src/devices/infrastructure/in-memory-device-commands.repository.js');
+const { ALARM_REPOSITORY } =
+  await import('./../src/alarm/domain/alarm.repository.js');
+const { InMemoryAlarmRepository } =
+  await import('./../src/alarm/infrastructure/in-memory-alarm.repository.js');
 const { STUDENTS_REPOSITORY } =
   await import('./../src/students/domain/students.repository.js');
 const { InMemoryStudentsRepository } =
@@ -49,6 +57,10 @@ const { InMemoryInstancesRepository } =
   await import('./../src/schedules/infrastructure/in-memory-instances.repository.js');
 const { SLOTS_REPOSITORY } =
   await import('./../src/sync/domain/slots.repository.js');
+const { ATTENDANCE_REPOSITORY } =
+  await import('./../src/attendance/domain/attendance.repository.js');
+const { InMemoryAttendanceRepository } =
+  await import('./../src/attendance/infrastructure/in-memory-attendance.repository.js');
 const { InMemorySlotsRepository } =
   await import('./../src/sync/infrastructure/in-memory-slots.repository.js');
 const { SyncService } = await import('./../src/sync/sync.service.js');
@@ -87,6 +99,10 @@ describe('Schedules and template sync against the simulator (e2e)', () => {
       .useValue(new InMemoryDevicesRepository())
       .overrideProvider(PROCESSED_MESSAGES_REPOSITORY)
       .useValue(new InMemoryProcessedMessagesRepository())
+      .overrideProvider(DEVICE_COMMANDS_REPOSITORY)
+      .useValue(new InMemoryDeviceCommandsRepository())
+      .overrideProvider(ALARM_REPOSITORY)
+      .useValue(new InMemoryAlarmRepository())
       .overrideProvider(STUDENTS_REPOSITORY)
       .useValue(new InMemoryStudentsRepository())
       .overrideProvider(FINGERPRINTS_REPOSITORY)
@@ -99,6 +115,8 @@ describe('Schedules and template sync against the simulator (e2e)', () => {
       .useValue(new InMemoryInstancesRepository())
       .overrideProvider(SLOTS_REPOSITORY)
       .useValue(new InMemorySlotsRepository())
+      .overrideProvider(ATTENDANCE_REPOSITORY)
+      .useValue(new InMemoryAttendanceRepository())
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, '127.0.0.1');

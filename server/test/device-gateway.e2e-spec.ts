@@ -22,12 +22,36 @@ const { DEVICES_REPOSITORY } =
   await import('./../src/devices/domain/devices.repository.js');
 const { PROCESSED_MESSAGES_REPOSITORY } =
   await import('./../src/devices/domain/processed-messages.repository.js');
+const { DEVICE_COMMANDS_REPOSITORY } =
+  await import('./../src/devices/domain/device-commands.repository.js');
 const { DEVICES_CONFIG, defaultDevicesConfig } =
   await import('./../src/devices/devices.config.js');
 const { InMemoryDevicesRepository } =
   await import('./../src/devices/infrastructure/in-memory-devices.repository.js');
 const { InMemoryProcessedMessagesRepository } =
   await import('./../src/devices/infrastructure/in-memory-processed-messages.repository.js');
+const { InMemoryDeviceCommandsRepository } =
+  await import('./../src/devices/infrastructure/in-memory-device-commands.repository.js');
+const { FINGERPRINTS_REPOSITORY } =
+  await import('./../src/fingerprints/domain/fingerprints.repository.js');
+const { InMemoryFingerprintsRepository } =
+  await import('./../src/fingerprints/infrastructure/in-memory-fingerprints.repository.js');
+const { ENROLLMENTS_REPOSITORY } =
+  await import('./../src/fingerprints/domain/enrollments.repository.js');
+const { InMemoryEnrollmentsRepository } =
+  await import('./../src/fingerprints/infrastructure/in-memory-enrollments.repository.js');
+const { SCHEDULES_REPOSITORY } =
+  await import('./../src/schedules/domain/schedules.repository.js');
+const { InMemorySchedulesRepository } =
+  await import('./../src/schedules/infrastructure/in-memory-schedules.repository.js');
+const { INSTANCES_REPOSITORY } =
+  await import('./../src/schedules/domain/instances.repository.js');
+const { InMemoryInstancesRepository } =
+  await import('./../src/schedules/infrastructure/in-memory-instances.repository.js');
+const { ALARM_REPOSITORY } =
+  await import('./../src/alarm/domain/alarm.repository.js');
+const { InMemoryAlarmRepository } =
+  await import('./../src/alarm/infrastructure/in-memory-alarm.repository.js');
 const { MessageProcessor } =
   await import('./../src/devices/message-processor.service.js');
 
@@ -84,6 +108,7 @@ describe('Device gateway (e2e)', () => {
   }
 
   beforeEach(async () => {
+    const fingerprints = new InMemoryFingerprintsRepository();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue({})
@@ -91,6 +116,18 @@ describe('Device gateway (e2e)', () => {
       .useValue(new InMemoryDevicesRepository())
       .overrideProvider(PROCESSED_MESSAGES_REPOSITORY)
       .useValue(new InMemoryProcessedMessagesRepository())
+      .overrideProvider(DEVICE_COMMANDS_REPOSITORY)
+      .useValue(new InMemoryDeviceCommandsRepository())
+      .overrideProvider(FINGERPRINTS_REPOSITORY)
+      .useValue(fingerprints)
+      .overrideProvider(ENROLLMENTS_REPOSITORY)
+      .useValue(new InMemoryEnrollmentsRepository(fingerprints))
+      .overrideProvider(SCHEDULES_REPOSITORY)
+      .useValue(new InMemorySchedulesRepository())
+      .overrideProvider(INSTANCES_REPOSITORY)
+      .useValue(new InMemoryInstancesRepository())
+      .overrideProvider(ALARM_REPOSITORY)
+      .useValue(new InMemoryAlarmRepository())
       .overrideProvider(DEVICES_CONFIG)
       .useValue({ ...defaultDevicesConfig, helloTimeoutMs: 300 })
       .compile();

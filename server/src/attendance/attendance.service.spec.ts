@@ -1,3 +1,4 @@
+import type { RejectReason } from '@gymtime/shared';
 import { AttendanceError } from './domain/attendance.errors.js';
 import { buildAttendanceFixture } from './testing.js';
 
@@ -158,6 +159,55 @@ describe('AttendanceService.recordScan (R1-R4, R10)', () => {
     await f.service.recordScan('dev', 5, 0);
     expect(f.onInstanceEmptied).toHaveBeenCalledWith(instance.id);
   });
+});
+
+describe('AttendanceService.recordScan rejection reasons (R16)', () => {
+  type Fixture = ReturnType<typeof buildAttendanceFixture>;
+  type Arrange = (f: Fixture, studentId: string) => Promise<void>;
+
+  const rejections: Array<{
+    reason: RejectReason;
+    at: string;
+    arrange: Arrange;
+  }> = [
+    {
+      reason: 'NO_ACTIVE_SCHEDULE',
+      at: '10:30',
+      arrange: async () => undefined,
+    },
+    {
+      reason: 'NOT_IN_SCHEDULE',
+      at: '10:30',
+      arrange: async (f) => {
+        await f.weekly('A', '10:00', '11:00');
+      },
+    },
+    {
+      // The entry window closes 5 minutes before the end (10:55).
+      reason: 'OUTSIDE_ENTRY_WINDOW',
+      at: '10:57',
+      arrange: async (f, studentId) => {
+        const schedule = await f.weekly('A', '10:00', '11:00');
+        await f.schedules.assignStudent(schedule.schedule.id, studentId);
+      },
+    },
+  ];
+
+  it.each(rejections)(
+    'denies $reason without writing a session',
+    async ({ reason, at, arrange }) => {
+      const f = buildAttendanceFixture();
+      const ana = await f.newStudent('1');
+      await arrange(f, ana.id);
+      f.setNow(bogota(at));
+      f.slot(ana);
+
+      const outcome = await f.service.recordScan('dev', 5, 0);
+
+      expect(outcome.decision).toEqual({ kind: 'denied', reason });
+      expect(await f.repository.list()).toHaveLength(0);
+    },
+  );
 });
 
 describe('AttendanceService manual registration (R13, R14)', () => {

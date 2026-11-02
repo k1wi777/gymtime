@@ -98,7 +98,38 @@ npm run lint
 npm run format:check
 npm test            # pruebas unitarias de todos los workspaces
 npm run test:e2e    # pruebas e2e (lentas)
+npm run test:scenarios  # escenarios integrales A1–A12 con el simulador
 ```
+
+### Escenarios integrales A1–A12
+
+`npm run test:scenarios` ejecuta con un solo comando los doce escenarios del
+backlog, con el simulador real contra el gateway y sin pasos manuales:
+
+| Escenario | Qué demuestra |
+|---|---|
+| A1 | El enrolamiento deja la plantilla cifrada y lista para el lector. |
+| A2/A3 | La misma huella registra la entrada y después la salida. |
+| A4 | Una huella desconocida muestra «Huella no reconocida» y no abre sesión. |
+| A5 | Un estudiante del lector que ya no está en el horario es rechazado con `NOT_IN_SCHEDULE`. |
+| A6 | Un escaneo sin horario activo se rechaza con `NO_ACTIVE_SCHEDULE`. |
+| A7/A8 | Al terminar un horario con gente dentro la alarma sigue encendida (`PENDING_EXIT`) y se apaga (`CLEARED`) cuando sale el último. |
+| A9 | El apagado manual por botón o por CLI silencia la sirena y deja las sesiones `no_registrada`. |
+| A10 | La orden encolada se entrega al reconectar con su `id` y un mensaje duplicado no se procesa dos veces. |
+| A11 | Un horario vacío pita 5 s y la alarma se apaga sola. |
+| A12 | Dos horarios consecutivos resuelven cada estudiante a su propio horario. |
+
+- **Requisitos:** Node 24 y `npm install`. No hace falta Docker, PostgreSQL ni
+  hardware: los escenarios arrancan el servidor con repositorios en memoria, un
+  reloj controlado y una alarma con tick corto.
+- **Duración esperada:** por debajo de 60 s (unos 12 s incluyendo la compilación
+  de `shared` y `simulator`). Solo A11 espera tiempo real, los 5 s del aviso
+  corto; el resto mueve el reloj.
+- **Código:** arranque y utilidades en `server/test/support/scenario-app.ts`,
+  cliente mínimo de protocolo en `server/test/support/raw-device.ts` y los
+  escenarios en `server/test/scenarios/a1-a12.e2e-spec.ts`.
+- La cola de órdenes (ack, idempotencia y reenvío) se prueba en
+  `server/test/commands.e2e-spec.ts` y corre con `npm run test:e2e`.
 
 ## Documentación
 

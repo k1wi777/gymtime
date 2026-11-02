@@ -23,10 +23,26 @@ const { DEVICES_REPOSITORY } =
   await import('./../src/devices/domain/devices.repository.js');
 const { PROCESSED_MESSAGES_REPOSITORY } =
   await import('./../src/devices/domain/processed-messages.repository.js');
+const { DEVICE_COMMANDS_REPOSITORY } =
+  await import('./../src/devices/domain/device-commands.repository.js');
 const { InMemoryDevicesRepository } =
   await import('./../src/devices/infrastructure/in-memory-devices.repository.js');
 const { InMemoryProcessedMessagesRepository } =
   await import('./../src/devices/infrastructure/in-memory-processed-messages.repository.js');
+const { InMemoryDeviceCommandsRepository } =
+  await import('./../src/devices/infrastructure/in-memory-device-commands.repository.js');
+const { SCHEDULES_REPOSITORY } =
+  await import('./../src/schedules/domain/schedules.repository.js');
+const { InMemorySchedulesRepository } =
+  await import('./../src/schedules/infrastructure/in-memory-schedules.repository.js');
+const { INSTANCES_REPOSITORY } =
+  await import('./../src/schedules/domain/instances.repository.js');
+const { InMemoryInstancesRepository } =
+  await import('./../src/schedules/infrastructure/in-memory-instances.repository.js');
+const { ALARM_REPOSITORY } =
+  await import('./../src/alarm/domain/alarm.repository.js');
+const { InMemoryAlarmRepository } =
+  await import('./../src/alarm/infrastructure/in-memory-alarm.repository.js');
 const { STUDENTS_REPOSITORY } =
   await import('./../src/students/domain/students.repository.js');
 const { InMemoryStudentsRepository } =
@@ -96,6 +112,14 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
       .useValue(new InMemoryDevicesRepository())
       .overrideProvider(PROCESSED_MESSAGES_REPOSITORY)
       .useValue(new InMemoryProcessedMessagesRepository())
+      .overrideProvider(DEVICE_COMMANDS_REPOSITORY)
+      .useValue(new InMemoryDeviceCommandsRepository())
+      .overrideProvider(SCHEDULES_REPOSITORY)
+      .useValue(new InMemorySchedulesRepository())
+      .overrideProvider(INSTANCES_REPOSITORY)
+      .useValue(new InMemoryInstancesRepository())
+      .overrideProvider(ALARM_REPOSITORY)
+      .useValue(new InMemoryAlarmRepository())
       .overrideProvider(STUDENTS_REPOSITORY)
       .useValue(new InMemoryStudentsRepository())
       .overrideProvider(FINGERPRINTS_REPOSITORY)
