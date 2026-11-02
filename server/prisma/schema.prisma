@@ -1,0 +1,255 @@
+// Data model from backlog_iteracion_1_backend.md section 7.
+// Prisma fields are English camelCase; tables and columns keep the backlog names.
+//
+// Not expressible in Prisma, added by hand to the `init` migration.sql (keep them
+// if the migration is ever regenerated):
+//   - partial unique index: one active fingerprint per student
+//       CREATE UNIQUE INDEX "fingerprints_one_active_per_student"
+//         ON "fingerprints" ("student_id") WHERE "activa";
+//   - CHECK on schedules: exactly one of dia_semana / fecha is set.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EnrollmentStatus {
+  pending
+  in_progress
+  done
+  failed
+  expired
+  cancelled
+
+  @@map("enrollment_status")
+}
+
+enum SessionStatus {
+  abierta
+  cerrada
+  no_registrada
+
+  @@map("session_status")
+}
+
+enum AttendanceSource {
+  device
+  manual
+
+  @@map("attendance_source")
+}
+
+enum CommandStatus {
+  pending
+  sent
+  acked
+  failed
+
+  @@map("command_status")
+}
+
+enum AlarmClosedBy {
+  all_exited
+  button
+  cli
+  timeout
+
+  @@map("alarm_closed_by")
+}
+
+model Student {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document  String  @unique @map("documento")
+  name      String  @map("nombre")
+  program   String? @map("programa")
+  active    Boolean @default(true) @map("activo")
+  consented Boolean @default(false) @map("consentimiento")
+
+  fingerprints Fingerprint[]
+  enrollments  Enrollment[]
+  schedules    ScheduleStudent[]
+  sessions     AttendanceSession[]
+
+  @@map("students")
+}
+
+model Fingerprint {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  // Already encrypted (AES-256-GCM, tag appended); never plain.
+  template  Bytes    @map("plantilla")
+  iv        Bytes
+  // At most one active per student: partial unique index in the migration.
+  active    Boolean  @default(true) @map("activa")
+  createdAt DateTime @default(now()) @map("creada") @db.Timestamptz()
+
+  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  slots   DeviceSlot[]
+
+  @@index([studentId])
+  @@map("fingerprints")
+}
+
+model Device {
+  id              String    @id
+  name            String?   @map("nombre")
+  lastConnectedAt DateTime? @map("ultima_conexion") @db.Timestamptz()
+  firmwareVersion String?   @map("version_firmware")
+
+  enrollments Enrollment[]
+  slots       DeviceSlot[]
+  commands    DeviceCommand[]
+  messages    ProcessedMessage[]
+
+  @@map("devices")
+}
+
+model Enrollment {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String           @map("student_id") @db.Uuid
+  deviceId  String           @map("device_id")
+  status    EnrollmentStatus @default(pending) @map("estado")
+  expiresAt DateTime         @map("expira") @db.Timestamptz()
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  device  Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([deviceId, status])
+  @@map("enrollments")
+}
+
+model DeviceSlot {
+  deviceId      String  @map("device_id")
+  slot          Int
+  fingerprintId String? @map("fingerprint_id") @db.Uuid
+  syncId        String? @map("sync_id")
+
+  device      Device       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  fingerprint Fingerprint? @relation(fields: [fingerprintId], references: [id], onDelete: SetNull)
+
+  @@id([deviceId, slot])
+  @@index([fingerprintId])
+  @@map("device_slots")
+}
+
+model Schedule {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String    @map("nombre")
+  // Exactly one of weekday / date is set (CHECK in the migration).
+  weekday            Int?      @map("dia_semana")
+  date               DateTime? @map("fecha") @db.Date
+  startTime          DateTime  @map("inicio") @db.Time()
+  endTime            DateTime  @map("fin") @db.Time()
+  // Minutes before startTime during which entry is accepted.
+  entryMarginMinutes Int       @default(0) @map("margen_ingreso")
+
+  students  ScheduleStudent[]
+  instances ScheduleInstance[]
+
+  @@map("schedules")
+}
+
+model ScheduleStudent {
+  scheduleId String @map("schedule_id") @db.Uuid
+  studentId  String @map("student_id") @db.Uuid
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([scheduleId, studentId])
+  @@index([studentId])
+  @@map("schedule_students")
+}
+
+model ScheduleInstance {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId String   @map("schedule_id") @db.Uuid
+  date       DateTime @map("fecha") @db.Date
+  startsAt   DateTime @map("inicio") @db.Timestamptz()
+  endsAt     DateTime @map("fin") @db.Timestamptz()
+  status     String   @default("scheduled") @map("estado")
+
+  schedule Schedule            @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  sessions AttendanceSession[]
+  alarms   AlarmEvent[]
+
+  // Makes the daily generator idempotent.
+  @@unique([scheduleId, date])
+  @@map("schedule_instances")
+}
+
+model AttendanceSession {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId    String            @map("student_id") @db.Uuid
+  instanceId   String            @map("instance_id") @db.Uuid
+  enteredAt    DateTime          @map("entrada") @db.Timestamptz()
+  exitedAt     DateTime?         @map("salida") @db.Timestamptz()
+  entrySource  AttendanceSource  @map("origen_entrada")
+  exitSource   AttendanceSource? @map("origen_salida")
+  status       SessionStatus     @default(abierta) @map("estado")
+  manualReason String?           @map("motivo_manual")
+
+  student  Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, status])
+  @@index([studentId])
+  @@map("attendance_sessions")
+}
+
+model DeviceCommand {
+  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId String        @map("device_id")
+  type     String        @map("tipo")
+  payload  Json
+  status   CommandStatus @default(pending) @map("estado")
+  attempts Int           @default(0) @map("intentos")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  // Lookup of pending commands per device.
+  @@index([deviceId, status])
+  @@map("device_commands")
+}
+
+model ProcessedMessage {
+  messageId  String   @map("message_id")
+  deviceId   String   @map("device_id")
+  receivedAt DateTime @default(now()) @map("recibido") @db.Timestamptz()
+  response   Json?    @map("respuesta")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  // Idempotency key for repeated device messages.
+  @@id([deviceId, messageId])
+  @@map("processed_messages")
+}
+
+model AlarmEvent {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instanceId String         @map("instance_id") @db.Uuid
+  startedAt  DateTime       @map("inicio") @db.Timestamptz()
+  endedAt    DateTime?      @map("fin") @db.Timestamptz()
+  closedBy   AlarmClosedBy? @map("cerrada_por")
+
+  instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("alarm_events")
+}
+
+model EventLog {
+  id        Int      @id @default(autoincrement())
+  type      String   @map("tipo")
+  detail    Json?    @map("detalle")
+  createdAt DateTime @default(now()) @map("fecha") @db.Timestamptz()
+
+  @@index([createdAt])
+  @@map("event_log")
+}

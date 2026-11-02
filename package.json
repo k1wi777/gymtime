@@ -1,0 +1,23 @@
+{
+  "name": "gymtime",
+  "version": "0.0.1",
+  "private": true,
+  "description": "GymTime attendance and alarm system",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "migrate": "npm run migrate --workspace server",
+    "migrate:deploy": "npm run migrate:deploy --workspace server",
+    "db:generate": "npm run db:generate --workspace server"
+  }
+}
