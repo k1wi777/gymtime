@@ -135,6 +135,7 @@ async function execute(
   return command.run({
     http: createHttpClient({ ...config, fetch: runtime.fetch }),
     io: { out: (t) => runtime.out(t), err: (t) => runtime.err(t) },
+    url: config.url,
     values,
     positionals: parsed.positionals,
     signal: runtime.signal ?? new AbortController().signal,

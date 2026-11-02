@@ -20,7 +20,8 @@ export class DevicesController {
   @Get('status')
   @ApiOperation({ summary: 'Connection state of every known device' })
   @ApiOkResponse({
-    description: 'deviceId, online, lastConnectedAt and firmwareVersion',
+    description:
+      'deviceId, online, lastConnectedAt, firmwareVersion and pendingCommands',
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
   status(): Promise<DeviceStatus[]> {

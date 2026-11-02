@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
 
-**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios) y H4 (alarma y vencimientos) cerrados. Falta el panel web y los hitos posteriores; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat y eventos en vivo) cerrados. Faltan las pruebas integrales, la guía de problemas comunes y el panel web; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
@@ -36,6 +36,8 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Alarma: `ALARM_BEEP_SECONDS` (5) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
+- `GET /events` (SSE con `x-api-key`): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
+- Las órdenes de enrolamiento y de alarma se guardan en `device_commands` antes de enviarse: si el lector está desconectado se entregan al reconectar, con el mismo `id` y en orden.
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
 
 ## Simulador y firmware
@@ -72,6 +74,8 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 | `gym alarm status` | Muestra si la sirena está encendida, su motivo, la ocurrencia, la duración y las sesiones abiertas. |
 | `gym alarm on` / `gym alarm test` | Enciende la sirena de forma continua (`MANUAL`) o con el pitido corto de prueba (`TEST`); 409 si no hay dispositivo en línea. |
 | `gym alarm off` | Silencia la sirena, marca como `no_registrada` las sesiones abiertas de la ocurrencia alarmada e informa cuántas cerró; 409 si no estaba encendida. |
+| `gym device status` | Tabla de dispositivos: en línea, última conexión en Bogotá, versión de firmware y órdenes pendientes de confirmar. |
+| `gym watch` | Muestra en vivo los eventos del servidor (conexiones, escaneos, órdenes y alarma) con hora de Bogotá; se reconecta solo y se corta con Ctrl+C. |
 
 La sincronización es automática al conectarse el dispositivo, al terminar un enrolamiento y 15 minutos antes de cada horario y al terminar. Un horario creado con `--ends-in` o que empieza dentro de esos 15 minutos ya pasó su disparador: `gym schedule create` lo avisa y hay que ejecutar `gym sync` a mano. Quitar un estudiante de un horario solo existe en REST (`DELETE /schedules/:id/students/:studentId`). Capacidad: 161 plantillas por sincronización, porque el slot 162 es el de trabajo del enrolamiento.
 

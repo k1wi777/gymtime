@@ -53,6 +53,7 @@ describe('AlarmScheduler (R1, R11)', () => {
       f.instances,
       f.devices,
       f.link.sender,
+      f.systemEvents,
       f.clock,
       f.config,
     );

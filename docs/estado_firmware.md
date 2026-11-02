@@ -1,6 +1,6 @@
 # Estado del backend para firmware
 
-Qué puede probar hoy el equipo de firmware y qué falta. Hitos cerrados: **H1 (conexión)**, **H2 (enrolamiento)**, **H3 (escaneo, asistencia y horarios)** y **H4 (alarma y vencimientos)**. Este documento no repite el protocolo: el formato de cada mensaje está en [`protocolo_v0.md`](./protocolo_v0.md) y la puesta en marcha detallada en [`integracion_firmware.md`](./integracion_firmware.md).
+Qué puede probar hoy el equipo de firmware y qué falta. Hitos cerrados: **H1 (conexión)**, **H2 (enrolamiento)**, **H3 (escaneo, asistencia y horarios)**, **H4 (alarma y vencimientos)** y **H5 (órdenes con confirmación, heartbeat y eventos en vivo)**. Este documento no repite el protocolo: el formato de cada mensaje está en [`protocolo_v0.md`](./protocolo_v0.md) y la puesta en marcha detallada en [`integracion_firmware.md`](./integracion_firmware.md).
 
 ## Cómo trabajar en local
 
@@ -22,9 +22,9 @@ curl -H "x-api-key: <ADMIN_API_KEY>" http://localhost:3000/devices/status
 |---|---|---|---|
 | `hello` / `hello.ok` | dispositivo / servidor | Disponible | Autenticación con el token del dispositivo. |
 | `ack` | ambos | Disponible | Idempotencia por `id`: un duplicado recibe de nuevo el ack guardado. |
-| `status` (latido) | dispositivo | Disponible | Alimenta `GET /devices/status`. |
-| `enroll.start` | servidor | Disponible | Lo envía el servidor al iniciar un enrolamiento. |
-| `enroll.cancel` | servidor | Disponible | Se envía al cancelar un enrolamiento. |
+| `status` (latido) | dispositivo | Disponible | Obligatorio: alimenta `GET /devices/status` y mantiene viva la conexión. Sin tráfico durante dos intervalos de `heartbeatSec` el servidor cierra con 4402 y marca el dispositivo fuera de línea. |
+| `enroll.start` | servidor | Disponible | Lo envía el servidor al iniciar un enrolamiento. Queda guardado como pendiente hasta el `ack` y se reenvía con el mismo `id` si el lector se reconecta. |
+| `enroll.cancel` | servidor | Disponible | Se envía al cancelar un enrolamiento; también se reintenta y se reenvía al reconectar. |
 | `enroll.progress`, `enroll.done`, `enroll.failed` | dispositivo | Disponible | Únicos mensajes del dispositivo con lógica de enrolamiento en el servidor. |
 | `fingerprint.scan`, `fingerprint.unknown` | dispositivo | Disponible | El servidor decide entrada, salida o rechazo y responde con `scan.result`. |
 | `button.pressed` | dispositivo | Disponible | Si la sirena está encendida la silencia, marca las sesiones abiertas como `no_registrada` y registra que la apagó el botón; si está apagada solo se registra y se confirma. |
@@ -32,7 +32,7 @@ curl -H "x-api-key: <ADMIN_API_KEY>" http://localhost:3000/devices/status
 | `scan.result` | servidor | Disponible | Respuesta a `fingerprint.scan`/`fingerprint.unknown`, con la pantalla a mostrar. |
 | `templates.sync` | servidor | Disponible | Bloques de hasta 10 plantillas con `ack` por bloque; un bloque único 1 de 1 con `templates: []` vacía el lector. Slots 1..161 (el 162 es el de trabajo del enrolamiento). Se envía al conectarse, al terminar un enrolamiento, 15 min antes de cada horario, al terminar cada horario y con `gym sync`. |
 | `schedule.set` | servidor | Disponible | Tras la sincronización, con el horario en curso o el más próximo (segundos Unix). Si no hay ninguno, no se envía. |
-| `alarm.set` | servidor | Disponible | Al terminar un horario: pitido corto `END_BEEP` si quedó vacío o continua `PENDING_EXIT` si queda alguien; al salir el último, `CLEARED`. También lo disparan `gym alarm on/test/off`. `durationSec` numérico se apaga solo; `null` suena hasta otra orden. |
+| `alarm.set` | servidor | Disponible | Al terminar un horario: pitido corto `END_BEEP` si quedó vacío o continua `PENDING_EXIT` si queda alguien; al salir el último, `CLEARED`. También lo disparan `gym alarm on/test/off`. `durationSec` numérico se apaga solo; `null` suena hasta otra orden. La última orden de alarma gana: las anteriores sin confirmar se descartan, y la vigente se reenvía al reconectar. |
 | `display.message` | servidor | Pendiente (hitos posteriores) | El backlog no fija el hito; aún no se envía. |
 
 ## REST y CLI
@@ -42,7 +42,8 @@ Todas las rutas de estudiantes, enrolamientos, horarios, asistencia, alarma y `/
 | Método y ruta | Función |
 |---|---|
 | `GET /health` | Estado, uptime y base de datos. |
-| `GET /devices/status` | Dispositivos conectados. |
+| `GET /devices/status` | Dispositivos conectados, última conexión, firmware y órdenes pendientes. |
+| `GET /events` | Stream SSE con `x-api-key` de conexiones, escaneos, órdenes y alarma para `gym watch`. |
 | `POST /students`, `GET /students` | Alta y listado de estudiantes. |
 | `PATCH /students/:id`, `DELETE /students/:id` | Modificar o dar de baja un estudiante. |
 | `POST /students/:id/enrollments` | Inicia un enrolamiento. |
@@ -69,6 +70,8 @@ CLI `gym` (opciones y configuración en el [README](../README.md#cli-gym)):
 | `gym sessions open`, `gym sessions list` | Quién está dentro e historial de sesiones. |
 | `gym attendance entry/exit` | Registro manual con motivo obligatorio. |
 | `gym alarm on/off/test/status` | Controla la sirena y consulta su estado. |
+| `gym device status` | Estado del lector: en línea, última conexión, firmware y órdenes pendientes. |
+| `gym watch` | Eventos del servidor en vivo, con reconexión automática y salida limpia con Ctrl+C. |
 
 ## El simulador como referencia
 
@@ -102,6 +105,9 @@ Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
 | Sincronización de plantillas (`templates.sync`, `schedule.set`) | Disponible |
 | Horarios | Disponible |
 | Alarma, apagado manual y vencimientos | Disponible |
+| Órdenes persistidas, reintentos y reenvío al reconectar | Disponible |
+| Heartbeat obligatorio y detección de conexiones muertas | Disponible |
+| Eventos en vivo por SSE y `gym watch` | Disponible |
 | Mensajes de pantalla (`display.message`) | Pendiente (hitos posteriores) |
 
-El firmware ya puede implementar el flujo completo de la iteración 1: `scan.result`, `schedule.set`, `alarm.set` y el efecto de `button.pressed`. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.
+El firmware ya puede implementar el flujo completo de la iteración 1: `scan.result`, `schedule.set`, `alarm.set` y el efecto de `button.pressed`. Debe enviar `status` con la periodicidad anunciada en `hello.ok` y confirmar con `ack` los mensajes del servidor; las órdenes que no se confirmaron se reenvían, con el mismo `id`, al reconectar el lector. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.

@@ -6,6 +6,15 @@ import type { DevicesRepository } from '../domain/devices.repository.js';
 export class PrismaDevicesRepository implements DevicesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async ensure(id: string) {
+    // `createMany` + skipDuplicates is one round trip and never touches an
+    // existing row (online state and firmware stay as they are).
+    await this.prisma.device.createMany({
+      data: [{ id }],
+      skipDuplicates: true,
+    });
+  }
+
   async upsertOnline(id: string, firmwareVersion: string, at: Date) {
     const data = { online: true, lastConnectedAt: at, firmwareVersion };
     await this.prisma.device.upsert({

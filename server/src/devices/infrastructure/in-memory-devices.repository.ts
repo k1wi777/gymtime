@@ -4,6 +4,16 @@ import type { DevicesRepository } from '../domain/devices.repository.js';
 export class InMemoryDevicesRepository implements DevicesRepository {
   private readonly devices = new Map<string, Device>();
 
+  async ensure(id: string) {
+    if (this.devices.has(id)) return;
+    this.devices.set(id, {
+      id,
+      online: false,
+      lastConnectedAt: null,
+      firmwareVersion: null,
+    });
+  }
+
   async upsertOnline(id: string, firmwareVersion: string, at: Date) {
     this.devices.set(id, {
       id,

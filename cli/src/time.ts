@@ -22,6 +22,12 @@ export function formatBogotaDate(iso: string): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
+/** `HH:mm:ss` of an ISO instant, in Bogota time. */
+export function formatBogotaClock(iso: string): string {
+  const d = shifted(iso);
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+}
+
 /** `HH:mm:ss` or `HH:mm` of a stored wall-clock time, trimmed to minutes. */
 export function shortTime(time: string): string {
   return time.slice(0, 5);

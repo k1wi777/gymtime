@@ -319,6 +319,7 @@ describe('AlarmService recovery (R11, R12)', () => {
       f.instances,
       f.devices,
       f.link.sender,
+      f.systemEvents,
       f.clock,
       f.config,
     );
@@ -404,5 +405,40 @@ describe('AlarmService recovery (R11, R12)', () => {
       durationSec: null,
       reason: 'PENDING_EXIT',
     });
+  });
+});
+
+describe('AlarmService events (R11, R13)', () => {
+  it('emits alarm on and off with reason and closed sessions', async () => {
+    const f = buildAlarmFixture();
+    await f.markOnline();
+    const received: { type: string; data: Record<string, unknown> }[] = [];
+    f.systemEvents.events.subscribe((event) =>
+      received.push({ type: event.type, data: event.data }),
+    );
+
+    await f.service.turnOn('MANUAL');
+    await f.service.off('cli');
+
+    expect(received).toEqual([
+      {
+        type: 'alarm',
+        data: {
+          on: true,
+          reason: 'MANUAL',
+          closedBy: null,
+          sessionsClosed: 0,
+        },
+      },
+      {
+        type: 'alarm',
+        data: {
+          on: false,
+          reason: 'CLEARED',
+          closedBy: 'cli',
+          sessionsClosed: 0,
+        },
+      },
+    ]);
   });
 });

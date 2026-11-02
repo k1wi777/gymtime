@@ -246,7 +246,7 @@ export class EnrollmentService {
       deviceId,
       expiresAt,
     });
-    const result = await this.sender.send(
+    const result = await this.sender.sendCommand(
       deviceId,
       this.message('enroll.start', {
         enrollmentId: enrollment.id,
@@ -265,6 +265,9 @@ export class EnrollmentService {
         'Device did not confirm enroll.start',
       );
     }
+    // A queued order is delivered when the device reconnects; the enrollment
+    // stays pending until the device reports enroll.progress.
+    if (result === 'queued') return this.require(enrollment.id);
     // Null when it was cancelled or expired while waiting for the ack.
     const started = await this.enrollments.transition(
       enrollment.id,
@@ -293,7 +296,7 @@ export class EnrollmentService {
   /** Best effort: never blocks or fails the caller. */
   private async sendCancel(enrollment: Enrollment): Promise<void> {
     try {
-      await this.sender.send(
+      await this.sender.sendCommand(
         enrollment.deviceId,
         this.message('enroll.cancel', { enrollmentId: enrollment.id }),
       );

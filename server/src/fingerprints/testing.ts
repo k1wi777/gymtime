@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import { DevicesService } from '../devices/devices.service.js';
+import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from '../devices/infrastructure/in-memory-devices.repository.js';
 import type { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { Env } from '../config/env.schema.js';
@@ -22,9 +23,12 @@ export function buildEnrollmentFixture(
   const fingerprints = new InMemoryFingerprintsRepository();
   const enrollments = new InMemoryEnrollmentsRepository(fingerprints);
   const students = new StudentsService(new InMemoryStudentsRepository());
-  const devices = new DevicesService(new InMemoryDevicesRepository());
+  const devices = new DevicesService(
+    new InMemoryDevicesRepository(),
+    new InMemoryDeviceCommandsRepository(),
+  );
   const send = vi.fn().mockResolvedValue(sendResult);
-  const sender = { send } as unknown as OutboundSender;
+  const sender = { send, sendCommand: send } as unknown as OutboundSender;
   const cipher = new TemplateCipher({
     get: () => randomBytes(32).toString('base64'),
   } as unknown as ConfigService<Env, true>);

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.schema.js';
 import { DevicesService } from '../devices/devices.service.js';
+import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from '../devices/infrastructure/in-memory-devices.repository.js';
 import { TemplateCipher } from '../fingerprints/crypto/template-cipher.service.js';
 import { defaultFingerprintsConfig } from '../fingerprints/fingerprints.config.js';
@@ -31,7 +32,10 @@ export function buildSyncFixture(config: SyncConfig = testSyncConfig) {
     fingerprintsRepo,
     defaultFingerprintsConfig,
   );
-  const devices = new DevicesService(new InMemoryDevicesRepository());
+  const devices = new DevicesService(
+    new InMemoryDevicesRepository(),
+    new InMemoryDeviceCommandsRepository(),
+  );
   const slots = new InMemorySlotsRepository();
   const planner = new SyncPlanner(sf.instances, fingerprints, config);
 

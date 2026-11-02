@@ -4,6 +4,7 @@ import type { Env } from '../config/env.schema.js';
 import { ConnectionRegistry } from './connection-registry.js';
 import { defaultDevicesConfig } from './devices.config.js';
 import { DevicesService } from './devices.service.js';
+import { InMemoryDeviceCommandsRepository } from './infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from './infrastructure/in-memory-devices.repository.js';
 import { InMemoryProcessedMessagesRepository } from './infrastructure/in-memory-processed-messages.repository.js';
 import {
@@ -12,6 +13,7 @@ import {
   type Session,
 } from './message-processor.service.js';
 import { OutboundSender } from './outbound-sender.service.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { frame, helloFrame, statusFrame } from './testing/frames.js';
 
 const TOKEN = 'device-token-123456';
@@ -28,8 +30,17 @@ describe('MessageProcessor', () => {
   let session: Session;
 
   beforeEach(() => {
-    devices = new DevicesService(new InMemoryDevicesRepository());
-    sender = new OutboundSender(new ConnectionRegistry(), defaultDevicesConfig);
+    devices = new DevicesService(
+      new InMemoryDevicesRepository(),
+      new InMemoryDeviceCommandsRepository(),
+    );
+    sender = new OutboundSender(
+      new ConnectionRegistry(),
+      devices,
+      defaultDevicesConfig,
+      new InMemoryDeviceCommandsRepository(),
+      new SystemEventsService(),
+    );
     processed = new InMemoryProcessedMessagesRepository();
     const config = {
       get: () => TOKEN,
@@ -58,6 +69,7 @@ describe('MessageProcessor', () => {
       expect(actions[0]).toEqual({
         kind: 'authenticated',
         deviceId: 'esp32-1',
+        firmwareVersion: '1.0.0',
       });
       expect(sent(actions)[0]).toMatchObject({
         type: 'hello.ok',

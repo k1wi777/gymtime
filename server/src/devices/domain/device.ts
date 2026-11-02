@@ -11,4 +11,6 @@ export interface DeviceStatus {
   online: boolean;
   lastConnectedAt: string | null;
   firmwareVersion: string | null;
+  /** Commands in `pending` or `sent` that the device has not confirmed. */
+  pendingCommands: number;
 }

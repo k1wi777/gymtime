@@ -6,6 +6,8 @@ export interface DevicesConfig {
   /** Resends after the first attempt. */
   maxResends: number;
   heartbeatSec: number;
+  /** Two heartbeat intervals: a silence beyond this marks the link dead. */
+  heartbeatTimeoutMs: number;
 }
 
 export const DEVICES_CONFIG = Symbol('DEVICES_CONFIG');
@@ -15,4 +17,5 @@ export const defaultDevicesConfig: DevicesConfig = {
   ackTimeoutMs: 5000,
   maxResends: 3,
   heartbeatSec: 30,
+  heartbeatTimeoutMs: 30 * 2 * 1000,
 };

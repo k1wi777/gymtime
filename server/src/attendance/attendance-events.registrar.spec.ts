@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import type { DeviceMessage } from '@gymtime/shared';
 import type { MessageProcessor } from '../devices/message-processor.service.js';
 import type { OutboundSender } from '../devices/outbound-sender.service.js';
@@ -7,7 +8,10 @@ import type { SyncService } from '../sync/sync.service.js';
 import { AttendanceEventsRegistrar } from './attendance-events.registrar.js';
 import type { AttendanceService } from './attendance.service.js';
 
-type Handler = (deviceId: string, message: DeviceMessage) => Promise<void> | void;
+type Handler = (
+  deviceId: string,
+  message: DeviceMessage,
+) => Promise<void> | void;
 
 const at = new Date('2026-11-02T15:30:00Z');
 const student = {
@@ -39,14 +43,16 @@ function build() {
   } as unknown as AttendanceService;
   const send = vi.fn().mockResolvedValue('acked');
   const sender = { send } as unknown as OutboundSender;
+  const events = new SystemEventsService();
   const registrar = new AttendanceEventsRegistrar(
     processor,
     sync,
     attendance,
     sender,
+    events,
   );
   registrar.onModuleInit();
-  return { handlers, provider: () => provider, attendance, send };
+  return { handlers, provider: () => provider, attendance, send, events };
 }
 
 const scanMessage = (slot = 5): DeviceMessage => ({
@@ -99,6 +105,61 @@ describe('AttendanceEventsRegistrar (R11, R12, R17)', () => {
     });
   });
 
+  it('emits a scan event with device, slot, result and student (R13)', async () => {
+    const { handlers, attendance, events } = build();
+    const received: unknown[] = [];
+    events.events.subscribe((event) => received.push(event));
+    attendance.recordScan = vi.fn().mockResolvedValue({
+      student,
+      decision: { kind: 'denied', reason: 'ALREADY_EXITED' },
+      at,
+    });
+
+    await handlers.get('fingerprint.scan')?.('dev', scanMessage(7));
+
+    expect(received).toEqual([
+      {
+        type: 'scan',
+        at: at.toISOString(),
+        data: {
+          deviceId: 'dev',
+          slot: 7,
+          result: 'denied',
+          studentId: 's1',
+          studentName: 'Ana',
+          reason: 'ALREADY_EXITED',
+        },
+      },
+    ]);
+  });
+
+  it('emits an unknown scan without student (R13)', async () => {
+    const { handlers, attendance, events } = build();
+    const received: unknown[] = [];
+    events.events.subscribe((event) => received.push(event));
+    attendance.recordUnknown = vi.fn().mockReturnValue(at);
+
+    await handlers.get('fingerprint.unknown')?.(
+      'dev',
+      randomMessage('fingerprint.unknown'),
+    );
+
+    expect(received).toEqual([
+      {
+        type: 'scan',
+        at: at.toISOString(),
+        data: {
+          deviceId: 'dev',
+          slot: null,
+          result: 'unknown',
+          studentId: null,
+          studentName: null,
+          reason: null,
+        },
+      },
+    ]);
+  });
+
   it('answers an unknown fingerprint with `unknown` (R11)', async () => {
     const { handlers, attendance, send } = build();
     const message = randomMessage('fingerprint.unknown');
@@ -110,13 +171,19 @@ describe('AttendanceEventsRegistrar (R11, R12, R17)', () => {
     expect(send.mock.calls[0][1]).toMatchObject({
       type: 'scan.result',
       ref: message.id,
-      payload: { result: 'unknown', display: { line1: 'Huella no reconocida' } },
+      payload: {
+        result: 'unknown',
+        display: { line1: 'Huella no reconocida' },
+      },
     });
   });
 
   it('only records a button press (R12)', async () => {
     const { handlers, attendance, send } = build();
-    await handlers.get('button.pressed')?.('dev', randomMessage('button.pressed'));
+    await handlers.get('button.pressed')?.(
+      'dev',
+      randomMessage('button.pressed'),
+    );
     expect(attendance.recordButton).toHaveBeenCalledWith('dev');
     expect(send).not.toHaveBeenCalled();
   });

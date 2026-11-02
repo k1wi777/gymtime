@@ -1,4 +1,5 @@
 import { CliError } from './errors.js';
+import { parseSseStream, type SystemEvent } from './stream.js';
 
 export type FetchLike = (
   input: string,
@@ -12,6 +13,8 @@ export type FetchLike = (
   ok: boolean;
   status: number;
   statusText: string;
+  /** Present for streamed responses (`text/event-stream`). */
+  body?: AsyncIterable<Uint8Array> | null;
   text(): Promise<string>;
 }>;
 
@@ -34,6 +37,12 @@ export interface HttpClient {
     body?: unknown,
     options?: RequestOptions,
   ): Promise<T>;
+  /** Opens an SSE stream; aborts with `options.signal` (Ctrl+C). */
+  stream(path: string, options?: StreamOptions): AsyncIterable<SystemEvent>;
+}
+
+export interface StreamOptions {
+  signal?: AbortSignal;
 }
 
 export const DEFAULT_TIMEOUT_MS = 10_000;
@@ -79,6 +88,34 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       } catch {
         throw new CliError(`Invalid response from ${options.url}`);
       }
+    },
+
+    stream(path: string, streamOptions: StreamOptions = {}) {
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterableIterator<SystemEvent> {
+          let response;
+          try {
+            response = await doFetch(`${options.url}${path}`, {
+              method: 'GET',
+              headers: {
+                'x-api-key': options.apiKey,
+                accept: 'text/event-stream',
+              },
+              signal: streamOptions.signal,
+            });
+          } catch {
+            // Ctrl+C aborts the fetch: a clean end, not a connection failure.
+            if (streamOptions.signal?.aborted) return;
+            throw new CliError(`Could not connect to ${options.url}`);
+          }
+          if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw httpError(response.status, response.statusText, text);
+          }
+          if (!response.body) return;
+          yield* parseSseStream(response.body);
+        },
+      };
     },
   };
 }

@@ -3,15 +3,18 @@ import {
   type DeviceConnection,
 } from './connection-registry.js';
 import { DevicesService } from './devices.service.js';
+import { InMemoryDeviceCommandsRepository } from './infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from './infrastructure/in-memory-devices.repository.js';
 
 const connection = (): DeviceConnection => ({ send: vi.fn(), close: vi.fn() });
 
 describe('DevicesService', () => {
   let service: DevicesService;
+  let commands: InMemoryDeviceCommandsRepository;
 
   beforeEach(() => {
-    service = new DevicesService(new InMemoryDevicesRepository());
+    commands = new InMemoryDeviceCommandsRepository();
+    service = new DevicesService(new InMemoryDevicesRepository(), commands);
   });
 
   it('creates the device online with firmware and last connection', async () => {
@@ -22,6 +25,7 @@ describe('DevicesService', () => {
         online: true,
         lastConnectedAt: '2026-01-01T00:00:00.000Z',
         firmwareVersion: '1.2.3',
+        pendingCommands: 0,
       },
     ]);
   });
@@ -36,12 +40,41 @@ describe('DevicesService', () => {
     });
   });
 
+  it('counts unconfirmed commands per device', async () => {
+    await service.markOnline('d1', '1.0.0');
+    const command = (id: string) => ({
+      id,
+      deviceId: 'd1',
+      type: 'alarm.set',
+      payload: { on: true },
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    await commands.create(command('00000000-0000-4000-8000-000000000001'));
+    await commands.markSent('00000000-0000-4000-8000-000000000001', 1);
+    await commands.create(command('00000000-0000-4000-8000-000000000002'));
+    await commands.create(command('00000000-0000-4000-8000-000000000003'));
+    await commands.markAcked('00000000-0000-4000-8000-000000000003');
+
+    expect((await service.listStatus())[0]).toMatchObject({
+      pendingCommands: 2,
+    });
+  });
+
   it('marks every device offline', async () => {
     await service.markOnline('d1', '1.0.0');
     await service.markOnline('d2', '1.0.0');
     await service.markAllOffline();
     const statuses = await service.listStatus();
     expect(statuses.every((s) => !s.online)).toBe(true);
+  });
+
+  describe('getOnlyDeviceId', () => {
+    it('returns the single known device even when offline', async () => {
+      await service.ensureDevice('d1');
+      expect(await service.getOnlyDeviceId()).toBe('d1');
+      await service.markOnline('d2', '1.0.0');
+      expect(await service.getOnlyDeviceId()).toBeNull();
+    });
   });
 
   describe('getOnlineDeviceId', () => {
@@ -83,7 +116,10 @@ describe('ConnectionRegistry', () => {
 
 describe('DevicesService.onConnected (R17)', () => {
   it('runs every listener and survives a failing one', async () => {
-    const service = new DevicesService(new InMemoryDevicesRepository());
+    const service = new DevicesService(
+      new InMemoryDevicesRepository(),
+      new InMemoryDeviceCommandsRepository(),
+    );
     const calls: string[] = [];
     service.onConnected(() => {
       throw new Error('boom');

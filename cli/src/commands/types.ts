@@ -9,6 +9,8 @@ export interface Io {
 export interface CommandContext {
   http: HttpClient;
   io: Io;
+  /** Server base URL, for commands that print where they connect. */
+  url: string;
   /** Parsed option values of the command (global ones included). */
   values: Record<string, string | boolean | string[] | undefined>;
   positionals: string[];

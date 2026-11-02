@@ -23,7 +23,7 @@ import {
 /** What the gateway must do after a frame has been processed. */
 export type Action =
   | { kind: 'send'; message: ServerMessage }
-  | { kind: 'authenticated'; deviceId: string }
+  | { kind: 'authenticated'; deviceId: string; firmwareVersion: string }
   | { kind: 'close'; code: number; reason: string };
 
 /** State of one connection; `deviceId` is null until a valid hello. */
@@ -120,7 +120,7 @@ export class MessageProcessor {
     if (!session.deviceId) {
       await this.devices.markOnline(deviceId, fw);
       this.logger.log({ event: 'auth_ok', deviceId, fw });
-      actions.push({ kind: 'authenticated', deviceId });
+      actions.push({ kind: 'authenticated', deviceId, firmwareVersion: fw });
     }
     actions.push({
       kind: 'send',

@@ -6,6 +6,7 @@ import type {
   OutboundSender,
   SendResult,
 } from '../devices/outbound-sender.service.js';
+import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from '../devices/infrastructure/in-memory-devices.repository.js';
 import {
   MONDAY_9AM_BOGOTA,
@@ -15,6 +16,7 @@ import type { SyncService } from '../sync/sync.service.js';
 import { defaultAlarmConfig, type AlarmConfig } from './alarm.config.js';
 import { AlarmService } from './alarm.service.js';
 import { InMemoryAlarmRepository } from './infrastructure/in-memory-alarm.repository.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 
 export const bogota = (time: string, date = '2026-11-02') =>
   new Date(`${date}T${time.length === 5 ? `${time}:00` : time}-05:00`);
@@ -28,7 +30,11 @@ export function fakeAlarmSender() {
       return 'acked';
     },
   );
-  return { sender: { send } as unknown as OutboundSender, sent, send };
+  return {
+    sender: { send, sendCommand: send } as unknown as OutboundSender,
+    sent,
+    send,
+  };
 }
 
 /**
@@ -50,14 +56,19 @@ export function buildAlarmFixture(
     sf.clock,
   );
   const events = new InMemoryAlarmRepository();
-  const devices = new DevicesService(new InMemoryDevicesRepository());
+  const devices = new DevicesService(
+    new InMemoryDevicesRepository(),
+    new InMemoryDeviceCommandsRepository(),
+  );
   const link = fakeAlarmSender();
+  const systemEvents = new SystemEventsService();
   const service = new AlarmService(
     events,
     attendance,
     sf.instances,
     devices,
     link.sender,
+    systemEvents,
     sf.clock,
     config,
   );
@@ -82,6 +93,7 @@ export function buildAlarmFixture(
     devices,
     link,
     service,
+    systemEvents,
     config,
     markOnline: (deviceId = 'dev') =>
       devices.markOnline(deviceId, 'fw', sf.clock.now()),

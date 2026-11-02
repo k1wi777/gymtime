@@ -1,4 +1,5 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { MessageProcessor } from '../devices/message-processor.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
 import { SyncService } from '../sync/sync.service.js';
@@ -21,6 +22,7 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
     private readonly sync: SyncService,
     private readonly attendance: AttendanceService,
     private readonly sender: OutboundSender,
+    private readonly events: SystemEventsService,
   ) {}
 
   onModuleInit(): void {
@@ -33,9 +35,29 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
           message.payload.slot,
           message.ts,
         );
+        this.events.emit(
+          'scan',
+          {
+            deviceId,
+            slot: message.payload.slot,
+            result: outcome.decision.kind,
+            studentId: outcome.student?.id ?? null,
+            studentName: outcome.student?.name ?? null,
+            reason:
+              outcome.decision.kind === 'denied'
+                ? outcome.decision.reason
+                : null,
+          },
+          outcome.at,
+        );
         this.send(
           deviceId,
-          buildScanResult(outcome.decision, outcome.student, message.id, outcome.at),
+          buildScanResult(
+            outcome.decision,
+            outcome.student,
+            message.id,
+            outcome.at,
+          ),
         );
       },
     );
@@ -45,6 +67,18 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
       (deviceId, message) => {
         if (message.type !== 'fingerprint.unknown') return;
         const at = this.attendance.recordUnknown(deviceId);
+        this.events.emit(
+          'scan',
+          {
+            deviceId,
+            slot: null,
+            result: 'unknown',
+            studentId: null,
+            studentName: null,
+            reason: null,
+          },
+          at,
+        );
         this.send(deviceId, buildUnknownScanResult(message.id, at));
       },
     );

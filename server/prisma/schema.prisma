@@ -215,8 +215,10 @@ model DeviceCommand {
   deviceId String        @map("device_id")
   type     String        @map("tipo")
   payload  Json
-  status   CommandStatus @default(pending) @map("estado")
-  attempts Int           @default(0) @map("intentos")
+  status    CommandStatus @default(pending) @map("estado")
+  attempts  Int           @default(0) @map("intentos")
+  // FIFO order for replaying pending commands after a reconnection.
+  createdAt DateTime      @default(now()) @map("creada") @db.Timestamptz()
 
   device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 

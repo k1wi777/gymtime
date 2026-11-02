@@ -1,11 +1,13 @@
 import { attendanceCommands } from './attendance.js';
 import { alarmCommands } from './alarm.js';
+import { deviceCommands } from './device.js';
 import { enrollCommands } from './enroll.js';
 import { scheduleCommands } from './schedule.js';
 import { sessionsCommands } from './sessions.js';
 import { studentCommands } from './student.js';
 import { syncCommands } from './sync.js';
 import type { Command } from './types.js';
+import { watchCommands } from './watch.js';
 
 export const COMMANDS: readonly Command[] = [
   ...studentCommands,
@@ -15,6 +17,8 @@ export const COMMANDS: readonly Command[] = [
   ...sessionsCommands,
   ...attendanceCommands,
   ...alarmCommands,
+  ...deviceCommands,
+  ...watchCommands,
 ];
 
 export const GROUP_SUMMARIES: Record<string, string> = {
@@ -25,4 +29,6 @@ export const GROUP_SUMMARIES: Record<string, string> = {
   sessions: 'Inspect attendance sessions',
   attendance: 'Register entries and exits manually',
   alarm: 'Control the siren and silence the end-of-schedule alarm',
+  device: 'Inspect the reader connection and its pending orders',
+  watch: 'Watch system events live',
 };

@@ -4,6 +4,7 @@ import { PROTOCOL_VERSION, type ServerMessage } from '@gymtime/shared';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import type { AlarmPort } from '../attendance/domain/alarm.port.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { DevicesService } from '../devices/devices.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
@@ -71,6 +72,7 @@ export class AlarmService implements AlarmPort {
     private readonly instances: InstancesService,
     private readonly devices: DevicesService,
     private readonly sender: OutboundSender,
+    private readonly systemEvents: SystemEventsService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(ALARM_CONFIG) private readonly config: AlarmConfig,
   ) {
@@ -102,7 +104,7 @@ export class AlarmService implements AlarmPort {
       this.activeEvents.delete(instanceId);
       this.logger.log({ event: 'alarm_all_exited', instanceId });
       if ((await this.events.findOpen()).length === 0 && this.current.on) {
-        this.clearAlarm();
+        this.clearAlarm({ closedBy: 'all_exited', sessionsClosed: 0 });
       }
     });
   }
@@ -144,6 +146,7 @@ export class AlarmService implements AlarmPort {
             ? null
             : new Date(now.getTime() + durationSec * 1000),
       };
+      this.emitAlarm({ on: true, reason });
       this.sendTo(deviceId, {
         on: true,
         durationSec,
@@ -302,6 +305,7 @@ export class AlarmService implements AlarmPort {
       startedAt: now,
       expiresAt: new Date(now.getTime() + beepSeconds * 1000),
     };
+    this.emitAlarm({ on: true, reason: 'END_BEEP' });
     this.dispatch({ on: true, durationSec: beepSeconds, reason: 'END_BEEP' });
     this.logger.log({ event: 'alarm_end_beep', instanceId: instance.id });
   }
@@ -317,6 +321,7 @@ export class AlarmService implements AlarmPort {
       startedAt: this.clock.now(),
       expiresAt: null,
     };
+    this.emitAlarm({ on: true, reason: 'PENDING_EXIT' });
     this.dispatch({ on: true, durationSec: null, reason: 'PENDING_EXIT' });
   }
 
@@ -329,6 +334,7 @@ export class AlarmService implements AlarmPort {
 
   private async closeExpired(now: Date): Promise<void> {
     let closedLast = false;
+    let closedTotal = 0;
     for (const [instanceId, active] of this.activeEvents) {
       if (active.endsAt.getTime() + this.timeoutMs > now.getTime()) continue;
       const sessionsClosed = await this.attendance.markUnregisteredByInstance(
@@ -343,6 +349,7 @@ export class AlarmService implements AlarmPort {
       if (!closed) continue;
       this.activeEvents.delete(instanceId);
       closedLast = true;
+      closedTotal += sessionsClosed;
       this.logger.log({
         event: 'alarm_timeout',
         instanceId,
@@ -350,7 +357,7 @@ export class AlarmService implements AlarmPort {
       });
     }
     if (closedLast && this.activeEvents.size === 0 && this.current.on) {
-      this.clearAlarm();
+      this.clearAlarm({ closedBy: 'timeout', sessionsClosed: closedTotal });
     }
   }
 
@@ -373,7 +380,7 @@ export class AlarmService implements AlarmPort {
       this.activeEvents.delete(event.instanceId);
       sessionsClosed += count;
     }
-    this.clearAlarm();
+    this.clearAlarm({ closedBy, sessionsClosed });
     this.logger.log({
       event: 'alarm_off',
       closedBy,
@@ -383,12 +390,34 @@ export class AlarmService implements AlarmPort {
     return { closedBy, sessionsClosed, status: await this.status() };
   }
 
-  private clearAlarm(): void {
+  /**
+   * Clears the state and publishes the alarm event. `details` is only present
+   * when the siren is silenced (they describe why and what was closed).
+   */
+  private clearAlarm(details?: {
+    closedBy: 'all_exited' | 'button' | 'cli' | 'timeout';
+    sessionsClosed: number;
+  }): void {
     this.current = offState();
+    this.systemEvents.emit('alarm', {
+      on: false,
+      reason: 'CLEARED',
+      closedBy: details?.closedBy ?? null,
+      sessionsClosed: details?.sessionsClosed ?? 0,
+    });
     this.dispatch({ on: false, durationSec: null, reason: 'CLEARED' });
   }
 
-  /** Sends to the only online device without blocking the caller. */
+  private emitAlarm(payload: { on: boolean; reason: AlarmReason }): void {
+    this.systemEvents.emit('alarm', {
+      on: payload.on,
+      reason: payload.reason,
+      closedBy: null,
+      sessionsClosed: 0,
+    });
+  }
+
+  /** Sends to the only known device without blocking the caller. */
   private dispatch(payload: {
     on: boolean;
     durationSec: number | null;
@@ -396,7 +425,9 @@ export class AlarmService implements AlarmPort {
   }): void {
     void (async () => {
       try {
-        const deviceId = await this.devices.getOnlineDeviceId();
+        const deviceId =
+          (await this.devices.getOnlineDeviceId()) ??
+          (await this.devices.getOnlyDeviceId());
         if (!deviceId) {
           this.logger.warn({
             event: 'alarm_no_device',
@@ -436,7 +467,7 @@ export class AlarmService implements AlarmPort {
       payload,
     } as ServerMessage;
     void this.sender
-      .send(deviceId, message)
+      .sendCommand(deviceId, message, { supersedesPrevious: true })
       .then((result) => {
         if (result === 'failed') {
           this.logger.warn({
