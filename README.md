@@ -1,6 +1,6 @@
 # GymTime
 
-Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm; hoy solo existe el workspace `server/`.
+Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado) y `server/`.
 
 ## Puesta en marcha
 
@@ -21,9 +21,14 @@ npm run start:dev -w server  # API en http://0.0.0.0:3000
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
 
+## Simulador y firmware
+
+- `SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator` conecta un ESP32 simulado al backend (opciones `SIM_URL`, `SIM_DEVICE_ID`, `SIM_FW` o `--url`, `--device-id`, `--token`, `--fw`).
+- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): guía para conectar el ESP32 real (backend, IP, token, secuencia, problemas comunes). Referencia del protocolo: [`docs/protocolo_v0.md`](docs/protocolo_v0.md).
+
 ## Scripts (raíz)
 
-`npm run lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`.
+`npm run simulator`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`.
 
 ## Notas
 
