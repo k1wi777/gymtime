@@ -1,3 +1,4 @@
+import { EventLogService } from '../common/audit/event-log.service.js';
 import type { Clock } from '../common/time/clock.js';
 import {
   MONDAY_9AM_BOGOTA,
@@ -30,6 +31,7 @@ export function buildAttendanceFixture(start: Date = MONDAY_9AM_BOGOTA) {
     schedules.students,
     alarm,
     clock,
+    new EventLogService(schedules.eventLogRepo),
   );
 
   return {

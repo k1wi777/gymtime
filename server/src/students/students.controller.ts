@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -27,6 +28,7 @@ import {
 } from '@nestjs/swagger';
 import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
+import { DisplayValidationError } from '../common/display/display.errors.js';
 import { DuplicateDocumentError, type Student } from './domain/student.js';
 import {
   CreateStudentDto,
@@ -63,7 +65,7 @@ export class StudentsController {
       if (error instanceof DuplicateDocumentError) {
         throw new ConflictException(error.message);
       }
-      throw error;
+      throw mapDisplayError(error);
     }
   }
 
@@ -81,7 +83,10 @@ export class StudentsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edit name, program or consent (not the document)' })
+  @ApiOperation({
+    summary:
+      'Edit name, program (carrera), email, phone, display name or consent (not the document)',
+  })
   @ApiBody({ type: UpdateStudentDto })
   @ApiOkResponse({ type: StudentResponseDto })
   @ApiNotFoundResponse({ description: 'Student not found' })
@@ -91,7 +96,11 @@ export class StudentsController {
     @Body(new ZodValidationPipe(updateStudentSchema))
     body: z.infer<typeof updateStudentSchema>,
   ): Promise<Student> {
-    return this.orNotFound(await this.students.update(id, body));
+    try {
+      return this.orNotFound(await this.students.update(id, body));
+    } catch (error) {
+      throw mapDisplayError(error);
+    }
   }
 
   @Delete(':id')
@@ -109,4 +118,12 @@ export class StudentsController {
     if (!student) throw new NotFoundException('Student not found');
     return student;
   }
+}
+
+function mapDisplayError(error: unknown): unknown {
+  if (!(error instanceof DisplayValidationError)) return error;
+  return new BadRequestException({
+    message: error.message,
+    issues: error.errors,
+  });
 }

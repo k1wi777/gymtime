@@ -7,6 +7,7 @@ import { STUDENTS_REPOSITORY } from './domain/students.repository.js';
 import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
 import { StudentsController } from './students.controller.js';
 import { StudentsService } from './students.service.js';
+import { auditTestProviders } from '../common/audit/testing.js';
 import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 
 const KEY = 'admin-key-1234567890';
@@ -21,6 +22,7 @@ describe('StudentsController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [StudentsController],
       providers: [
+        ...auditTestProviders,
         StudentsService,
         ApiKeyGuard,
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
@@ -85,5 +87,95 @@ describe('StudentsController (HTTP)', () => {
       .set(auth)
       .send({ name: 'x' })
       .expect(400);
+  });
+
+  it('returns the display name, generated or custom (R8)', async () => {
+    const generated = await http()
+      .post('/students')
+      .set(auth)
+      .send({ ...body, name: 'Ana María Gómez Pérez' })
+      .expect(201);
+    expect(generated.body.displayName).toBe('Ana M.');
+    const edited = await http()
+      .patch(`/students/${generated.body.id}`)
+      .set(auth)
+      .send({ displayName: 'Anita' })
+      .expect(200);
+    expect(edited.body.displayName).toBe('Anita');
+    const tooLong = await http()
+      .patch(`/students/${generated.body.id}`)
+      .set(auth)
+      .send({ displayName: 'x'.repeat(20) })
+      .expect(400);
+    expect(tooLong.body.message).toContain('máximo 16');
+    await http()
+      .post('/students')
+      .set(auth)
+      .send({ ...body, document: '101', displayName: 'y'.repeat(17) })
+      .expect(400);
+  });
+
+  describe('contact data', () => {
+    it('accepts, returns, lists and edits optional email and phone', async () => {
+      const created = await http()
+        .post('/students')
+        .set(auth)
+        .send({
+          ...body,
+          program: 'Ingenieria',
+          email: ' Ana@UniCordoba.edu.co ',
+          phone: '+57 (300) 123-4567',
+        })
+        .expect(201);
+      expect(created.body).toMatchObject({
+        program: 'Ingenieria',
+        email: 'ana@unicordoba.edu.co',
+        phone: '+57 (300) 123-4567',
+      });
+      const edited = await http()
+        .patch(`/students/${created.body.id}`)
+        .set(auth)
+        .send({ email: 'otro@unicordoba.edu.co', phone: null })
+        .expect(200);
+      expect(edited.body).toMatchObject({
+        email: 'otro@unicordoba.edu.co',
+        phone: null,
+      });
+      const [listed] = (await http().get('/students').set(auth).expect(200))
+        .body;
+      expect(listed).toMatchObject({ email: 'otro@unicordoba.edu.co' });
+    });
+
+    it('defaults to null when omitted', async () => {
+      const created = await http()
+        .post('/students')
+        .set(auth)
+        .send(body)
+        .expect(201);
+      expect(created.body).toMatchObject({ email: null, phone: null });
+    });
+
+    it('rejects a malformed email or phone and over-long values', async () => {
+      for (const extra of [
+        { email: 'not-an-email' },
+        { email: `${'a'.repeat(250)}@x.co` },
+        { phone: 'call me' },
+        { phone: '()' },
+        { phone: '1'.repeat(21) },
+        { phone: '' },
+      ]) {
+        await http()
+          .post('/students')
+          .set(auth)
+          .send({ ...body, ...extra })
+          .expect(400);
+      }
+      const { body: s } = await http().post('/students').set(auth).send(body);
+      await http()
+        .patch(`/students/${s.id}`)
+        .set(auth)
+        .send({ phone: 'abc' })
+        .expect(400);
+    });
   });
 });

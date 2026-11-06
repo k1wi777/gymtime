@@ -1,4 +1,8 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
+import {
+  DISPLAY_CONFIG,
+  type DisplayConfig,
+} from '../config/display.config.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { MessageProcessor } from '../devices/message-processor.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
@@ -23,6 +27,7 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
     private readonly attendance: AttendanceService,
     private readonly sender: OutboundSender,
     private readonly events: SystemEventsService,
+    @Inject(DISPLAY_CONFIG) private readonly display: DisplayConfig,
   ) {}
 
   onModuleInit(): void {
@@ -57,6 +62,7 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
             outcome.student,
             message.id,
             outcome.at,
+            this.display,
           ),
         );
       },
@@ -79,7 +85,10 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
           },
           at,
         );
-        this.send(deviceId, buildUnknownScanResult(message.id, at));
+        this.send(
+          deviceId,
+          buildUnknownScanResult(message.id, at, this.display),
+        );
       },
     );
 

@@ -7,6 +7,7 @@ import {
   type StudentPatch,
 } from '../domain/student.js';
 import type { StudentsRepository } from '../domain/students.repository.js';
+import { toStudent } from './student-mapper.js';
 
 const UNIQUE_VIOLATION = 'P2002';
 const NOT_FOUND = 'P2025';
@@ -17,7 +18,7 @@ export class PrismaStudentsRepository implements StudentsRepository {
 
   async create(data: NewStudent) {
     try {
-      return await this.prisma.student.create({ data });
+      return toStudent(await this.prisma.student.create({ data }));
     } catch (error) {
       if (isPrismaError(error, UNIQUE_VIOLATION)) {
         throw new DuplicateDocumentError();
@@ -26,19 +27,24 @@ export class PrismaStudentsRepository implements StudentsRepository {
     }
   }
 
-  findById(id: string) {
-    return this.prisma.student.findUnique({ where: { id } });
+  async findById(id: string) {
+    const row = await this.prisma.student.findUnique({ where: { id } });
+    return row && toStudent(row);
   }
 
-  findByIds(ids: string[]) {
-    return this.prisma.student.findMany({ where: { id: { in: ids } } });
+  async findByIds(ids: string[]) {
+    const rows = await this.prisma.student.findMany({
+      where: { id: { in: ids } },
+    });
+    return rows.map(toStudent);
   }
 
-  findAll(filter: { active?: boolean }) {
-    return this.prisma.student.findMany({
+  async findAll(filter: { active?: boolean }) {
+    const rows = await this.prisma.student.findMany({
       where: filter.active === undefined ? {} : { active: filter.active },
       orderBy: { name: 'asc' },
     });
+    return rows.map(toStudent);
   }
 
   update(id: string, patch: StudentPatch) {
@@ -54,7 +60,9 @@ export class PrismaStudentsRepository implements StudentsRepository {
     data: StudentPatch | { active: boolean },
   ) {
     try {
-      return await this.prisma.student.update({ where: { id }, data });
+      return toStudent(
+        await this.prisma.student.update({ where: { id }, data }),
+      );
     } catch (error) {
       if (isPrismaError(error, NOT_FOUND)) return null;
       throw error;

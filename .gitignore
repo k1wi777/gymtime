@@ -10,3 +10,6 @@ server/src/generated/
 # REI harness and Claude Code local files (kept out of version control)
 .rei/
 .claude/
+
+# OpenCode agent adapter artifacts
+.opencode/

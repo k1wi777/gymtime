@@ -7,6 +7,9 @@
 //       CREATE UNIQUE INDEX "fingerprints_one_active_per_student"
 //         ON "fingerprints" ("student_id") WHERE "activa";
 //   - CHECK on schedules: exactly one of dia_semana / fecha is set.
+//   - partial unique index: one active assignment per schedule and student
+//       CREATE UNIQUE INDEX "schedule_students_one_active"
+//         ON "schedule_students" ("schedule_id", "student_id") WHERE "valid_to" IS NULL;
 
 generator client {
   provider            = "prisma-client"
@@ -53,6 +56,14 @@ enum CommandStatus {
   @@map("command_status")
 }
 
+enum ActorType {
+  user
+  system
+  device
+
+  @@map("actor_type")
+}
+
 enum AlarmClosedBy {
   all_exited
   button
@@ -66,9 +77,17 @@ model Student {
   id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   document  String  @unique @map("documento")
   name      String  @map("nombre")
+  // The student's degree ("carrera").
   program   String? @map("programa")
   active    Boolean @default(true) @map("activo")
   consented Boolean @default(false) @map("consentimiento")
+  // Short name for the reader LCD (ASCII, up to DISPLAY_COLS). NULL = generated
+  // from `name` when read.
+  displayName String? @map("display_name")
+  // Optional contact data (Ley 1581: data minimisation). Never logged, never
+  // sent to the reader.
+  email     String? @map("correo")
+  phone     String? @map("telefono")
 
   fingerprints Fingerprint[]
   enrollments  Enrollment[]
@@ -162,15 +181,22 @@ model Schedule {
   @@map("schedules")
 }
 
+// One row per validity interval of a student in a schedule: removing a student
+// closes `validTo` instead of deleting, and assigning again opens a new row.
+// At most one open row per pair (partial unique index in the migration).
 model ScheduleStudent {
-  scheduleId String @map("schedule_id") @db.Uuid
-  studentId  String @map("student_id") @db.Uuid
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId String    @map("schedule_id") @db.Uuid
+  studentId  String    @map("student_id") @db.Uuid
+  validFrom  DateTime  @map("valid_from") @db.Timestamptz()
+  // NULL = still assigned.
+  validTo    DateTime? @map("valid_to") @db.Timestamptz()
 
   schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@id([scheduleId, studentId])
-  @@index([studentId])
+  @@index([scheduleId, validTo])
+  @@index([studentId, validFrom])
   @@map("schedule_students")
 }
 
@@ -188,6 +214,8 @@ model ScheduleInstance {
 
   // Makes the daily generator idempotent.
   @@unique([scheduleId, date])
+  // Reports by date range.
+  @@index([date])
   @@map("schedule_instances")
 }
 
@@ -206,7 +234,9 @@ model AttendanceSession {
   instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
   @@index([instanceId, status])
-  @@index([studentId])
+  // Reports: sessions by entry date and by student within a date range.
+  @@index([enteredAt])
+  @@index([studentId, enteredAt])
   @@map("attendance_sessions")
 }
 
@@ -259,6 +289,10 @@ model EventLog {
   id        Int      @id @default(autoincrement())
   type      String   @map("tipo")
   detail    Json?    @map("detalle")
+  // Who originated the event: the admin key is `system`, a device message
+  // is `device` with its id.
+  actorType ActorType @default(system) @map("actor_type")
+  actorId   String?   @map("actor_id")
   createdAt DateTime @default(now()) @map("fecha") @db.Timestamptz()
 
   @@index([createdAt])

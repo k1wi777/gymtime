@@ -34,6 +34,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
 - Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector. Las horas de los horarios son de America/Bogota (UTC-5 fijo).
 - Alarma: `ALARM_BEEP_SECONDS` (5) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
+- Pantalla del lector: `DISPLAY_COLS` (16) y `DISPLAY_ROWS` (2) fijan el tamaño del LCD y `DISPLAY_RESULT_SECONDS` (3) el tiempo por defecto de un mensaje. Los textos van sin tildes y de 16 caracteres como máximo; ver [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md).
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - `GET /events` (SSE con `x-api-key`): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
@@ -57,7 +58,8 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 
 | Comando | Efecto |
 |---|---|
-| `gym student add --document <doc> --name <nombre> [--program <p>] [--consented]` | Registra un estudiante. |
+| `gym student add --document <doc> --name <nombre> [--program <carrera>] [--email <correo>] [--phone <teléfono>] [--display-name <texto>] [--consented]` | Registra un estudiante. `--document` es la cédula y `--program` la carrera; correo y teléfono son opcionales (Ley 1581: solo se guardan si se indican, no van a los logs ni al lector). `--display-name` (máx. 16 caracteres ASCII) es el nombre que muestra el LCD; si se omite se genera. |
+| `gym student edit <documento> [--name] [--program] [--email] [--phone] [--display-name]` | Modifica los datos indicados. |
 | `gym student list [--active true\|false]` | Tabla de estudiantes. |
 | `gym student remove <documento>` | Desactiva al estudiante (borra su huella). |
 | `gym enroll start --student <documento> [--device <id>]` | Inicia el enrolamiento y muestra cada paso del dispositivo hasta `done`, `failed`, `expired` o `cancelled` (código 0 solo en `done`). Ctrl+C lo cancela. |
@@ -74,10 +76,11 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 | `gym alarm status` | Muestra si la sirena está encendida, su motivo, la ocurrencia, la duración y las sesiones abiertas. |
 | `gym alarm on` / `gym alarm test` | Enciende la sirena de forma continua (`MANUAL`) o con el pitido corto de prueba (`TEST`); 409 si no hay dispositivo en línea. |
 | `gym alarm off` | Silencia la sirena, marca como `no_registrada` las sesiones abiertas de la ocurrencia alarmada e informa cuántas cerró; 409 si no estaba encendida. |
+| `gym device message "línea 1" ["línea 2"] [--seconds N] [--device ID]` | Muestra un mensaje en el LCD del lector (sin tildes; máx. 2 líneas de 16 caracteres; 1 a 60 s). Con el lector desconectado queda en cola y se entrega al reconectar; sale con error si no lo confirma. |
 | `gym device status` | Tabla de dispositivos: en línea, última conexión en Bogotá, versión de firmware y órdenes pendientes de confirmar. |
 | `gym watch` | Muestra en vivo los eventos del servidor (conexiones, escaneos, órdenes y alarma) con hora de Bogotá; se reconecta solo y se corta con Ctrl+C. |
 
-La sincronización es automática al conectarse el dispositivo, al terminar un enrolamiento y 15 minutos antes de cada horario y al terminar. Un horario creado con `--ends-in` o que empieza dentro de esos 15 minutos ya pasó su disparador: `gym schedule create` lo avisa y hay que ejecutar `gym sync` a mano. Quitar un estudiante de un horario solo existe en REST (`DELETE /schedules/:id/students/:studentId`). Capacidad: 161 plantillas por sincronización, porque el slot 162 es el de trabajo del enrolamiento.
+La sincronización es automática al conectarse el dispositivo, al terminar un enrolamiento y 15 minutos antes de cada horario y al terminar. Un horario creado con `--ends-in` o que empieza dentro de esos 15 minutos ya pasó su disparador: `gym schedule create` lo avisa y hay que ejecutar `gym sync` a mano. Quitar un estudiante de un horario solo existe en REST (`DELETE /schedules/:id/students/:studentId`): cierra su vigencia (`valid_to`) sin borrar la fila, de modo que el historial se conserva y asignarlo de nuevo abre otra vigencia. Los cambios de estudiantes, horarios, alarma manual y mensajes quedan en `event_log` con su origen (`actor_type`: `system` para la clave de administración, `device` para el lector). Capacidad: 161 plantillas por sincronización, porque el slot 162 es el de trabajo del enrolamiento.
 
 Ejemplo sin hardware (backend y simulador en marcha, ver «Simulador y firmware»):
 
@@ -99,6 +102,7 @@ npm run format:check
 npm test            # pruebas unitarias de todos los workspaces
 npm run test:e2e    # pruebas e2e (lentas)
 npm run test:scenarios  # escenarios integrales A1–A12 con el simulador
+npm run test:migration  # migra una base de la iteración 1 y verifica datos e índices (requiere PostgreSQL, p. ej. docker compose up -d)
 ```
 
 ### Escenarios integrales A1–A12
@@ -110,7 +114,7 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 |---|---|
 | A1 | El enrolamiento deja la plantilla cifrada y lista para el lector. |
 | A2/A3 | La misma huella registra la entrada y después la salida. |
-| A4 | Una huella desconocida muestra «Huella no reconocida» y no abre sesión. |
+| A4 | Una huella desconocida muestra «No reconocida» / «Intente de nuevo» y no abre sesión. |
 | A5 | Un estudiante del lector que ya no está en el horario es rechazado con `NOT_IN_SCHEDULE`. |
 | A6 | Un escaneo sin horario activo se rechaza con `NO_ACTIVE_SCHEDULE`. |
 | A7/A8 | Al terminar un horario con gente dentro la alarma sigue encendida (`PENDING_EXIT`) y se apaga (`CLEARED`) cuando sale el último. |

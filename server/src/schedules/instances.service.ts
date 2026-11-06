@@ -66,7 +66,7 @@ export class InstancesService {
     studentId: string,
     at: Date,
   ): Promise<ResolvedOccurrence | null> {
-    const schedules = await this.schedules.findByStudent(studentId);
+    const schedules = await this.schedules.findByStudent(studentId, at);
     if (schedules.length === 0) return null;
     const reach = new Date(
       at.getTime() + MAX_ENTRY_MARGIN_MINUTES * MS_PER_MINUTE,
@@ -101,7 +101,7 @@ export class InstancesService {
       at.getTime() + MAX_ENTRY_MARGIN_MINUTES * MS_PER_MINUTE,
     );
     const found = await this.instances.findInRange(at, reach);
-    const occurrences = await this.withStudents(found);
+    const occurrences = await this.withStudents(found, at);
     return occurrences.filter(
       (o) => o.window.opensAt <= at && at < o.instance.endsAt,
     );
@@ -142,7 +142,7 @@ export class InstancesService {
     const found = (await this.instances.findInRange(now, reach)).filter(
       (i) => i.endsAt > now,
     );
-    return this.withStudents(found);
+    return this.withStudents(found, now);
   }
 
   /** Upcoming occurrences (not yet ended) of the given schedules, grouped by schedule. */
@@ -184,14 +184,16 @@ export class InstancesService {
     };
   }
 
+  /** Only the assignments active at `at` count (R17). */
   private async withStudents(
     found: ScheduleInstance[],
+    at: Date,
   ): Promise<RelevantOccurrence[]> {
     if (found.length === 0) return [];
     const scheduleIds = [...new Set(found.map((i) => i.scheduleId))];
     const [schedules, students] = await Promise.all([
       Promise.all(scheduleIds.map((id) => this.schedules.findById(id))),
-      this.schedules.listStudentIds(scheduleIds),
+      this.schedules.listStudentIds(scheduleIds, at),
     ]);
     const byId = new Map(
       schedules.flatMap((s) => (s ? [[s.id, s] as const] : [])),

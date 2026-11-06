@@ -154,7 +154,7 @@ Todos los mensajes son JSON de texto, uno por trama, con el sobre `{v, id, type,
 }
 ```
 
-   Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican. Tres puntos que el firmware debe cumplir:
+   `display.message` ya está disponible: texto de hasta 2 líneas de 16 caracteres ASCII, que el firmware muestra durante `durationSec` (dos líneas vacías = limpiar la pantalla); ver [`mensajes_pantalla.md`](./mensajes_pantalla.md). Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican. Tres puntos que el firmware debe cumplir:
 
    - Al recibir el **primer bloque de una sincronización nueva** (`syncId` distinto del anterior), borra todas las plantillas locales y carga las recibidas en los slots indicados; los bloques siguientes del mismo `syncId` solo añaden. Cada bloque se confirma con su `ack`.
    - Un bloque único 1 de 1 con `templates` vacío significa «borra todo y no cargues nada». Se confirma con `ack` como cualquier otro:
@@ -254,6 +254,16 @@ El simulador hace de lector: al recibir `templates.sync` guarda cada plantilla e
 gym schedule create --name Prueba --ends-in 3m --student 123
 gym sync
 ```
+
+### Mensajes de pantalla simulados
+
+El simulador atiende `display.message` sin pantalla real: imprime `display.message: "línea 1" / "línea 2" (3s)` (o `(screen cleared)` si las dos líneas llegan vacías) y lo confirma con `ack`. Para verlo con el backend en marcha:
+
+```bash
+gym device message "Hola" "GymTime" --seconds 5
+```
+
+Con el simulador desconectado, la orden queda en cola (`queued`) y llega al reconectar. Los textos que el servidor envía, la regla de 16 caracteres ASCII y los mensajes locales del firmware están en [`mensajes_pantalla.md`](./mensajes_pantalla.md).
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.
 

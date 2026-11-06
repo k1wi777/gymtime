@@ -5,8 +5,7 @@ import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-m
 import { InMemoryDevicesRepository } from '../devices/infrastructure/in-memory-devices.repository.js';
 import type { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { Env } from '../config/env.schema.js';
-import { InMemoryStudentsRepository } from '../students/infrastructure/in-memory-students.repository.js';
-import { StudentsService } from '../students/students.service.js';
+import { buildStudentsService } from '../students/testing.js';
 import type { Clock } from '../common/time/clock.js';
 import { TemplateCipher } from './crypto/template-cipher.service.js';
 import { EnrollmentService } from './enrollment.service.js';
@@ -22,7 +21,7 @@ export function buildEnrollmentFixture(
   const clock: Clock = { now: () => new Date(current) };
   const fingerprints = new InMemoryFingerprintsRepository();
   const enrollments = new InMemoryEnrollmentsRepository(fingerprints);
-  const students = new StudentsService(new InMemoryStudentsRepository());
+  const students = buildStudentsService().service;
   const devices = new DevicesService(
     new InMemoryDevicesRepository(),
     new InMemoryDeviceCommandsRepository(),

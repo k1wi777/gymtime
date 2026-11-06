@@ -28,6 +28,19 @@ describe('SyncPlanner (R9-R12, R16)', () => {
     expect(plan.schedule?.scheduleId).toBe(now.schedule.id); // in progress wins
   });
 
+  it('leaves out a student whose assignment was closed (R17)', async () => {
+    const f = buildSyncFixture();
+    const now = await f.weekly('Now', '08:30', '09:30');
+    const a = await f.enroll('1', 1, [now.schedule.id]);
+    await f.enroll('2', 2, [now.schedule.id]);
+    await f.schedules.unassignStudent(now.schedule.id, a.id);
+
+    const plan = await f.planner.build(f.clock.now(), empty);
+
+    expect(plan.slots.map((s) => s.studentId)).not.toContain(a.id);
+    expect(plan.slots).toHaveLength(1);
+  });
+
   it('does not repeat a student present in several schedules or open sessions', async () => {
     const f = buildSyncFixture();
     const s1 = await f.weekly('A', '08:30', '09:30');

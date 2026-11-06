@@ -1,3 +1,4 @@
+import { deviceActor, runAsActor } from '../common/audit/actor.js';
 import { AlarmService } from './alarm.service.js';
 import { bogota, buildAlarmFixture } from './testing.js';
 
@@ -312,18 +313,7 @@ describe('AlarmService timeout (R10)', () => {
 });
 
 describe('AlarmService recovery (R11, R12)', () => {
-  function restart(f: ReturnType<typeof buildAlarmFixture>) {
-    return new AlarmService(
-      f.events,
-      f.attendance,
-      f.instances,
-      f.devices,
-      f.link.sender,
-      f.systemEvents,
-      f.clock,
-      f.config,
-    );
-  }
+  const restart = (f: ReturnType<typeof buildAlarmFixture>) => f.restart();
 
   it('restores an open continuous alarm without a duplicate alarm.set', async () => {
     const { f } = await withSchedule(async (f) => {
@@ -335,6 +325,7 @@ describe('AlarmService recovery (R11, R12)', () => {
       return { instanceId: instance.id };
     });
     await vi.waitFor(() => expect(f.alarms()).toHaveLength(1));
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(1));
     const sent = f.link.sent.length;
 
     const restarted = restart(f);
@@ -396,15 +387,110 @@ describe('AlarmService recovery (R11, R12)', () => {
       return { instanceId: instance.id };
     });
     await vi.waitFor(() => expect(f.alarms()).toHaveLength(1));
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(1));
 
     f.service.onDeviceConnected('other-device');
 
-    expect(f.link.send).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(f.link.send).toHaveBeenCalledTimes(4));
     expect(f.alarms().at(-1)).toMatchObject({
       on: true,
       durationSec: null,
       reason: 'PENDING_EXIT',
     });
+  });
+});
+
+describe('AlarmService screen message (R12, R13)', () => {
+  async function pendingExit() {
+    const { f, instanceId } = await withSchedule(async (f) => {
+      await f.weekly('A', '10:00', '11:00');
+      const [instance] = await f.instancesOf();
+      await f.openSession(instance.id);
+      f.setNow(bogota('11:00'));
+      await f.service.onInstanceEnded(instance, f.clock.now());
+      return { instanceId: instance.id };
+    });
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(1));
+    return { f, instanceId };
+  }
+
+  it('shows "Tiempo cumplido / Registre salida" with PENDING_EXIT for the alarm lifetime', async () => {
+    const { f } = await pendingExit();
+    expect(f.messages()).toEqual([
+      {
+        line1: 'Tiempo cumplido',
+        line2: 'Registre salida',
+        durationSec: f.config.timeoutMinutes * 60,
+      },
+    ]);
+    // Replaces an older unconfirmed message instead of piling up.
+    const call = f.link.send.mock.calls.find(
+      ([, message]) => message.type === 'display.message',
+    );
+    expect(call?.[2]).toEqual({ supersedesPrevious: true });
+    // The alarm text is not an operator message: nothing audited.
+    expect(f.eventLog.entries).toEqual([]);
+  });
+
+  it('resends it to a reconnecting device with the remaining seconds', async () => {
+    const { f } = await pendingExit();
+    f.setNow(bogota('11:10'));
+
+    f.service.onDeviceConnected('dev');
+
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(2));
+    expect(f.messages()[1]).toEqual({
+      line1: 'Tiempo cumplido',
+      line2: 'Registre salida',
+      durationSec: (f.config.timeoutMinutes - 10) * 60,
+    });
+  });
+
+  it('clears the screen when the alarm is silenced', async () => {
+    const { f, instanceId } = await pendingExit();
+
+    await f.service.onInstanceEmptied(instanceId);
+
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(2));
+    expect(f.messages()[1]).toEqual({ line1: '', line2: '', durationSec: 1 });
+    const clear = f.link.send.mock.calls.filter(
+      ([, message]) => message.type === 'display.message',
+    )[1];
+    expect(clear?.[2]).toEqual({ supersedesPrevious: true });
+  });
+
+  it('does not send a message for END_BEEP, TEST or MANUAL', async () => {
+    const f = buildAlarmFixture();
+    await f.markOnline();
+    await f.service.turnOn('TEST');
+    await f.service.turnOn('MANUAL');
+    await f.service.off('cli');
+    await vi.waitFor(() => expect(f.alarms().length).toBeGreaterThan(2));
+    expect(f.messages()).toEqual([]);
+
+    await f.weekly('A', '10:00', '11:00');
+    const [instance] = await f.instancesOf();
+    f.setNow(bogota('11:00'));
+    await f.service.onInstanceEnded(instance, f.clock.now());
+    await vi.waitFor(() => expect(f.alarms().at(-1)?.reason).toBe('END_BEEP'));
+    expect(f.messages()).toEqual([]);
+  });
+
+  it('audits manual on/off and the button with the actor (R19)', async () => {
+    const f = buildAlarmFixture();
+    await f.markOnline();
+    await f.service.turnOn('MANUAL');
+    await f.service.off('cli');
+    await f.service.turnOn('MANUAL');
+    await runAsActor(deviceActor('dev'), () =>
+      f.service.onButtonPressed('dev'),
+    );
+    expect(f.eventLog.entries.map((e) => [e.type, e.actor])).toEqual([
+      ['alarm.manual_on', { type: 'system', id: null }],
+      ['alarm.manual_off', { type: 'system', id: null }],
+      ['alarm.manual_on', { type: 'system', id: null }],
+      ['alarm.button_off', { type: 'device', id: 'dev' }],
+    ]);
   });
 });
 

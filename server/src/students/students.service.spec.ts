@@ -1,6 +1,8 @@
 import { DuplicateDocumentError } from './domain/student.js';
-import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
-import { StudentsService } from './students.service.js';
+import { DisplayValidationError } from '../common/display/display.errors.js';
+import type { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
+import type { StudentsService } from './students.service.js';
+import { buildStudentsService } from './testing.js';
 
 const data = (document = '100') => ({
   document,
@@ -9,11 +11,14 @@ const data = (document = '100') => ({
   consented: true,
 });
 
+const LONG_NAME = 'Ana María Gómez Pérez';
+
 describe('StudentsService', () => {
   let service: StudentsService;
+  let eventLog: InMemoryEventLogRepository;
 
   beforeEach(() => {
-    service = new StudentsService(new InMemoryStudentsRepository());
+    ({ service, eventLog } = buildStudentsService());
   });
 
   it('creates an active student', async () => {
@@ -86,5 +91,116 @@ describe('StudentsService', () => {
       throw new Error('boom');
     });
     expect((await service.deactivate(id))?.active).toBe(false);
+  });
+
+  describe('display name (R8, R9)', () => {
+    it('uses the full name when it fits, without accents', async () => {
+      const student = await service.create({ ...data(), name: 'María Núñez' });
+      expect(student.displayName).toBe('Maria Nunez');
+    });
+
+    it('shortens a long name to the first name and the next initial', async () => {
+      const student = await service.create({ ...data(), name: LONG_NAME });
+      expect(student.displayName).toBe('Ana M.');
+    });
+
+    it('accepts a custom display name and normalizes it', async () => {
+      const student = await service.create({
+        ...data(),
+        displayName: 'Ñoño',
+      });
+      expect(student.displayName).toBe('Nono');
+    });
+
+    it('rejects a display name that does not fit the screen', async () => {
+      await expect(
+        service.create({ ...data(), displayName: 'x'.repeat(17) }),
+      ).rejects.toBeInstanceOf(DisplayValidationError);
+      const { id } = await service.create(data());
+      await expect(
+        service.update(id, { displayName: 'x'.repeat(17) }),
+      ).rejects.toBeInstanceOf(DisplayValidationError);
+      await expect(
+        service.update(id, { displayName: '   ' }),
+      ).rejects.toBeInstanceOf(DisplayValidationError);
+    });
+
+    it('regenerates it when the name changes and it was not customised', async () => {
+      const { id } = await service.create({ ...data(), name: LONG_NAME });
+      const updated = await service.update(id, {
+        name: 'Luis Alberto Mora Ruiz',
+      });
+      expect(updated?.displayName).toBe('Luis A.');
+    });
+
+    it('keeps a customised display name when the name changes', async () => {
+      const { id } = await service.create({ ...data(), displayName: 'Anita' });
+      const updated = await service.update(id, { name: 'Ana Maria' });
+      expect(updated?.displayName).toBe('Anita');
+    });
+
+    it('lets the display name be edited explicitly', async () => {
+      const { id } = await service.create(data());
+      const updated = await service.update(id, { displayName: 'Anita' });
+      expect(updated?.displayName).toBe('Anita');
+    });
+  });
+
+  describe('contact data', () => {
+    it('is optional and stored when given', async () => {
+      const plain = await service.create(data('1'));
+      expect(plain).toMatchObject({ email: null, phone: null });
+      const full = await service.create({
+        ...data('2'),
+        email: 'ana@unicordoba.edu.co',
+        phone: '+57 300 123 4567',
+      });
+      expect(full).toMatchObject({
+        email: 'ana@unicordoba.edu.co',
+        phone: '+57 300 123 4567',
+      });
+    });
+
+    it('is editable and can be cleared', async () => {
+      const { id } = await service.create(data());
+      expect(
+        await service.update(id, { email: 'a@b.co', phone: '3001234567' }),
+      ).toMatchObject({ email: 'a@b.co', phone: '3001234567' });
+      expect(
+        await service.update(id, { email: null, phone: null }),
+      ).toMatchObject({ email: null, phone: null });
+    });
+
+    it('keeps deactivation working with contact data', async () => {
+      const { id } = await service.create({ ...data(), email: 'a@b.co' });
+      expect((await service.deactivate(id))?.active).toBe(false);
+    });
+  });
+
+  describe('audit trail (R19)', () => {
+    it('records creation, edition and deactivation without personal data', async () => {
+      const { id } = await service.create({
+        ...data(),
+        email: 'secret@example.com',
+        phone: '3001234567',
+      });
+      await service.update(id, { name: 'Bea', email: 'other@example.com' });
+      await service.deactivate(id);
+      expect(eventLog.entries.map((e) => e.type)).toEqual([
+        'student.created',
+        'student.updated',
+        'student.deactivated',
+      ]);
+      expect(eventLog.entries[1]?.detail).toEqual({
+        studentId: id,
+        fields: ['name', 'email'],
+      });
+      expect(JSON.stringify(eventLog.entries)).not.toMatch(
+        /secret@|other@|3001234567/,
+      );
+      expect(eventLog.entries.every((e) => e.actor.type === 'system')).toBe(
+        true,
+      );
+    });
   });
 });

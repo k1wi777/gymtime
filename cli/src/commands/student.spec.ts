@@ -6,6 +6,9 @@ const ana = {
   document: '123',
   name: 'Ana',
   program: 'Cross',
+  email: 'ana@unicordoba.edu.co',
+  phone: '300 123 4567',
+  displayName: 'Ana',
   active: true,
   consented: true,
 };
@@ -15,6 +18,9 @@ const luis = {
   document: '456',
   name: 'Luis',
   program: null,
+  email: null,
+  phone: null,
+  displayName: 'Luis',
   active: false,
   consented: false,
 };
@@ -59,6 +65,48 @@ describe('student add', () => {
     });
   });
 
+  it('sends the optional email, phone and display name and prints them', async () => {
+    const server = fakeServer(() => ({ status: 201, body: ana }));
+    const { code, out } = await invoke(
+      [
+        'student',
+        'add',
+        '--document',
+        '123',
+        '--name',
+        'Ana',
+        '--email',
+        'ana@unicordoba.edu.co',
+        '--phone',
+        '300 123 4567',
+        '--display-name',
+        'Ana',
+      ],
+      { fetch: server.fetch },
+    );
+    expect(code).toBe(0);
+    expect(server.calls[0]?.body).toMatchObject({
+      email: 'ana@unicordoba.edu.co',
+      phone: '300 123 4567',
+      displayName: 'Ana',
+    });
+    expect(out).toContain('email:      ana@unicordoba.edu.co');
+    expect(out).toContain('phone:      300 123 4567');
+  });
+
+  it('shows the server validation error for a bad email', async () => {
+    const server = fakeServer(() => ({
+      status: 400,
+      body: { message: 'Validation failed' },
+    }));
+    const { code, err } = await invoke(
+      ['student', 'add', '--document', '1', '--name', 'A', '--email', 'x'],
+      { fetch: server.fetch },
+    );
+    expect(code).toBe(1);
+    expect(err).toContain('Validation failed');
+  });
+
   it('informs the conflict of a duplicate document', async () => {
     const server = fakeServer(() => ({
       status: 409,
@@ -87,9 +135,13 @@ describe('student list', () => {
     expect(code).toBe(0);
     expect(server.calls[0]?.path).toBe('/students');
     const [header, row1, row2] = out.split('\n');
-    expect(header).toMatch(/^DOCUMENT\s+NAME\s+PROGRAM\s+ACTIVE\s+CONSENT$/);
-    expect(row1).toMatch(/^123\s+Ana\s+Cross\s+yes\s+yes$/);
-    expect(row2).toMatch(/^456\s+Luis\s+-\s+no\s+no$/);
+    expect(header).toMatch(
+      /^DOCUMENT\s+NAME\s+PROGRAM\s+EMAIL\s+PHONE\s+DISPLAY\s+ACTIVE\s+CONSENT$/,
+    );
+    expect(row1).toMatch(
+      /^123\s+Ana\s+Cross\s+ana@unicordoba\.edu\.co\s+300 123 4567\s+Ana\s+yes\s+yes$/,
+    );
+    expect(row2).toMatch(/^456\s+Luis\s+-\s+-\s+-\s+Luis\s+no\s+no$/);
   });
 
   it('filters by active and validates the value', async () => {
@@ -102,6 +154,40 @@ describe('student list', () => {
     expect((await invoke(['student', 'list', '--active', 'maybe'])).code).toBe(
       2,
     );
+  });
+});
+
+describe('student edit', () => {
+  it('resolves the document and patches only the given fields', async () => {
+    const server = fakeServer((call) =>
+      call.method === 'GET' ? { body: [ana, luis] } : { body: ana },
+    );
+    const { code, out } = await invoke(
+      ['student', 'edit', '123', '--phone', '310', '--display-name', 'Anita'],
+      { fetch: server.fetch },
+    );
+    expect(code).toBe(0);
+    expect(server.calls[1]).toMatchObject({
+      method: 'PATCH',
+      path: '/students/id-1',
+      body: { phone: '310', displayName: 'Anita' },
+    });
+    expect(Object.keys(server.calls[1]?.body as object)).toEqual([
+      'phone',
+      'displayName',
+    ]);
+    expect(out).toContain('Student updated.');
+  });
+
+  it('needs a document and at least one option, and knows missing students', async () => {
+    expect((await invoke(['student', 'edit'])).code).toBe(2);
+    expect((await invoke(['student', 'edit', '123'])).code).toBe(2);
+    const server = fakeServer(() => ({ body: [] }));
+    const result = await invoke(['student', 'edit', '9', '--name', 'X'], {
+      fetch: server.fetch,
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('No student with document 9');
   });
 });
 

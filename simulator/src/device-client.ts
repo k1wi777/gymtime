@@ -48,6 +48,16 @@ export function describeScanResult(
   );
 }
 
+/** Operator-facing line for a `display.message` (what the LCD would show). */
+export function describeDisplayMessage(
+  payload: Extract<ServerMessage, { type: 'display.message' }>['payload'],
+): string {
+  if (payload.line1 === '' && payload.line2 === '') {
+    return `display.message: (screen cleared) (${payload.durationSec}s)`;
+  }
+  return `display.message: "${payload.line1}" / "${payload.line2}" (${payload.durationSec}s)`;
+}
+
 /**
  * Simulated ESP32: speaks protocol v0 with the gateway, keeps itself online
  * and reconnects. It has no process side effects (see `main.ts`).
@@ -308,6 +318,9 @@ export class DeviceClient {
         break;
       case 'alarm.set':
         this.onAlarm(message.payload);
+        break;
+      case 'display.message':
+        this.logger.state(describeDisplayMessage(message.payload));
         break;
     }
   }

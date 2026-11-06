@@ -1,6 +1,7 @@
 import type { Clock } from '../common/time/clock.js';
-import { InMemoryStudentsRepository } from '../students/infrastructure/in-memory-students.repository.js';
-import { StudentsService } from '../students/students.service.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
+import { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
+import { buildStudentsService } from '../students/testing.js';
 import { InstancesService } from './instances.service.js';
 import { InMemoryInstancesRepository } from './infrastructure/in-memory-instances.repository.js';
 import { InMemorySchedulesRepository } from './infrastructure/in-memory-schedules.repository.js';
@@ -25,7 +26,8 @@ export function buildSchedulesFixture(start: Date = MONDAY_9AM_BOGOTA) {
   const clock: Clock = { now: () => new Date(current) };
   const schedulesRepo = new InMemorySchedulesRepository();
   const instancesRepo = new InMemoryInstancesRepository();
-  const students = new StudentsService(new InMemoryStudentsRepository());
+  const eventLogRepo = new InMemoryEventLogRepository();
+  const students = buildStudentsService(undefined, eventLogRepo).service;
   const instances = new InstancesService(
     schedulesRepo,
     instancesRepo,
@@ -36,9 +38,11 @@ export function buildSchedulesFixture(start: Date = MONDAY_9AM_BOGOTA) {
     students,
     instances,
     clock,
+    new EventLogService(eventLogRepo),
   );
   return {
     clock,
+    eventLogRepo,
     schedulesRepo,
     instancesRepo,
     students,

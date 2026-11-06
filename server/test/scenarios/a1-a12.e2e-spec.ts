@@ -120,8 +120,8 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
     );
     expect(entry.payload).toMatchObject({ studentName: 'Ana', reason: null });
     expect(entry.payload.display).toEqual({
-      line1: 'Entrada registrada',
-      line2: 'Ana',
+      line1: 'Ana',
+      line2: 'Entrada OK',
       color: 'green',
     });
     const [open] = await harness.openSessions();
@@ -133,7 +133,10 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       'scan.result',
       (message) => message.payload.result === 'exit',
     );
-    expect(exit.payload.display).toMatchObject({ line1: 'Salida registrada' });
+    expect(exit.payload.display).toMatchObject({
+      line1: 'Ana',
+      line2: 'Salida OK',
+    });
     expect(await harness.openSessions()).toHaveLength(0);
     expect(await harness.sessions()).toMatchObject([
       { status: 'cerrada', exitSource: 'device', student: { id: ana } },
@@ -157,8 +160,8 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       reason: null,
     });
     expect(result.payload.display).toEqual({
-      line1: 'Huella no reconocida',
-      line2: '',
+      line1: 'No reconocida',
+      line2: 'Intente de nuevo',
       color: 'red',
     });
     expect(await harness.sessions()).toHaveLength(0);
@@ -191,7 +194,10 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       studentName: 'Luis',
       reason: 'NOT_IN_SCHEDULE',
     });
-    expect(denied.payload.display).toMatchObject({ line1: 'Acceso denegado' });
+    expect(denied.payload.display).toMatchObject({
+      line1: 'Luis',
+      line2: 'No es su horario',
+    });
     expect(await harness.sessions()).toHaveLength(0);
   });
 

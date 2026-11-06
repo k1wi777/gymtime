@@ -5,8 +5,11 @@ const at = new Date('2026-11-02T15:30:00Z');
 const student = {
   id: 's1',
   document: '1',
-  name: 'Ana',
+  name: 'Ana María Gómez Pérez',
   program: null,
+  email: null,
+  phone: null,
+  displayName: 'Ana M.',
   active: true,
   consented: true,
 };
@@ -25,9 +28,9 @@ describe('scan.result payloads (R10, R11)', () => {
       ts: Math.floor(at.getTime() / 1000),
       payload: {
         result: 'entry',
-        studentName: 'Ana',
+        studentName: 'Ana María Gómez Pérez',
         reason: null,
-        display: { line1: 'Entrada registrada', color: 'green' },
+        display: { line1: 'Ana M.', line2: 'Entrada OK', color: 'green' },
       },
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);
@@ -40,7 +43,11 @@ describe('scan.result payloads (R10, R11)', () => {
       `00000000-0000-4000-8000-000000000002`,
       at,
     );
-    expect(message.payload).toMatchObject({ result: 'exit', studentName: 'Ana' });
+    expect(message.payload).toMatchObject({
+      result: 'exit',
+      studentName: 'Ana María Gómez Pérez',
+      display: { line1: 'Ana M.', line2: 'Salida OK' },
+    });
     expect(scanResultSchema.safeParse(message).success).toBe(true);
   });
 
@@ -53,7 +60,7 @@ describe('scan.result payloads (R10, R11)', () => {
     );
     expect(message.payload).toMatchObject({
       result: 'denied',
-      studentName: 'Ana',
+      studentName: 'Ana María Gómez Pérez',
       reason: 'NOT_IN_SCHEDULE',
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);
@@ -83,7 +90,7 @@ describe('scan.result payloads (R10, R11)', () => {
         result: 'unknown',
         studentName: null,
         reason: null,
-        display: { line1: 'Huella no reconocida' },
+        display: { line1: 'No reconocida', line2: 'Intente de nuevo' },
       },
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);

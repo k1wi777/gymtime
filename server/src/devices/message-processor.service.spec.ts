@@ -1,3 +1,4 @@
+import { currentActor } from '../common/audit/actor.js';
 import { randomUUID } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.schema.js';
@@ -169,6 +170,17 @@ describe('MessageProcessor', () => {
       );
       expect(actions).toEqual([]);
       expect(handleAck).toHaveBeenCalledWith('esp32-1', ref);
+    });
+
+    it('runs the handler on behalf of the device for the audit trail (R19)', async () => {
+      await authenticate();
+      let actor: unknown;
+      processor.registerHandler('status', () => {
+        actor = currentActor();
+      });
+      await processor.process(session, statusFrame());
+      expect(actor).toEqual({ type: 'device', id: 'esp32-1' });
+      expect(currentActor()).toEqual({ type: 'system', id: null });
     });
 
     it('does not reprocess a duplicate and resends the original ack', async () => {

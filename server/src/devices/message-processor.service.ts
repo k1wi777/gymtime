@@ -10,6 +10,7 @@ import {
   type DeviceMessage,
   type ServerMessage,
 } from '@gymtime/shared';
+import { deviceActor, runAsActor } from '../common/audit/actor.js';
 import { safeEqual } from '../common/auth/safe-equal.js';
 import type { Env } from '../config/env.schema.js';
 import { DEVICES_CONFIG, type DevicesConfig } from './devices.config.js';
@@ -157,8 +158,12 @@ export class MessageProcessor {
       // Handlers run before the record is saved, so a failure leaves the id
       // unprocessed and a retry runs it again: handlers must be idempotent.
       const handler = this.handlers.get(message.type);
-      if (handler) await handler(deviceId, message);
-      else
+      // The audit trail attributes whatever the handler does to the device.
+      if (handler) {
+        await runAsActor(deviceActor(deviceId), () =>
+          handler(deviceId, message),
+        );
+      } else
         this.logger.debug({
           event: 'no_handler',
           deviceId,

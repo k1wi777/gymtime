@@ -12,16 +12,45 @@ const base = {
 };
 
 describe('InMemorySchedulesRepository', () => {
-  it('assigns and unassigns students idempotently', async () => {
+  const t = (minute: number) => new Date(Date.UTC(2026, 10, 2, 15, minute));
+
+  it('assigns and unassigns students idempotently, keeping the rows', async () => {
     const repo = new InMemorySchedulesRepository();
     const s = await repo.create(base);
-    await repo.assignStudent(s.id, 'a');
-    await repo.assignStudent(s.id, 'a');
-    expect((await repo.listStudentIds([s.id])).get(s.id)).toEqual(['a']);
-    expect(await repo.findByStudent('a')).toHaveLength(1);
-    await repo.unassignStudent(s.id, 'a');
-    await repo.unassignStudent(s.id, 'a');
-    expect((await repo.listStudentIds([s.id])).get(s.id)).toEqual([]);
+    expect(await repo.assignStudent(s.id, 'a', t(0))).toBe(true);
+    expect(await repo.assignStudent(s.id, 'a', t(1))).toBe(false);
+    expect((await repo.listStudentIds([s.id], t(2))).get(s.id)).toEqual(['a']);
+    expect(await repo.findByStudent('a', t(2))).toHaveLength(1);
+    expect(await repo.unassignStudent(s.id, 'a', t(5))).toBe(true);
+    expect(await repo.unassignStudent(s.id, 'a', t(6))).toBe(false);
+    expect((await repo.listStudentIds([s.id], t(6))).get(s.id)).toEqual([]);
+    expect(await repo.listAssignments(s.id)).toHaveLength(1);
+  });
+
+  it('answers by instant: before the start and from the end it is not active', async () => {
+    const repo = new InMemorySchedulesRepository();
+    const s = await repo.create(base);
+    await repo.assignStudent(s.id, 'a', t(10));
+    await repo.unassignStudent(s.id, 'a', t(20));
+    const at = (minute: number) => repo.listStudentIds([s.id], t(minute));
+    expect((await at(9)).get(s.id)).toEqual([]);
+    expect((await at(10)).get(s.id)).toEqual(['a']);
+    expect((await at(19)).get(s.id)).toEqual(['a']);
+    expect((await at(20)).get(s.id)).toEqual([]);
+    expect(await repo.findByStudent('a', t(25))).toHaveLength(0);
+  });
+
+  it('opens a new interval when the student is assigned again', async () => {
+    const repo = new InMemorySchedulesRepository();
+    const s = await repo.create(base);
+    await repo.assignStudent(s.id, 'a', t(0));
+    await repo.unassignStudent(s.id, 'a', t(5));
+    expect(await repo.assignStudent(s.id, 'a', t(10))).toBe(true);
+    const history = await repo.listAssignments(s.id);
+    expect(history.map((a) => [a.validFrom, a.validTo])).toEqual([
+      [t(0), t(5)],
+      [t(10), null],
+    ]);
   });
 });
 

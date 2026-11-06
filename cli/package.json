@@ -17,6 +17,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@gymtime/shared": "*"
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "oxlint": "^1.58.0",

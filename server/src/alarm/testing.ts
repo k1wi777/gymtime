@@ -1,9 +1,14 @@
 import type { ServerMessage } from '@gymtime/shared';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import { InMemoryAttendanceRepository } from '../attendance/infrastructure/in-memory-attendance.repository.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
+import { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
 import { DevicesService } from '../devices/devices.service.js';
+import { DisplayService } from '../devices/display.service.js';
+import { testDisplayConfig } from '../students/testing.js';
 import type {
   OutboundSender,
+  SendCommandOptions,
   SendResult,
 } from '../devices/outbound-sender.service.js';
 import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-memory-device-commands.repository.js';
@@ -25,7 +30,11 @@ export const bogota = (time: string, date = '2026-11-02') =>
 export function fakeAlarmSender() {
   const sent: ServerMessage[] = [];
   const send = vi.fn(
-    async (_deviceId: string, message: ServerMessage): Promise<SendResult> => {
+    async (
+      _deviceId: string,
+      message: ServerMessage,
+      _options?: SendCommandOptions,
+    ): Promise<SendResult> => {
       sent.push(message);
       return 'acked';
     },
@@ -54,6 +63,7 @@ export function buildAlarmFixture(
     sf.students,
     { onInstanceEmptied() {}, onButtonPressed() {} },
     sf.clock,
+    new EventLogService(sf.eventLogRepo),
   );
   const events = new InMemoryAlarmRepository();
   const devices = new DevicesService(
@@ -62,6 +72,13 @@ export function buildAlarmFixture(
   );
   const link = fakeAlarmSender();
   const systemEvents = new SystemEventsService();
+  const eventLog = new EventLogService(sf.eventLogRepo);
+  const display = new DisplayService(
+    devices,
+    link.sender,
+    eventLog,
+    testDisplayConfig,
+  );
   const service = new AlarmService(
     events,
     attendance,
@@ -69,10 +86,27 @@ export function buildAlarmFixture(
     devices,
     link.sender,
     systemEvents,
+    display,
+    eventLog,
     sf.clock,
     config,
   );
   attendance.setAlarmPort(service);
+
+  /** A new service on the same state: simulates a server restart. */
+  const restart = () =>
+    new AlarmService(
+      events,
+      attendance,
+      sf.instances,
+      devices,
+      link.sender,
+      systemEvents,
+      display,
+      eventLog,
+      sf.clock,
+      config,
+    );
 
   const instancesOf = () =>
     sf.instancesRepo.findInRange(bogota('00:00'), bogota('23:59'));
@@ -93,12 +127,19 @@ export function buildAlarmFixture(
     devices,
     link,
     service,
+    restart,
+    eventLog: sf.eventLogRepo,
     systemEvents,
     config,
     markOnline: (deviceId = 'dev') =>
       devices.markOnline(deviceId, 'fw', sf.clock.now()),
     instancesOf,
     openSession,
+    /** `display.message` payloads sent so far. */
+    messages: () =>
+      link.sent.flatMap((message) =>
+        message.type === 'display.message' ? [message.payload] : [],
+      ),
     /** `alarm.set` payloads sent so far. */
     alarms: () =>
       link.sent.flatMap((message) =>

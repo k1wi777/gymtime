@@ -19,6 +19,9 @@ const student = {
   document: '1',
   name: 'Ana',
   program: null,
+  email: null,
+  phone: null,
+  displayName: 'Ana',
   active: true,
   consented: true,
 };
@@ -50,6 +53,7 @@ function build() {
     attendance,
     sender,
     events,
+    { cols: 16, rows: 2, resultSeconds: 3 },
   );
   registrar.onModuleInit();
   return { handlers, provider: () => provider, attendance, send, events };
@@ -173,7 +177,7 @@ describe('AttendanceEventsRegistrar (R11, R12, R17)', () => {
       ref: message.id,
       payload: {
         result: 'unknown',
-        display: { line1: 'Huella no reconocida' },
+        display: { line1: 'No reconocida', line2: 'Intente de nuevo' },
       },
     });
   });

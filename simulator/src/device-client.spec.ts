@@ -153,6 +153,34 @@ describe('DeviceClient', () => {
     });
   });
 
+  it('prints the two lines and the duration of a display.message and acks it (R7)', async () => {
+    const client = newClient();
+    await vi.waitFor(() => expect(client.state).toBe('online'));
+    const msg = frame('display.message', {
+      line1: 'Tiempo cumplido',
+      line2: 'Registre salida',
+      durationSec: 1800,
+    });
+    sockets[0].send(JSON.stringify(msg));
+    await vi.waitFor(() => {
+      expect(
+        received.filter((m) => m.type === 'ack' && m.ref === msg.id),
+      ).toHaveLength(1);
+      expect(logs).toContain(
+        'display.message: "Tiempo cumplido" / "Registre salida" (1800s)',
+      );
+    });
+    const clear = frame('display.message', {
+      line1: '',
+      line2: '',
+      durationSec: 1,
+    });
+    sockets[0].send(JSON.stringify(clear));
+    await vi.waitFor(() =>
+      expect(logs).toContain('display.message: (screen cleared) (1s)'),
+    );
+  });
+
   it('answers an invalid message with an error ack when the id is recoverable', async () => {
     const client = newClient();
     await vi.waitFor(() => expect(client.state).toBe('online'));
@@ -556,8 +584,8 @@ describe('DeviceClient', () => {
           studentName: 'Ana',
           reason: 'NOT_IN_SCHEDULE',
           display: {
-            line1: 'Acceso denegado',
-            line2: 'Ana: fuera del horario',
+            line1: 'Ana',
+            line2: 'No es su horario',
             color: 'red',
           },
         },
@@ -572,7 +600,7 @@ describe('DeviceClient', () => {
           logs.some(
             (l) =>
               l.includes('scan.result denied: Ana (NOT_IN_SCHEDULE)') &&
-              l.includes('Acceso denegado') &&
+              l.includes('Ana / No es su horario') &&
               l.includes('red'),
           ),
         ).toBe(true);

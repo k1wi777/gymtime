@@ -1,5 +1,4 @@
 import { AlarmScheduler } from './alarm-scheduler.js';
-import { AlarmService } from './alarm.service.js';
 import { bogota, buildAlarmFixture } from './testing.js';
 
 function build(start = bogota('09:00')) {
@@ -45,18 +44,10 @@ describe('AlarmScheduler (R1, R11)', () => {
     f.setNow(bogota('11:00'));
     await f.service.onInstanceEnded(instance, f.clock.now());
     await vi.waitFor(() => expect(f.alarms()).toHaveLength(1));
+    await vi.waitFor(() => expect(f.messages()).toHaveLength(1));
     const sent = f.link.sent.length;
 
-    const restartedService = new AlarmService(
-      f.events,
-      f.attendance,
-      f.instances,
-      f.devices,
-      f.link.sender,
-      f.systemEvents,
-      f.clock,
-      f.config,
-    );
+    const restartedService = f.restart();
     const restarted = new AlarmScheduler(
       f.instances,
       restartedService,

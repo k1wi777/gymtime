@@ -21,6 +21,9 @@ describe('validateEnv', () => {
       SYNC_LEAD_MINUTES: 15,
       ALARM_BEEP_SECONDS: 5,
       ALARM_TIMEOUT_MINUTES: 30,
+      DISPLAY_COLS: 16,
+      DISPLAY_ROWS: 2,
+      DISPLAY_RESULT_SECONDS: 3,
     });
   });
 
@@ -30,6 +33,29 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...valid(), SYNC_LEAD_MINUTES: '-1' })).toThrow(
       /SYNC_LEAD_MINUTES/,
     );
+  });
+
+  it('reads the display settings and rejects out-of-range values', () => {
+    const env = validateEnv({
+      ...valid(),
+      DISPLAY_COLS: '20',
+      DISPLAY_ROWS: '4',
+      DISPLAY_RESULT_SECONDS: '5',
+    });
+    expect(env).toMatchObject({
+      DISPLAY_COLS: 20,
+      DISPLAY_ROWS: 4,
+      DISPLAY_RESULT_SECONDS: 5,
+    });
+    for (const name of [
+      'DISPLAY_COLS',
+      'DISPLAY_ROWS',
+      'DISPLAY_RESULT_SECONDS',
+    ]) {
+      expect(() => validateEnv({ ...valid(), [name]: '0' })).toThrow(
+        new RegExp(name),
+      );
+    }
   });
 
   it('reads the alarm settings and rejects out-of-range values', () => {

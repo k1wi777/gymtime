@@ -3,10 +3,11 @@ import type { ServerMessage } from '@gymtime/shared';
 import type { Student } from '../../students/domain/student.js';
 import type { Decision } from './decision.js';
 import {
-  UNKNOWN_DISPLAY,
   deniedDisplay,
   entryDisplay,
   exitDisplay,
+  unknownDisplay,
+  type DisplayLayout,
 } from './display.js';
 
 export type ScanResultMessage = Extract<ServerMessage, { type: 'scan.result' }>;
@@ -14,12 +15,14 @@ export type ScanResultMessage = Extract<ServerMessage, { type: 'scan.result' }>;
 /**
  * Builds the response to a scan: `ref` is the scan id, `ts` the server instant
  * of the decision (the device timestamp is never echoed as the decision time).
+ * `display` uses the student's `displayName`; `studentName` keeps the full name.
  */
 export function buildScanResult(
   decision: Decision,
   student: Student | null,
   ref: string,
   at: Date,
+  layout?: DisplayLayout,
 ): ScanResultMessage {
   const envelope = {
     v: 1 as const,
@@ -35,22 +38,34 @@ export function buildScanResult(
         result: 'denied',
         studentName: student?.name ?? null,
         reason: decision.reason,
-        display: deniedDisplay(decision.reason, student?.name ?? null),
+        display: deniedDisplay(
+          decision.reason,
+          student?.displayName ?? null,
+          layout,
+        ),
       },
     };
   }
-  const name = requireName(student);
+  const resolved = requireStudent(student);
   const display =
-    decision.kind === 'entry' ? entryDisplay(name) : exitDisplay(name);
+    decision.kind === 'entry'
+      ? entryDisplay(resolved.displayName, layout)
+      : exitDisplay(resolved.displayName, layout);
   return {
     ...envelope,
-    payload: { result: decision.kind, studentName: name, reason: null, display },
+    payload: {
+      result: decision.kind,
+      studentName: resolved.name,
+      reason: null,
+      display,
+    },
   };
 }
 
 export function buildUnknownScanResult(
   ref: string,
   at: Date,
+  layout?: DisplayLayout,
 ): ScanResultMessage {
   return {
     v: 1,
@@ -62,15 +77,15 @@ export function buildUnknownScanResult(
       result: 'unknown',
       studentName: null,
       reason: null,
-      display: UNKNOWN_DISPLAY,
+      display: unknownDisplay(layout),
     },
   };
 }
 
 /** `entry`/`exit` always come from a resolved student. */
-function requireName(student: Student | null): string {
+function requireStudent(student: Student | null): Student {
   if (!student) throw new Error('entry/exit decisions require a student');
-  return student.name;
+  return student;
 }
 
 const seconds = (at: Date) => Math.floor(at.getTime() / 1000);

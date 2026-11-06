@@ -278,6 +278,8 @@ Decisión del servidor ante un `fingerprint.scan` o `fingerprint.unknown` (`ref`
 
 Campos del payload: `result`: `entry`, `exit`, `denied`, `unknown`. Con `entry`/`exit`: `studentName` texto y `reason` `null`. Con `denied`: `reason` es un código de rechazo y `studentName` texto o `null`. Con `unknown`: ambos `null`. `display`: `line1`, `line2`, `color` (texto libre, p. ej. `green`).
 
+`studentName` es el nombre completo; en `display.line1` el servidor envía el nombre corto de pantalla (`display_name`, máximo 16 caracteres ASCII). Las dos líneas de `display` ya vienen listas para una pantalla LCD de 16 × 2: sin tildes y de 16 caracteres como máximo; la lista de textos está en [`mensajes_pantalla.md`](./mensajes_pantalla.md). `color` no aplica a una pantalla monocroma y el firmware puede ignorarlo.
+
 <!-- example: scan.result -->
 ```json
 {
@@ -291,8 +293,8 @@ Campos del payload: `result`: `entry`, `exit`, `denied`, `unknown`. Con `entry`/
     "studentName": "Ana Perez",
     "reason": null,
     "display": {
-      "line1": "Bienvenido",
-      "line2": "Ana Perez",
+      "line1": "Ana Perez",
+      "line2": "Entrada OK",
       "color": "green"
     }
   }
@@ -448,6 +450,13 @@ Muestra un texto temporal en la pantalla.
 
 Campos del payload: `line1`, `line2` texto; `durationSec` entero > 0.
 
+Reglas:
+
+- Cada línea tiene como máximo 16 caracteres y solo ASCII imprimible (el servidor quita las tildes y rechaza lo demás antes de enviarlo). El firmware debe confirmar con `ack` aunque la pantalla no pueda dibujar el texto.
+- `durationSec` es el tiempo en pantalla; al cumplirse, el lector vuelve a su estado de reposo. Una orden nueva reemplaza a la que se estaba mostrando.
+- **Dos líneas vacías** (`""`) significan «limpiar la pantalla»: retiran el mensaje en curso, por ejemplo el de la alarma.
+- Es una orden persistida como `alarm.set`: se reintenta con el mismo `id` y, si el lector estaba desconectado, se entrega al reconectar, en orden de creación. Lo envían `POST /devices/messages` y `gym device message`, y la alarma continua (`Tiempo cumplido` / `Registre salida`, ver [`mensajes_pantalla.md`](./mensajes_pantalla.md)).
+
 <!-- example: display.message -->
 ```json
 {
@@ -457,8 +466,8 @@ Campos del payload: `line1`, `line2` texto; `durationSec` entero > 0.
   "ts": 1760000000,
   "ref": null,
   "payload": {
-    "line1": "Cierre en 5 min",
-    "line2": "Registre su salida",
+    "line1": "Tiempo cumplido",
+    "line2": "Registre salida",
     "durationSec": 10
   }
 }

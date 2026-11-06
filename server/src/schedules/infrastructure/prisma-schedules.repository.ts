@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { NewSchedule, Schedule } from '../domain/schedule.js';
 import type { SchedulesRepository } from '../domain/schedules.repository.js';
@@ -59,34 +60,63 @@ export class PrismaSchedulesRepository implements SchedulesRepository {
     return rows.map(toDomain);
   }
 
-  async findByStudent(studentId: string) {
+  async findByStudent(studentId: string, at: Date) {
     const rows = await this.prisma.schedule.findMany({
-      where: { students: { some: { studentId } } },
+      where: { students: { some: { studentId, ...activeAt(at) } } },
     });
     return rows.map(toDomain);
   }
 
-  async assignStudent(scheduleId: string, studentId: string) {
-    await this.prisma.scheduleStudent.upsert({
-      where: { scheduleId_studentId: { scheduleId, studentId } },
-      create: { scheduleId, studentId },
-      update: {},
+  async assignStudent(scheduleId: string, studentId: string, at: Date) {
+    const open = await this.prisma.scheduleStudent.findFirst({
+      where: { scheduleId, studentId, validTo: null },
+      select: { id: true },
     });
+    if (open) return false;
+    try {
+      await this.prisma.scheduleStudent.create({
+        data: { scheduleId, studentId, validFrom: at },
+      });
+      return true;
+    } catch (error) {
+      // A concurrent request won: the partial unique index allows one open row.
+      if (isUniqueViolation(error)) return false;
+      throw error;
+    }
   }
 
-  async unassignStudent(scheduleId: string, studentId: string) {
-    await this.prisma.scheduleStudent.deleteMany({
-      where: { scheduleId, studentId },
+  async unassignStudent(scheduleId: string, studentId: string, at: Date) {
+    const { count } = await this.prisma.scheduleStudent.updateMany({
+      where: { scheduleId, studentId, validTo: null },
+      data: { validTo: at },
     });
+    return count > 0;
   }
 
-  async listStudentIds(scheduleIds: string[]) {
+  async listStudentIds(scheduleIds: string[], at: Date) {
     const result = new Map<string, string[]>(scheduleIds.map((id) => [id, []]));
     const rows = await this.prisma.scheduleStudent.findMany({
-      where: { scheduleId: { in: scheduleIds } },
+      where: { scheduleId: { in: scheduleIds }, ...activeAt(at) },
       orderBy: { studentId: 'asc' },
     });
     for (const row of rows) result.get(row.scheduleId)?.push(row.studentId);
     return result;
   }
+
+  listAssignments(scheduleId: string) {
+    return this.prisma.scheduleStudent.findMany({
+      where: { scheduleId },
+      orderBy: [{ validFrom: 'asc' }, { id: 'asc' }],
+    });
+  }
 }
+
+/** Interval active at `at`: started and not yet closed. */
+const activeAt = (at: Date) => ({
+  validFrom: { lte: at },
+  OR: [{ validTo: null }, { validTo: { gt: at } }],
+});
+
+const isUniqueViolation = (error: unknown): boolean =>
+  error instanceof Prisma.PrismaClientKnownRequestError &&
+  error.code === 'P2002';

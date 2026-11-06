@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { auditTestProviders } from '../common/audit/testing.js';
 import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK } from '../common/time/clock.js';
 import { STUDENTS_REPOSITORY } from '../students/domain/students.repository.js';
@@ -29,6 +30,7 @@ describe('SchedulesController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [SchedulesController],
       providers: [
+        ...auditTestProviders,
         SchedulesService,
         InstancesService,
         StudentsService,

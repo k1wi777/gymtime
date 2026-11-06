@@ -4,6 +4,8 @@ import request from 'supertest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
+import { EVENT_LOG_REPOSITORY } from '../src/common/audit/event-log.repository.js';
+import { InMemoryEventLogRepository } from '../src/common/audit/in-memory-event-log.repository.js';
 
 const TOKEN = 'device-token-123456';
 const ADMIN_KEY = 'admin-key-1234567890';
@@ -120,6 +122,8 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
       .useValue(new InMemoryInstancesRepository())
       .overrideProvider(ALARM_REPOSITORY)
       .useValue(new InMemoryAlarmRepository())
+      .overrideProvider(EVENT_LOG_REPOSITORY)
+      .useValue(new InMemoryEventLogRepository())
       .overrideProvider(STUDENTS_REPOSITORY)
       .useValue(new InMemoryStudentsRepository())
       .overrideProvider(FINGERPRINTS_REPOSITORY)

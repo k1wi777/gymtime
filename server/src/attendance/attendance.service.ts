@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { InstancesService, type Occurrence } from '../schedules/instances.service.js';
@@ -72,6 +73,7 @@ export class AttendanceService {
     private readonly students: StudentsService,
     @Inject(ALARM_PORT) private alarm: AlarmPort,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly eventLog: EventLogService,
   ) {}
 
   /** The alarm module replaces the initial no-op once it is wired. */
@@ -143,13 +145,15 @@ export class AttendanceService {
           decision.kind === 'denied' ? decision.reason : 'SESSION_ALREADY_OPEN',
         );
       }
-      return this.sessions.create({
+      const session = await this.sessions.create({
         studentId: student.id,
         instanceId: decision.occurrence.instance.id,
         enteredAt: at,
         entrySource: 'manual',
         manualReason: reason,
       });
+      await this.recordManual('entry', session);
+      return session;
     });
   }
 
@@ -167,8 +171,22 @@ export class AttendanceService {
         manualReason: reason,
       });
       if (!closed) throw new AttendanceError('NO_OPEN_SESSION');
+      await this.recordManual('exit', closed);
       await this.notifyAlarmIfEmpty(closed.instanceId);
       return closed;
+    });
+  }
+
+  /** Audit trail of the manual registrations (who did it comes from the context). */
+  private recordManual(
+    kind: 'entry' | 'exit',
+    session: AttendanceSession,
+  ): Promise<void> {
+    return this.eventLog.record('attendance.manual', {
+      kind,
+      sessionId: session.id,
+      studentId: session.studentId,
+      instanceId: session.instanceId,
     });
   }
 

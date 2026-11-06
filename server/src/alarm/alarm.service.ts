@@ -3,10 +3,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PROTOCOL_VERSION, type ServerMessage } from '@gymtime/shared';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import type { AlarmPort } from '../attendance/domain/alarm.port.js';
+import { ALARM_LINES } from '../attendance/domain/display.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { DevicesService } from '../devices/devices.service.js';
+import { DisplayService } from '../devices/display.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { ScheduleInstance } from '../schedules/domain/schedule-instance.js';
 import { InstancesService } from '../schedules/instances.service.js';
@@ -24,6 +27,8 @@ import type {
 } from './domain/alarm-event.js';
 
 const MS_PER_MINUTE = 60_000;
+/** Seconds the blank message that clears the screen stays (protocol minimum). */
+const CLEAR_SECONDS = 1;
 
 interface CurrentAlarm {
   on: boolean;
@@ -73,6 +78,8 @@ export class AlarmService implements AlarmPort {
     private readonly devices: DevicesService,
     private readonly sender: OutboundSender,
     private readonly systemEvents: SystemEventsService,
+    private readonly display: DisplayService,
+    private readonly eventLog: EventLogService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(ALARM_CONFIG) private readonly config: AlarmConfig,
   ) {
@@ -153,6 +160,7 @@ export class AlarmService implements AlarmPort {
         reason,
       });
       this.logger.log({ event: 'alarm_manual', reason, deviceId });
+      await this.eventLog.record('alarm.manual_on', { reason, deviceId });
       return this.status();
     });
   }
@@ -169,7 +177,10 @@ export class AlarmService implements AlarmPort {
     };
   }
 
-  /** Re-sends the continuous alarm to a device that just connected (R12). */
+  /**
+   * Re-sends the continuous alarm to a device that just connected (R12),
+   * with its screen message when the alarm is waiting for exits.
+   */
   onDeviceConnected(deviceId: string): void {
     if (!this.current.on || this.current.durationSec !== null) return;
     this.sendTo(deviceId, {
@@ -177,6 +188,9 @@ export class AlarmService implements AlarmPort {
       durationSec: null,
       reason: this.current.reason ?? 'PENDING_EXIT',
     });
+    if (this.current.reason === 'PENDING_EXIT') {
+      this.showAlarmMessage(this.remainingSeconds(), deviceId);
+    }
     this.logger.log({
       event: 'alarm_resent',
       deviceId,
@@ -323,6 +337,18 @@ export class AlarmService implements AlarmPort {
     };
     this.emitAlarm({ on: true, reason: 'PENDING_EXIT' });
     this.dispatch({ on: true, durationSec: null, reason: 'PENDING_EXIT' });
+    // The protocol has no "until further notice": the message lasts as long as
+    // the alarm can, and CLEARED removes it earlier.
+    this.showAlarmMessage(this.config.timeoutMinutes * 60);
+  }
+
+  /** Seconds until the last open event times out; at least 1. */
+  private remainingSeconds(now: Date = this.clock.now()): number {
+    const ends = [...this.activeEvents.values()].map(
+      (active) => active.endsAt.getTime() + this.timeoutMs,
+    );
+    if (ends.length === 0) return this.config.timeoutMinutes * 60;
+    return Math.max(1, Math.ceil((Math.max(...ends) - now.getTime()) / 1000));
   }
 
   private expireBeep(now: Date): void {
@@ -387,6 +413,10 @@ export class AlarmService implements AlarmPort {
       events: open.length,
       sessionsClosed,
     });
+    await this.eventLog.record(
+      closedBy === 'button' ? 'alarm.button_off' : 'alarm.manual_off',
+      { events: open.length, sessionsClosed },
+    );
     return { closedBy, sessionsClosed, status: await this.status() };
   }
 
@@ -398,6 +428,7 @@ export class AlarmService implements AlarmPort {
     closedBy: 'all_exited' | 'button' | 'cli' | 'timeout';
     sessionsClosed: number;
   }): void {
+    const hadMessage = this.current.reason === 'PENDING_EXIT';
     this.current = offState();
     this.systemEvents.emit('alarm', {
       on: false,
@@ -406,6 +437,51 @@ export class AlarmService implements AlarmPort {
       sessionsClosed: details?.sessionsClosed ?? 0,
     });
     this.dispatch({ on: false, durationSec: null, reason: 'CLEARED' });
+    if (hadMessage) this.clearAlarmMessage();
+  }
+
+  /**
+   * Blank lines replace the alarm text, and `supersedesPrevious` fails the
+   * alarm message that was never confirmed so it is not replayed afterwards.
+   */
+  private clearAlarmMessage(): void {
+    this.sendMessage('', '', CLEAR_SECONDS);
+  }
+
+  private showAlarmMessage(durationSec: number, deviceId?: string): void {
+    this.sendMessage(
+      ALARM_LINES.line1,
+      ALARM_LINES.line2,
+      durationSec,
+      deviceId,
+    );
+  }
+
+  /** Fire and forget, like `dispatch`; the server composes it, so it is not audited. */
+  private sendMessage(
+    line1: string,
+    line2: string,
+    durationSec: number,
+    deviceId?: string,
+  ): void {
+    void (async () => {
+      try {
+        await this.display.show(
+          {
+            deviceId: deviceId ?? (await this.display.defaultDevice()),
+            line1,
+            line2,
+            durationSec,
+          },
+          { supersedesPrevious: true, audit: false },
+        );
+      } catch (error) {
+        this.logger.error({
+          event: 'alarm_message_failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
   }
 
   private emitAlarm(payload: { on: boolean; reason: AlarmReason }): void {

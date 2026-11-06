@@ -53,6 +53,10 @@ export const envSchema = z.object({
   ALARM_BEEP_SECONDS: z.coerce.number().int().min(1).max(300).default(5),
   // After a schedule ends, how long until abandoned sessions are closed.
   ALARM_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
+  // Reader LCD: size and default time a message stays on screen.
+  DISPLAY_COLS: z.coerce.number().int().min(8).max(40).default(16),
+  DISPLAY_ROWS: z.coerce.number().int().min(1).max(4).default(2),
+  DISPLAY_RESULT_SECONDS: z.coerce.number().int().min(1).max(60).default(3),
 });
 
 export type Env = z.infer<typeof envSchema>;

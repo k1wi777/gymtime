@@ -87,6 +87,71 @@ describe('SchedulesService students and queries (R3, R4)', () => {
     expect((await f.schedules.get(schedule.id))?.students).toEqual([]);
   });
 
+  it('closes the validity instead of deleting and opens another on reassign (R15, R16, R18)', async () => {
+    const f = buildSchedulesFixture(); // Monday 09:00 Bogota
+    const { schedule } = await f.weekly('Morning', '10:00', '11:00');
+    const ana = await f.newStudent('1');
+    await f.schedules.assignStudent(schedule.id, ana.id);
+    await f.schedules.assignStudent(schedule.id, ana.id);
+    f.setNow(new Date('2026-11-02T15:00:00Z'));
+    await f.schedules.unassignStudent(schedule.id, ana.id);
+    await f.schedules.unassignStudent(schedule.id, ana.id);
+    f.setNow(new Date('2026-11-02T16:00:00Z'));
+    await f.schedules.assignStudent(schedule.id, ana.id);
+
+    const history = await f.schedules.listAssignments(schedule.id);
+    expect(history.map((a) => [a.validFrom.toISOString(), a.validTo])).toEqual([
+      ['2026-11-02T14:00:00.000Z', new Date('2026-11-02T15:00:00Z')],
+      ['2026-11-02T16:00:00.000Z', null],
+    ]);
+    expect((await f.schedules.get(schedule.id))?.students).toEqual([ana]);
+  });
+
+  it('lists and resolves only the assignments active at the instant (R17)', async () => {
+    const f = buildSchedulesFixture();
+    const { schedule } = await f.weekly('Morning', '10:00', '11:00');
+    const ana = await f.newStudent('1');
+    await f.schedules.assignStudent(schedule.id, ana.id);
+    f.setNow(new Date('2026-11-02T15:30:00Z'));
+    expect(
+      await f.instances.resolveForStudent(ana.id, f.clock.now()),
+    ).not.toBeNull();
+    expect(
+      (await f.instances.listActive(f.clock.now()))[0]?.studentIds,
+    ).toEqual([ana.id]);
+
+    await f.schedules.unassignStudent(schedule.id, ana.id);
+
+    expect(
+      await f.instances.resolveForStudent(ana.id, f.clock.now()),
+    ).toBeNull();
+    expect(
+      (await f.instances.listActive(f.clock.now()))[0]?.studentIds,
+    ).toEqual([]);
+    expect((await f.schedules.list())[0]?.students).toEqual([]);
+  });
+
+  it('audits only the real changes with the schedule and student ids (R19)', async () => {
+    const f = buildSchedulesFixture();
+    const { schedule } = await f.weekly('Morning', '10:00', '11:00');
+    const ana = await f.newStudent('1');
+    await f.schedules.assignStudent(schedule.id, ana.id);
+    await f.schedules.assignStudent(schedule.id, ana.id);
+    await f.schedules.unassignStudent(schedule.id, ana.id);
+    await f.schedules.unassignStudent(schedule.id, ana.id);
+    const events = f.eventLogRepo.entries.filter((e) =>
+      e.type.startsWith('schedule.'),
+    );
+    expect(events.map((e) => e.type)).toEqual([
+      'schedule.student_assigned',
+      'schedule.student_unassigned',
+    ]);
+    expect(events[0]).toMatchObject({
+      actor: { type: 'system', id: null },
+      detail: { scheduleId: schedule.id, studentId: ana.id },
+    });
+  });
+
   it('reports a missing schedule or student', async () => {
     const f = buildSchedulesFixture();
     const { schedule } = await f.weekly('Morning', '10:00', '11:00');

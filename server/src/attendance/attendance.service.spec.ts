@@ -210,6 +210,42 @@ describe('AttendanceService.recordScan rejection reasons (R16)', () => {
   );
 });
 
+describe('AttendanceService with validity intervals (R16, R17, R18)', () => {
+  it('denies a removed student at once and keeps their past sessions', async () => {
+    const f = buildAttendanceFixture();
+    const { schedule, ana } = await scheduleWithStudent(f);
+    f.slot(ana);
+    f.setNow(bogota('10:30'));
+    expect((await f.service.recordScan('dev', 5, 0)).decision.kind).toBe(
+      'entry',
+    );
+    expect((await f.service.recordScan('dev', 5, 0)).decision.kind).toBe(
+      'exit',
+    );
+
+    await f.schedules.unassignStudent(schedule.schedule.id, ana.id);
+
+    const denied = await f.service.recordScan('dev', 5, 0);
+    expect(denied.decision).toMatchObject({
+      kind: 'denied',
+      reason: 'NOT_IN_SCHEDULE',
+    });
+    expect(await f.repository.list()).toHaveLength(1);
+    expect(
+      await f.schedules.listAssignments(schedule.schedule.id),
+    ).toHaveLength(1);
+
+    f.advance(1000);
+    await f.schedules.assignStudent(schedule.schedule.id, ana.id);
+    f.slot(ana);
+    // Back in the schedule: the rejection is now about the earlier exit.
+    expect((await f.service.recordScan('dev', 5, 0)).decision).toMatchObject({
+      kind: 'denied',
+      reason: 'ALREADY_EXITED',
+    });
+  });
+});
+
 describe('AttendanceService manual registration (R13, R14)', () => {
   it('creates a manual entry with the reason', async () => {
     const f = buildAttendanceFixture();
@@ -224,6 +260,25 @@ describe('AttendanceService manual registration (R13, R14)', () => {
       manualReason: 'olvidó huella',
       status: 'abierta',
     });
+  });
+
+  it('audits manual entry and exit with the session ids (R19)', async () => {
+    const f = buildAttendanceFixture();
+    const { ana } = await scheduleWithStudent(f);
+    f.setNow(bogota('10:30'));
+
+    const entry = await f.service.registerManualEntry(ana.id, 'sin huella');
+    await f.service.registerManualExit(ana.id, 'sin huella');
+
+    const manual = f.eventLogRepo.entries.filter(
+      (e) => e.type === 'attendance.manual',
+    );
+    expect(manual).toHaveLength(2);
+    expect(manual[0]).toMatchObject({
+      actor: { type: 'system', id: null },
+      detail: { kind: 'entry', sessionId: entry.id, studentId: ana.id },
+    });
+    expect(manual[1]?.detail).toMatchObject({ kind: 'exit' });
   });
 
   it('rejects a second entry and an exit without an open session', async () => {

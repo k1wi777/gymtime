@@ -16,6 +16,8 @@ import { ALARM_REPOSITORY } from '../../src/alarm/domain/alarm.repository.js';
 import { InMemoryAlarmRepository } from '../../src/alarm/infrastructure/in-memory-alarm.repository.js';
 import { ATTENDANCE_REPOSITORY } from '../../src/attendance/domain/attendance.repository.js';
 import { InMemoryAttendanceRepository } from '../../src/attendance/infrastructure/in-memory-attendance.repository.js';
+import { EVENT_LOG_REPOSITORY } from '../../src/common/audit/event-log.repository.js';
+import { InMemoryEventLogRepository } from '../../src/common/audit/in-memory-event-log.repository.js';
 import { CLOCK, type Clock } from '../../src/common/time/clock.js';
 import {
   DEVICES_CONFIG,
@@ -86,6 +88,7 @@ export interface InMemoryRepositories {
   slots: InMemorySlotsRepository;
   attendance: InMemoryAttendanceRepository;
   alarm: InMemoryAlarmRepository;
+  eventLog: InMemoryEventLogRepository;
 }
 
 export interface InMemoryAppOptions {
@@ -128,6 +131,7 @@ function createRepositories(): InMemoryRepositories {
     slots: new InMemorySlotsRepository(),
     attendance: new InMemoryAttendanceRepository(),
     alarm: new InMemoryAlarmRepository(),
+    eventLog: new InMemoryEventLogRepository(),
   };
 }
 
@@ -169,6 +173,8 @@ export async function buildInMemoryApp(
     .useValue(repositories.attendance)
     .overrideProvider(ALARM_REPOSITORY)
     .useValue(repositories.alarm)
+    .overrideProvider(EVENT_LOG_REPOSITORY)
+    .useValue(repositories.eventLog)
     .overrideProvider(ALARM_CONFIG)
     .useValue({ ...defaultAlarmConfig, tickMs: 10, ...options.alarm })
     .overrideProvider(DEVICES_CONFIG)

@@ -5,6 +5,7 @@ import { DeviceGateway } from './device-gateway.js';
 import { DEVICES_CONFIG, defaultDevicesConfig } from './devices.config.js';
 import { DevicesController } from './devices.controller.js';
 import { DevicesService } from './devices.service.js';
+import { DisplayService } from './display.service.js';
 import { DEVICE_COMMANDS_REPOSITORY } from './domain/device-commands.repository.js';
 import { DEVICES_REPOSITORY } from './domain/devices.repository.js';
 import { PROCESSED_MESSAGES_REPOSITORY } from './domain/processed-messages.repository.js';
@@ -30,10 +31,11 @@ import { OutboundSender } from './outbound-sender.service.js';
     ApiKeyGuard,
     ConnectionRegistry,
     DevicesService,
+    DisplayService,
     MessageProcessor,
     OutboundSender,
     DeviceGateway,
   ],
-  exports: [DevicesService, OutboundSender, MessageProcessor],
+  exports: [DevicesService, DisplayService, OutboundSender, MessageProcessor],
 })
 export class DevicesModule {}

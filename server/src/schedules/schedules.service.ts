@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { secondsOfDay, toBogotaParts } from '../common/time/bogota.js';
 import type { Student } from '../students/domain/student.js';
@@ -13,6 +14,7 @@ import {
 import type { ScheduleInstance } from './domain/schedule-instance.js';
 import {
   SCHEDULES_REPOSITORY,
+  type ScheduleAssignment,
   type SchedulesRepository,
 } from './domain/schedules.repository.js';
 
@@ -54,6 +56,7 @@ export class SchedulesService {
     private readonly students: StudentsService,
     private readonly instances: InstancesService,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly eventLog: EventLogService,
   ) {}
 
   /** @throws ScheduleValidationError on an inconsistent definition. */
@@ -76,9 +79,10 @@ export class SchedulesService {
   async list(): Promise<ScheduleDetail[]> {
     const schedules = await this.repository.findAll();
     const ids = schedules.map((s) => s.id);
+    const now = this.clock.now();
     const [studentIds, upcoming] = await Promise.all([
-      this.repository.listStudentIds(ids),
-      this.instances.listUpcoming(ids, this.clock.now()),
+      this.repository.listStudentIds(ids, now),
+      this.instances.listUpcoming(ids, now),
     ]);
     const all = await this.students.findByIds([
       ...new Set([...studentIds.values()].flat()),
@@ -91,16 +95,47 @@ export class SchedulesService {
     }));
   }
 
-  /** Idempotent. @throws ScheduleLookupFailed when the schedule or student is missing. */
+  /**
+   * Opens a validity interval starting now; idempotent while one is active.
+   * @throws ScheduleLookupFailed when the schedule or student is missing.
+   */
   async assignStudent(scheduleId: string, studentId: string): Promise<void> {
     await this.requireBoth(scheduleId, studentId);
-    await this.repository.assignStudent(scheduleId, studentId);
+    const created = await this.repository.assignStudent(
+      scheduleId,
+      studentId,
+      this.clock.now(),
+    );
+    if (created) {
+      await this.eventLog.record('schedule.student_assigned', {
+        scheduleId,
+        studentId,
+      });
+    }
   }
 
-  /** Idempotent. @throws ScheduleLookupFailed when the schedule or student is missing. */
+  /**
+   * Closes the active interval now, keeping the row; idempotent.
+   * @throws ScheduleLookupFailed when the schedule or student is missing.
+   */
   async unassignStudent(scheduleId: string, studentId: string): Promise<void> {
     await this.requireBoth(scheduleId, studentId);
-    await this.repository.unassignStudent(scheduleId, studentId);
+    const closed = await this.repository.unassignStudent(
+      scheduleId,
+      studentId,
+      this.clock.now(),
+    );
+    if (closed) {
+      await this.eventLog.record('schedule.student_unassigned', {
+        scheduleId,
+        studentId,
+      });
+    }
+  }
+
+  /** Every interval of a schedule, including the closed ones (history). */
+  listAssignments(scheduleId: string): Promise<ScheduleAssignment[]> {
+    return this.repository.listAssignments(scheduleId);
   }
 
   /** Today's schedule starting now and ending `minutes` later (for quick tests). */
@@ -137,9 +172,10 @@ export class SchedulesService {
   }
 
   private async detail(schedule: Schedule): Promise<ScheduleDetail> {
+    const now = this.clock.now();
     const [ids, upcoming] = await Promise.all([
-      this.repository.listStudentIds([schedule.id]),
-      this.instances.listUpcoming([schedule.id], this.clock.now()),
+      this.repository.listStudentIds([schedule.id], now),
+      this.instances.listUpcoming([schedule.id], now),
     ]);
     const students = await this.students.findByIds(ids.get(schedule.id) ?? []);
     return {

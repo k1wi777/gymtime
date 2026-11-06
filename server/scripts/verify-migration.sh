@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# Verifies that the iteration 2 migrations upgrade an iteration 1 database
+# without losing data (E14-4) and that the report indexes are used (E14-3).
+#
+# Creates a throw-away database, applies the migrations up to the last one of
+# iteration 1, loads sample data, applies the rest and checks counts, values
+# and EXPLAIN plans. Needs a PostgreSQL (docker compose up -d) and `psql`.
+# Outside `rei check`: it touches a real database server.
+#
+#   npm run test:migration            (from the repo root or from server/)
+#   DATABASE_URL=postgresql://... npm run test:migration
+set -euo pipefail
+
+ITER1_LAST="20261102170000_device_command_created_at"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MIGRATIONS="$HERE/../prisma/migrations"
+ROOT_ENV="$HERE/../../.env"
+
+if [[ -z "${DATABASE_URL:-}" && -f "$ROOT_ENV" ]]; then
+  DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ROOT_ENV" | head -n1 | cut -d= -f2- | tr -d '"')"
+fi
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  echo "SKIP: DATABASE_URL is not set (and there is no .env); nothing verified." >&2
+  exit 0
+fi
+if ! command -v psql >/dev/null; then
+  echo "SKIP: psql is not installed; nothing verified." >&2
+  exit 0
+fi
+
+# Same server and credentials, another database; drop the query string (?schema=).
+BASE_URL="${DATABASE_URL%%\?*}"
+SERVER_URL="${BASE_URL%/*}"
+TEMP_DB="gymtime_migration_check_$$"
+ADMIN_URL="$SERVER_URL/postgres"
+TEMP_URL="$SERVER_URL/$TEMP_DB"
+
+if ! psql "$ADMIN_URL" -qtAc 'select 1' >/dev/null 2>&1; then
+  echo "SKIP: cannot connect to PostgreSQL (is 'docker compose up -d' running?); nothing verified." >&2
+  exit 0
+fi
+
+cleanup() {
+  psql "$ADMIN_URL" -qc "DROP DATABASE IF EXISTS \"$TEMP_DB\" WITH (FORCE)" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+psql "$ADMIN_URL" -qc "CREATE DATABASE \"$TEMP_DB\"" >/dev/null
+
+sql() { psql "$TEMP_URL" -v ON_ERROR_STOP=1 -qtA "$@"; }
+fail() { echo "FAIL: $*" >&2; exit 1; }
+expect() { # expect <description> <expected> <query>
+  local got
+  got="$(sql -c "$3")"
+  [[ "$got" == "$2" ]] || fail "$1: expected '$2', got '$got'"
+  echo "ok   $1"
+}
+
+apply_migrations() { # apply_migrations <from-exclusive|-> <to-inclusive|->
+  local name past_from=0
+  [[ "$1" == "-" ]] && past_from=1
+  for dir in "$MIGRATIONS"/*/; do
+    name="$(basename "$dir")"
+    if [[ $past_from -eq 0 ]]; then
+      [[ "$name" == "$1" ]] && past_from=1
+      continue
+    fi
+    sql -f "$dir/migration.sql" >/dev/null
+    echo "applied $name"
+    [[ "$2" != "-" && "$name" == "$2" ]] && return 0
+  done
+  return 0
+}
+
+echo "== Iteration 1 schema =="
+apply_migrations - "$ITER1_LAST"
+
+echo "== Iteration 1 sample data =="
+sql <<'SQL'
+INSERT INTO students (id, documento, nombre, programa, consentimiento) VALUES
+  ('00000000-0000-4000-8000-000000000001', '1001', 'Ana Maria Gomez Perez', 'Ingenieria', true),
+  ('00000000-0000-4000-8000-000000000002', '1002', 'Luis Mora', NULL, true),
+  ('00000000-0000-4000-8000-000000000003', '1003', 'Eva Ruiz', NULL, false);
+INSERT INTO fingerprints (student_id, plantilla, iv) VALUES
+  ('00000000-0000-4000-8000-000000000001', '\xdeadbeef', '\x00112233');
+INSERT INTO devices (id, version_firmware) VALUES ('esp32-1', '1.0.0');
+INSERT INTO schedules (id, nombre, dia_semana, inicio, fin) VALUES
+  ('00000000-0000-4000-8000-0000000000a1', 'Mananas', 1, '10:00', '11:00');
+INSERT INTO schedules (id, nombre, fecha, inicio, fin) VALUES
+  ('00000000-0000-4000-8000-0000000000a2', 'Sin ocurrencias', '2099-01-01', '10:00', '11:00');
+INSERT INTO schedule_instances (id, schedule_id, fecha, inicio, fin) VALUES
+  ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000a1', '2026-10-26', '2026-10-26 15:00+00', '2026-10-26 16:00+00'),
+  ('00000000-0000-4000-8000-0000000000b2', '00000000-0000-4000-8000-0000000000a1', '2026-11-02', '2026-11-02 15:00+00', '2026-11-02 16:00+00');
+INSERT INTO schedule_students (schedule_id, student_id) VALUES
+  ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001'),
+  ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000002'),
+  ('00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001');
+INSERT INTO attendance_sessions (student_id, instance_id, entrada, salida, origen_entrada, origen_salida, estado) VALUES
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b1', '2026-10-26 15:05+00', '2026-10-26 15:55+00', 'device', 'device', 'cerrada'),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2', '2026-11-02 15:02+00', NULL, 'device', NULL, 'abierta'),
+  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000000b2', '2026-11-02 15:10+00', '2026-11-02 15:50+00', 'manual', 'manual', 'cerrada');
+INSERT INTO alarm_events (instance_id, inicio) VALUES
+  ('00000000-0000-4000-8000-0000000000b2', '2026-11-02 16:00+00');
+INSERT INTO device_commands (device_id, tipo, payload, estado) VALUES
+  ('esp32-1', 'alarm.set', '{"on":true}', 'acked'),
+  ('esp32-1', 'schedule.set', '{}', 'pending');
+INSERT INTO processed_messages (message_id, device_id) VALUES ('m1', 'esp32-1');
+INSERT INTO event_log (tipo, detalle) VALUES ('legacy.event', '{"a":1}');
+SQL
+
+TABLES=(students fingerprints devices schedules schedule_students schedule_instances
+  attendance_sessions alarm_events device_commands processed_messages event_log)
+declare -A BEFORE
+for table in "${TABLES[@]}"; do BEFORE[$table]="$(sql -c "SELECT count(*) FROM $table")"; done
+
+echo "== Iteration 2 migrations =="
+apply_migrations "$ITER1_LAST" -
+
+echo "== No row lost =="
+for table in "${TABLES[@]}"; do
+  expect "$table keeps its ${BEFORE[$table]} row(s)" "${BEFORE[$table]}" "SELECT count(*) FROM $table"
+done
+
+echo "== Expected values =="
+expect "students: display_name, correo and telefono start NULL" "3" \
+  "SELECT count(*) FROM students WHERE display_name IS NULL AND correo IS NULL AND telefono IS NULL"
+expect "students keep their names and degree" "Ana Maria Gomez Perez|Ingenieria" \
+  "SELECT nombre || '|' || programa FROM students WHERE documento = '1001'"
+expect "assignments stay active" "3" "SELECT count(*) FROM schedule_students WHERE valid_to IS NULL"
+expect "valid_from is the first occurrence (Bogota midnight)" "2026-10-26 05:00:00+00" \
+  "SELECT valid_from AT TIME ZONE 'UTC' || '+00' FROM schedule_students WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND student_id = '00000000-0000-4000-8000-000000000001'"
+expect "valid_from without occurrences is not in the future" "0" \
+  "SELECT count(*) FROM schedule_students WHERE valid_from > now()"
+expect "the past sessions are covered by their assignment" "3" \
+  "SELECT count(*) FROM attendance_sessions a JOIN schedule_instances i ON i.id = a.instance_id JOIN schedule_students ss ON ss.schedule_id = i.schedule_id AND ss.student_id = a.student_id WHERE ss.valid_from <= a.entrada AND ss.valid_to IS NULL"
+expect "every assignment got an id" "3" "SELECT count(DISTINCT id) FROM schedule_students"
+expect "old event_log rows are attributed to system" "system|" \
+  "SELECT actor_type || '|' || coalesce(actor_id, '') FROM event_log"
+
+echo "== Constraints =="
+if sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null 2>&1; then
+  fail "a second active assignment of the same pair was accepted"
+fi
+echo "ok   one active assignment per pair"
+sql -c "UPDATE schedule_students SET valid_to = now() WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND student_id = '00000000-0000-4000-8000-000000000001'" >/dev/null
+sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null
+expect "closing and reassigning keeps both intervals" "2" \
+  "SELECT count(*) FROM schedule_students WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND student_id = '00000000-0000-4000-8000-000000000001'"
+
+echo "== Report indexes (EXPLAIN) =="
+sql <<'SQL' >/dev/null
+INSERT INTO students (documento, nombre)
+  SELECT 'bulk' || n, 'Bulk ' || n FROM generate_series(1, 60) n;
+INSERT INTO schedule_instances (schedule_id, fecha, inicio, fin)
+  SELECT '00000000-0000-4000-8000-0000000000a1', d::date, d + interval '15 hours', d + interval '16 hours'
+  FROM generate_series('2025-01-01'::date, '2026-06-30'::date, '1 day') d;
+INSERT INTO attendance_sessions (student_id, instance_id, entrada, salida, origen_entrada, origen_salida, estado)
+  SELECT s.id, i.id, i.inicio + interval '5 minutes', i.inicio + interval '55 minutes', 'device', 'device', 'cerrada'
+  FROM (SELECT id FROM students WHERE documento LIKE 'bulk%') s
+  CROSS JOIN (SELECT id, inicio FROM schedule_instances WHERE fecha < '2026-06-30' ORDER BY fecha LIMIT 300) i;
+ANALYZE;
+SQL
+
+# The planner may prefer a sequential scan on small tables; forbidding it makes
+# the check deterministic: it proves an index CAN serve the query.
+plan_uses() { # plan_uses <description> <index-regex> <query>
+  local plan
+  plan="$(sql -c "SET enable_seqscan = off; EXPLAIN $3" | tr '\n' ' ')"
+  if [[ "$plan" =~ $2 ]]; then echo "ok   $1 -> ${BASH_REMATCH[0]}"; else fail "$1: no index matching $2 in plan: $plan"; fi
+}
+S='00000000-0000-4000-8000-000000000001'
+plan_uses "sessions by entry date" "attendance_sessions_entrada_idx" \
+  "SELECT * FROM attendance_sessions WHERE entrada >= '2026-01-01' AND entrada < '2026-01-08'"
+plan_uses "sessions of a student by date" "attendance_sessions_student_id_entrada_idx" \
+  "SELECT * FROM attendance_sessions WHERE student_id = '$S' AND entrada >= '2025-06-01' AND entrada < '2026-07-01'"
+plan_uses "sessions of an occurrence" "attendance_sessions_instance_id_estado_idx" \
+  "SELECT * FROM attendance_sessions WHERE instance_id = '00000000-0000-4000-8000-0000000000b2' AND estado = 'cerrada'"
+plan_uses "occurrences by date" "schedule_instances_fecha_idx" \
+  "SELECT * FROM schedule_instances WHERE fecha >= '2026-01-01' AND fecha < '2026-02-01'"
+plan_uses "occurrences of a schedule by date" "schedule_instances_(schedule_id_fecha_key|fecha_idx)" \
+  "SELECT * FROM schedule_instances WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND fecha >= '2026-01-01' AND fecha < '2026-02-01'"
+plan_uses "assignments of a student over time" "schedule_students_student_id_valid_from_idx" \
+  "SELECT * FROM schedule_students WHERE student_id = '$S' AND valid_from <= now()"
+plan_uses "active assignments of a schedule" "schedule_students_(one_active|schedule_id_valid_to_idx)" \
+  "SELECT * FROM schedule_students WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND valid_to IS NULL"
+
+echo "Migration check passed."

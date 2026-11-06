@@ -8,7 +8,11 @@ export interface Student {
   id: string;
   document: string;
   name: string;
+  /** The student's degree ("carrera"). */
   program: string | null;
+  email?: string | null;
+  phone?: string | null;
+  displayName?: string;
   active: boolean;
   consented: boolean;
 }
@@ -31,6 +35,9 @@ export function describeStudent(student: Student): string {
     `document:   ${student.document}`,
     `name:       ${student.name}`,
     `program:    ${student.program ?? '-'}`,
+    `email:      ${student.email ?? '-'}`,
+    `phone:      ${student.phone ?? '-'}`,
+    `display:    ${student.displayName ?? '-'}`,
     `active:     ${yesNo(student.active)}`,
     `consented:  ${yesNo(student.consented)}`,
   ].join('\n');
@@ -41,11 +48,14 @@ const add: Command = {
   action: 'add',
   summary: 'Register a student',
   usage:
-    'student add --document <doc> --name <name> [--program <program>] [--consented]',
+    'student add --document <doc> --name <name> [--program <program>] [--email <email>] [--phone <phone>] [--display-name <text>] [--consented]',
   options: {
     document: { type: 'string' },
     name: { type: 'string' },
     program: { type: 'string' },
+    email: { type: 'string' },
+    phone: { type: 'string' },
+    'display-name': { type: 'string' },
     consented: { type: 'boolean' },
   },
   async run({ http, io, values, positionals }) {
@@ -57,6 +67,10 @@ const add: Command = {
         document,
         name,
         program: values['program'] ?? null,
+        // Optional contact data and LCD name: omitted when not given.
+        email: values['email'],
+        phone: values['phone'],
+        displayName: values['display-name'],
         consented: values['consented'] === true,
       });
       io.out('Student created.');
@@ -93,16 +107,77 @@ const list: Command = {
     }
     io.out(
       formatTable(
-        ['DOCUMENT', 'NAME', 'PROGRAM', 'ACTIVE', 'CONSENT'],
+        [
+          'DOCUMENT',
+          'NAME',
+          'PROGRAM',
+          'EMAIL',
+          'PHONE',
+          'DISPLAY',
+          'ACTIVE',
+          'CONSENT',
+        ],
         students.map((s) => [
           s.document,
           s.name,
           s.program ?? '-',
+          s.email ?? '-',
+          s.phone ?? '-',
+          s.displayName ?? '-',
           yesNo(s.active),
           yesNo(s.consented),
         ]),
       ),
     );
+    return 0;
+  },
+};
+
+const EDIT_FLAGS = [
+  ['name', 'name'],
+  ['program', 'program'],
+  ['email', 'email'],
+  ['phone', 'phone'],
+  ['display-name', 'displayName'],
+] as const;
+
+const edit: Command = {
+  group: 'student',
+  action: 'edit',
+  summary: 'Edit a student (name, program, contact data or LCD name)',
+  usage:
+    'student edit <document> [--name <name>] [--program <program>] [--email <email>] [--phone <phone>] [--display-name <text>]',
+  options: {
+    name: { type: 'string' },
+    program: { type: 'string' },
+    email: { type: 'string' },
+    phone: { type: 'string' },
+    'display-name': { type: 'string' },
+  },
+  async run({ http, io, values, positionals }: CommandContext) {
+    const [document, ...extra] = positionals;
+    if (document === undefined || extra.length > 0) {
+      throw new UsageError('expected exactly one <document>');
+    }
+    const patch: Record<string, string> = {};
+    for (const [flag, field] of EDIT_FLAGS) {
+      const value = values[flag];
+      if (typeof value === 'string') patch[field] = value;
+    }
+    if (Object.keys(patch).length === 0) {
+      throw new UsageError('nothing to change: give at least one option');
+    }
+    const student = await findStudentByDocument(http, document);
+    if (!student) {
+      throw new CliError(`No student with document ${document}`);
+    }
+    const updated = await http.request<Student>(
+      'PATCH',
+      `/students/${student.id}`,
+      patch,
+    );
+    io.out('Student updated.');
+    io.out(describeStudent(updated));
     return 0;
   },
 };
@@ -127,4 +202,4 @@ const remove: Command = {
   },
 };
 
-export const studentCommands: readonly Command[] = [add, list, remove];
+export const studentCommands: readonly Command[] = [add, edit, list, remove];
