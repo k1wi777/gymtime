@@ -28,12 +28,25 @@ class ProbeController {
   }
 }
 
+@Controller()
+class BodyProbeController {
+  @Post('students/import/probe')
+  importBody(@Req() req: Request) {
+    return { size: (req.body as { content: string }).content.length };
+  }
+
+  @Post('other/probe')
+  otherBody(@Req() req: Request) {
+    return { size: (req.body as { content: string }).content.length };
+  }
+}
+
 const LISTED = 'http://localhost:3000';
 const OTHER = 'http://evil.example';
 
 async function build(options: Partial<HttpOptions> = {}) {
   const moduleRef = await Test.createTestingModule({
-    controllers: [ProbeController],
+    controllers: [ProbeController, BodyProbeController],
   }).compile();
   const app = moduleRef.createNestApplication();
   configureHttp(app, { corsOrigins: [LISTED], trustProxy: 0, ...options });
@@ -122,6 +135,26 @@ describe('configureHttp (R19)', () => {
     app = await build({ corsOrigins: [] });
     const res = await http().get('/probe').set('Origin', LISTED).expect(200);
     expect(corsHeaders(res.headers)).toEqual([]);
+  });
+});
+
+describe('configureHttp body limit of the CSV import', () => {
+  let app: INestApplication;
+  afterEach(() => app.close());
+
+  it('accepts a large body only on the import routes', async () => {
+    app = await build();
+    const content = 'x'.repeat(500_000);
+    const accepted = await request(app.getHttpServer())
+      .post('/students/import/probe')
+      .send({ content })
+      .expect(201);
+    expect(accepted.body).toEqual({ size: 500_000 });
+    // Elsewhere the default 100 kb limit still applies.
+    const rejected = await request(app.getHttpServer())
+      .post('/other/probe')
+      .send({ content });
+    expect(rejected.status).toBeGreaterThanOrEqual(400);
   });
 });
 

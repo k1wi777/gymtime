@@ -1,11 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import type { Student } from '../../students/domain/student.js';
 import { MAX_ENTRY_MARGIN_MINUTES } from '../domain/schedule.js';
 import type { ScheduleInstance } from '../domain/schedule-instance.js';
 import type { ResolvedOccurrence } from '../instances.service.js';
 import type {
+  BulkAssignResult,
+  CopyResult,
   CreateScheduleInput,
   ScheduleDetail,
+  UpdateScheduleInput,
 } from '../schedules.service.js';
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
@@ -34,6 +38,7 @@ export const createScheduleSchema = z
     end: time.optional(),
     entryOpenMinutes: margin.optional(),
     entryCloseMinutes: margin.optional(),
+    periodId: z.uuid().optional(),
     endsInMinutes: z.number().int().min(1).max(1440).optional(),
   })
   .superRefine((value, ctx) => {
@@ -44,6 +49,23 @@ export const createScheduleSchema = z
         code: 'custom',
         path: ['endsInMinutes'],
         message: 'cannot be combined with weekday, date, start, end or margins',
+      });
+    }
+    // A recurring schedule belongs to a period; a one-off one never does.
+    if (endsInMinutes === undefined && value.weekday !== undefined) {
+      if (value.periodId === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['periodId'],
+          message: 'a recurring schedule needs a periodId',
+        });
+      }
+    }
+    if (value.date !== undefined && value.periodId !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['periodId'],
+        message: 'a one-off schedule does not belong to a period',
       });
     }
     if (endsInMinutes === undefined && (!value.start || !value.end)) {
@@ -66,8 +88,33 @@ export const createScheduleSchema = z
       end: value.end as string,
       entryOpenMinutes: value.entryOpenMinutes,
       entryCloseMinutes: value.entryCloseMinutes,
+      periodId: value.periodId,
     };
   });
+
+export const updateScheduleSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(200).optional(),
+    weekday: z.number().int().min(1).max(7).optional(),
+    start: time.optional(),
+    end: time.optional(),
+    entryOpenMinutes: margin.nullable().optional(),
+    entryCloseMinutes: margin.nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, 'no fields to update')
+  .transform((value): UpdateScheduleInput => value);
+
+export const assignBodySchema = z
+  .strictObject({ validFrom: z.iso.datetime({ offset: true }).optional() })
+  .default({});
+
+export const bulkAssignSchema = z.strictObject({
+  documents: z.array(z.string().trim().max(200)).min(1).max(500),
+});
+
+export const copyStudentsSchema = z.strictObject({
+  fromScheduleId: z.uuid(),
+});
 
 export const resolveQuerySchema = z.strictObject({
   studentId: z.uuid(),
@@ -98,10 +145,88 @@ export class CreateScheduleDto {
   })
   entryCloseMinutes?: number;
   @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Period of a recurring schedule (required with `weekday`, forbidden with `date`)',
+  })
+  periodId?: string;
+  @ApiPropertyOptional({
     description:
       'Quick test schedule: today, starting now, ending in N minutes',
   })
   endsInMinutes?: number;
+}
+
+export class UpdateScheduleDto {
+  @ApiPropertyOptional()
+  name?: string;
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 7,
+    description: 'Recurring only',
+  })
+  weekday?: number;
+  @ApiPropertyOptional({ example: '18:00', description: 'Bogota time' })
+  start?: string;
+  @ApiPropertyOptional({ example: '19:00', description: 'Bogota time' })
+  end?: string;
+  @ApiPropertyOptional({ nullable: true, type: Number })
+  entryOpenMinutes?: number | null;
+  @ApiPropertyOptional({ nullable: true, type: Number })
+  entryCloseMinutes?: number | null;
+}
+
+export class AssignStudentDto {
+  @ApiPropertyOptional({
+    format: 'date-time',
+    description: 'Start of the validity; now by default, never in the past',
+  })
+  validFrom?: string;
+}
+
+export class BulkAssignDto {
+  @ApiProperty({
+    type: [String],
+    description: 'Student documents (at most 500)',
+  })
+  documents: string[];
+}
+
+export class CopyStudentsDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Schedule to copy the list from',
+  })
+  fromScheduleId: string;
+}
+
+export class BulkAssignedStudentDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+  @ApiProperty()
+  document: string;
+  @ApiProperty()
+  name: string;
+}
+
+export class BulkAssignResponseDto {
+  @ApiProperty({ type: [BulkAssignedStudentDto] })
+  assigned: BulkAssignedStudentDto[];
+  @ApiProperty({ type: [BulkAssignedStudentDto] })
+  alreadyAssigned: BulkAssignedStudentDto[];
+  @ApiProperty({ type: [BulkAssignedStudentDto] })
+  inactive: BulkAssignedStudentDto[];
+  @ApiProperty({ type: [String], description: 'Documents with no student' })
+  notFound: string[];
+}
+
+export class CopyStudentsResponseDto {
+  @ApiProperty()
+  assigned: number;
+  @ApiProperty()
+  alreadyAssigned: number;
+  @ApiProperty()
+  skippedInactive: number;
 }
 
 export class ScheduleStudentDto {
@@ -126,6 +251,22 @@ export class InstanceDto {
   endsAt: string;
 }
 
+export class RegenerationDto {
+  @ApiProperty({ description: 'Occurrences created' })
+  created: number;
+  @ApiProperty({
+    description: 'Future occurrences without history that no longer apply',
+  })
+  deleted: number;
+  @ApiProperty({ description: 'Future occurrences moved to the new hours' })
+  updated: number;
+  @ApiProperty({
+    description:
+      'Occurrences that should change but were kept (attendance, alarm or already started)',
+  })
+  kept: number;
+}
+
 export class ScheduleResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
@@ -143,10 +284,17 @@ export class ScheduleResponseDto {
   entryOpenMinutes: number | null;
   @ApiProperty({ nullable: true, type: Number })
   entryCloseMinutes: number | null;
+  @ApiProperty({ nullable: true, type: String, format: 'uuid' })
+  periodId: string | null;
   @ApiProperty({ type: [ScheduleStudentDto] })
   students: ScheduleStudentDto[];
   @ApiProperty({ type: [InstanceDto] })
   upcoming: InstanceDto[];
+  @ApiPropertyOptional({
+    type: RegenerationDto,
+    description: 'Only on create and edit: what happened to the occurrences',
+  })
+  regeneration?: RegenerationDto;
 }
 
 export class ResolvedOccurrenceDto {
@@ -188,6 +336,7 @@ export function toScheduleResponse(
       active,
     })),
     upcoming: detail.upcoming.map(toInstanceDto),
+    ...(detail.regeneration && { regeneration: detail.regeneration }),
   };
 }
 
@@ -206,3 +355,27 @@ export function toResolveResponse(
     },
   };
 }
+
+const toBulkStudent = ({
+  id,
+  document,
+  name,
+}: Student): BulkAssignedStudentDto => ({
+  id,
+  document,
+  name,
+});
+
+export function toBulkAssignResponse(
+  result: BulkAssignResult,
+): BulkAssignResponseDto {
+  return {
+    assigned: result.assigned.map(toBulkStudent),
+    alreadyAssigned: result.alreadyAssigned.map(toBulkStudent),
+    inactive: result.inactive.map(toBulkStudent),
+    notFound: result.notFound,
+  };
+}
+
+export const toCopyResponse = (result: CopyResult): CopyStudentsResponseDto =>
+  result;

@@ -32,7 +32,38 @@ const BY_CODE: Record<string, string> = {
   // Alarm
   ALARM_NOT_ON: 'La alarma no está encendida.',
   NO_DEVICE_ONLINE: 'No hay un lector en línea.',
+  // Consent (H9)
+  CONSENT_REQUIRED:
+    'Falta el consentimiento del estudiante: regístrelo antes de enrolar la huella.',
+  CONSENT_VERSION_STALE:
+    'El texto de consentimiento cambió. Vuelva a abrirlo y léalo de nuevo.',
+  // Users (H9)
+  LAST_ADMIN: 'No se puede dejar el sistema sin un administrador activo.',
+  SELF_CHANGE_FORBIDDEN:
+    'No puede desactivarse ni cambiar su propio rol; pídaselo a otro administrador.',
+  USERNAME_TAKEN: 'Ese nombre de usuario ya existe.',
+  // Periods and schedules (H9)
+  PERIOD_NOT_FOUND: 'El periodo no existe.',
+  EXCEPTION_NOT_FOUND: 'El día sin servicio no existe.',
 };
+
+/**
+ * Codes whose message the server already words in Spanish and names what
+ * clashes (the period, the schedule, the missing column): shown as it comes.
+ */
+const SERVER_WORDED = new Set([
+  'PASSWORD_POLICY',
+  'PERIOD_OVERLAP',
+  'PERIOD_HAS_SCHEDULES',
+  'PERIOD_EXCLUDES_EXCEPTION',
+  'EXCEPTION_OUT_OF_PERIOD',
+  'INVALID_RANGE',
+  'SCHEDULE_OVERLAP',
+  'SCHEDULE_HAS_ATTENDANCE',
+  'INVALID_CSV',
+  'MAPPING_INCOMPLETE',
+  'IMPORT_CONFLICT',
+]);
 
 /** Text of a stable code (error or scan rejection), or undefined. */
 export const messageForCode = (code: string): string | undefined =>
@@ -54,8 +85,7 @@ const BY_STATUS: Record<number, string> = {
  */
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) {
-    // The server already words the password rules in Spanish.
-    if (error.code === 'PASSWORD_POLICY') return error.message;
+    if (error.code && SERVER_WORDED.has(error.code)) return error.message;
     if (error.code && BY_CODE[error.code]) {
       const base = BY_CODE[error.code] as string;
       return error.status === 429 && error.retryAfterSeconds

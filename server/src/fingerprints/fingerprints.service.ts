@@ -55,6 +55,13 @@ export class FingerprintsService {
     return new Set(rows.map((row) => row.studentId));
   }
 
+  /** When each of these students enrolled the active fingerprint (no template is read out). */
+  async findEnrolledSince(studentIds: string[]): Promise<Map<string, Date>> {
+    if (studentIds.length === 0) return new Map();
+    const rows = await this.fingerprints.findActiveByStudents(studentIds);
+    return new Map(rows.map((row) => [row.studentId, row.createdAt]));
+  }
+
   /**
    * Decrypts, in memory only, the active fingerprint of each active student.
    * Anything else is reported by student id, never by content.

@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { NewSchedule, Schedule } from '../domain/schedule.js';
+import type {
+  NewSchedule,
+  Schedule,
+  SchedulePatch,
+} from '../domain/schedule.js';
 import type { SchedulesRepository } from '../domain/schedules.repository.js';
 
 interface ScheduleRow {
@@ -13,6 +17,7 @@ interface ScheduleRow {
   endTime: Date;
   entryOpenMinutes: number | null;
   entryCloseMinutes: number | null;
+  periodId: string | null;
 }
 
 // Prisma maps TIME to a Date on 1970-01-01 (UTC) and DATE to UTC midnight.
@@ -29,6 +34,7 @@ function toDomain(row: ScheduleRow): Schedule {
     endTime: row.endTime.toISOString().slice(11, 19),
     entryOpenMinutes: row.entryOpenMinutes,
     entryCloseMinutes: row.entryCloseMinutes,
+    periodId: row.periodId,
   };
 }
 
@@ -58,6 +64,45 @@ export class PrismaSchedulesRepository implements SchedulesRepository {
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
     return rows.map(toDomain);
+  }
+
+  async findByPeriod(periodId: string) {
+    const rows = await this.prisma.schedule.findMany({
+      where: { periodId },
+      orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toDomain);
+  }
+
+  async update(id: string, patch: SchedulePatch) {
+    try {
+      const row = await this.prisma.schedule.update({
+        where: { id },
+        data: {
+          ...patch,
+          ...(patch.startTime !== undefined && {
+            startTime: timeToDate(patch.startTime),
+          }),
+          ...(patch.endTime !== undefined && {
+            endTime: timeToDate(patch.endTime),
+          }),
+        },
+      });
+      return toDomain(row);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async delete(id: string) {
+    const { count } = await this.prisma.schedule.deleteMany({ where: { id } });
+    return count > 0;
   }
 
   async findByStudent(studentId: string, at: Date) {

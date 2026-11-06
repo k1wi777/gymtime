@@ -10,7 +10,18 @@ export interface Student {
   /** Short ASCII name drawn on the reader LCD; always present in the domain. */
   displayName: string;
   active: boolean;
+  /** Derived: true while a consent is recorded (`consentVersion` is set). */
   consented: boolean;
+  /** Version of the consent text accepted; null without consent. */
+  consentVersion: string | null;
+  consentAt: Date | null;
+}
+
+/** A consent as recorded: `by` is the panel user, or null for the system key. */
+export interface ConsentRecord {
+  version: string;
+  at: Date;
+  by: string | null;
 }
 
 export interface NewStudent {
@@ -20,17 +31,24 @@ export interface NewStudent {
   email: string | null;
   phone: string | null;
   displayName: string;
-  consented: boolean;
+  consent?: ConsentRecord | null;
+  importBatchId?: string | null;
 }
 
-/** The document is not editable. */
+/** The document is not editable; consent has its own operation. */
 export interface StudentPatch {
   name?: string;
   program?: string | null;
   email?: string | null;
   phone?: string | null;
   displayName?: string;
-  consented?: boolean;
+}
+
+export interface StudentFilter {
+  active?: boolean;
+  /** Case-insensitive match on name or document. */
+  search?: string;
+  program?: string;
 }
 
 export class DuplicateDocumentError extends Error {

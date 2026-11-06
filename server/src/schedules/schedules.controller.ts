@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,6 +8,7 @@ import {
   NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -16,6 +16,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -27,18 +28,30 @@ import {
 import type { z } from 'zod';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
-import { ScheduleValidationError } from './domain/schedule.js';
 import {
+  AssignStudentDto,
+  BulkAssignDto,
+  BulkAssignResponseDto,
+  CopyStudentsDto,
+  CopyStudentsResponseDto,
   CreateScheduleDto,
   ResolveResponseDto,
   ScheduleResponseDto,
+  UpdateScheduleDto,
+  assignBodySchema,
+  bulkAssignSchema,
+  copyStudentsSchema,
   createScheduleSchema,
   resolveQuerySchema,
+  toBulkAssignResponse,
+  toCopyResponse,
   toResolveResponse,
   toScheduleResponse,
+  updateScheduleSchema,
 } from './dto/schedule.dto.js';
+import { mapScheduleError } from './http-errors.js';
 import { InstancesService } from './instances.service.js';
-import { ScheduleLookupFailed, SchedulesService } from './schedules.service.js';
+import { SchedulesService } from './schedules.service.js';
 import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 
 @ApiTags('schedules')
@@ -56,23 +69,22 @@ export class SchedulesController {
   @ApiOperation({
     summary: 'Create a recurring or one-off schedule (Bogota times)',
     description:
-      'Give weekday or date plus start and end, or only `endsInMinutes` for a test schedule that starts now.',
+      'A recurring schedule (`weekday`) needs a `periodId` and gets all its occurrences for the whole period, skipping the days without service (see `regeneration`). A one-off schedule (`date`) or the quick form (`endsInMinutes`, a test schedule that starts now) does not depend on any period.',
   })
   @ApiBody({ type: CreateScheduleDto })
   @ApiCreatedResponse({ type: ScheduleResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid body or definition' })
+  @ApiConflictResponse({
+    description:
+      'SCHEDULE_OVERLAP: overlaps another schedule of the period and day',
+  })
   async create(
     @Body(new ZodValidationPipe(createScheduleSchema))
     body: z.infer<typeof createScheduleSchema>,
   ): Promise<ScheduleResponseDto> {
-    try {
-      return toScheduleResponse(await this.schedules.create(body));
-    } catch (error) {
-      if (error instanceof ScheduleValidationError) {
-        throw new BadRequestException(error.message);
-      }
-      throw error;
-    }
+    return this.orMapped(async () =>
+      toScheduleResponse(await this.schedules.create(body)),
+    );
   }
 
   @Get()
@@ -114,18 +126,116 @@ export class SchedulesController {
     return toScheduleResponse(detail);
   }
 
+  @Patch(':id')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Edit a schedule and regenerate its future occurrences',
+    description:
+      'Only future occurrences without attendance or alarms change; the others are kept (see `regeneration`).',
+  })
+  @ApiBody({ type: UpdateScheduleDto })
+  @ApiOkResponse({ type: ScheduleResponseDto })
+  @ApiNotFoundResponse({ description: 'Schedule not found' })
+  @ApiBadRequestResponse({ description: 'Invalid body or definition' })
+  @ApiConflictResponse({ description: 'SCHEDULE_OVERLAP' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateScheduleSchema))
+    body: z.infer<typeof updateScheduleSchema>,
+  ): Promise<ScheduleResponseDto> {
+    return this.orMapped(async () =>
+      toScheduleResponse(await this.schedules.update(id, body)),
+    );
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Delete a schedule without history',
+    description:
+      'Rejected with SCHEDULE_HAS_ATTENDANCE when any of its occurrences has attendance or alarms: the history is kept.',
+  })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ description: 'Schedule not found' })
+  @ApiConflictResponse({ description: 'SCHEDULE_HAS_ATTENDANCE' })
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.orMapped(() => this.schedules.remove(id));
+  }
+
   @Put(':id/students/:studentId')
   @Roles('admin')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Assign a student (idempotent)' })
+  @ApiOperation({
+    summary: 'Assign a student (idempotent), optionally from a date',
+  })
+  @ApiBody({ type: AssignStudentDto, required: false })
   @ApiNoContentResponse()
   @ApiNotFoundResponse({ description: 'Schedule or student not found' })
-  @ApiBadRequestResponse({ description: 'Invalid id' })
+  @ApiBadRequestResponse({
+    description: 'Invalid id or `validFrom` in the past',
+  })
   async assign(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Body(new ZodValidationPipe(assignBodySchema))
+    body: z.infer<typeof assignBodySchema>,
   ): Promise<void> {
-    await this.orNotFound(() => this.schedules.assignStudent(id, studentId));
+    await this.orMapped(() =>
+      this.schedules.assignStudent(
+        id,
+        studentId,
+        body.validFrom ? new Date(body.validFrom) : undefined,
+      ),
+    );
+  }
+
+  @Post(':id/students/bulk')
+  @Roles('admin')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Assign many students by document',
+    description:
+      'Assigns the active students that exist and reports apart the unknown documents, the deactivated students and those already assigned; it never aborts because of them.',
+  })
+  @ApiBody({ type: BulkAssignDto })
+  @ApiOkResponse({ type: BulkAssignResponseDto })
+  @ApiNotFoundResponse({ description: 'Schedule not found' })
+  @ApiBadRequestResponse({
+    description: 'Invalid body (at most 500 documents)',
+  })
+  async bulkAssign(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(bulkAssignSchema))
+    body: z.infer<typeof bulkAssignSchema>,
+  ): Promise<BulkAssignResponseDto> {
+    return this.orMapped(async () =>
+      toBulkAssignResponse(await this.schedules.bulkAssign(id, body.documents)),
+    );
+  }
+
+  @Post(':id/students/copy')
+  @Roles('admin')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Copy the current student list of another schedule',
+    description:
+      'Only active students; those already assigned are not duplicated.',
+  })
+  @ApiBody({ type: CopyStudentsDto })
+  @ApiOkResponse({ type: CopyStudentsResponseDto })
+  @ApiNotFoundResponse({ description: 'Schedule not found' })
+  @ApiBadRequestResponse({ description: 'Invalid body or same schedule' })
+  async copyStudents(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(copyStudentsSchema))
+    body: z.infer<typeof copyStudentsSchema>,
+  ): Promise<CopyStudentsResponseDto> {
+    return this.orMapped(async () =>
+      toCopyResponse(
+        await this.schedules.copyStudents(id, body.fromScheduleId),
+      ),
+    );
   }
 
   @Delete(':id/students/:studentId')
@@ -139,17 +249,14 @@ export class SchedulesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('studentId', ParseUUIDPipe) studentId: string,
   ): Promise<void> {
-    await this.orNotFound(() => this.schedules.unassignStudent(id, studentId));
+    await this.orMapped(() => this.schedules.unassignStudent(id, studentId));
   }
 
-  private async orNotFound(action: () => Promise<void>): Promise<void> {
+  private async orMapped<T>(action: () => Promise<T>): Promise<T> {
     try {
-      await action();
+      return await action();
     } catch (error) {
-      if (error instanceof ScheduleLookupFailed) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
+      throw mapScheduleError(error);
     }
   }
 }

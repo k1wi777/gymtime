@@ -57,6 +57,12 @@ const start: Command = {
         typeof device === 'string' ? { deviceId: device } : {},
       );
     } catch (error) {
+      if (error instanceof HttpError && error.code === 'CONSENT_REQUIRED') {
+        throw new CliError(
+          `The enrollment was not started: student ${document} has no recorded consent.\n` +
+            `Once they have read and accepted the text, run \`gym student edit ${document} --consented\` (or use the panel), then enroll again.`,
+        );
+      }
       if (error instanceof HttpError && error.status < 500) {
         throw new CliError(`The enrollment was not started. ${error.message}`);
       }

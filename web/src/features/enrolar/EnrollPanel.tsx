@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { call, getApi } from '@/api/client';
+import { ApiError, call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type { Enrollment, Student } from '@/api/types';
 import { useLiveEvents, useResync } from '@/live/live-provider';
@@ -11,7 +11,7 @@ import {
   enrollStepLabel,
   failureLabel,
 } from '@/lib/labels';
-import { ConfirmDialog } from '@/ui/ConfirmDialog';
+import { ConsentDialog } from '@/features/students/ConsentDialog';
 import { Badge } from '@/ui/Badge';
 import { Notice } from '@/ui/Notice';
 import styles from './Enrolar.module.css';
@@ -24,14 +24,6 @@ export const FINAL_STATUSES = [
 ] as const;
 export const isFinal = (status: Enrollment['status']): boolean =>
   (FINAL_STATUSES as readonly string[]).includes(status);
-
-/**
- * Text read to the student before recording the consent. The panel only
- * enforces consent in the interface: the server does not yet require or store
- * it (version, date and author arrive with E25), so this is NOT a guarantee.
- */
-export const CONSENT_TEXT =
-  'Autorizo a la Universidad de Córdoba a tratar mi huella dactilar, dato biométrico sensible, con la única finalidad de controlar el acceso y el tiempo de permanencia en el gimnasio (Ley 1581 de 2012). Solo se guarda la plantilla cifrada, nunca la imagen de la huella, y puedo solicitar su eliminación en cualquier momento.';
 
 interface Props {
   student: Student;
@@ -51,7 +43,6 @@ export function EnrollPanel({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
-  const [accepted, setAccepted] = useState(false);
 
   const running = enrollment !== null && !isFinal(enrollment.status);
 
@@ -94,6 +85,11 @@ export function EnrollPanel({
       setEnrollment(created);
       onEnrollmentChanged(true);
     } catch (error) {
+      // The server is the authority on consent: reload the student so the
+      // panel shows the real state instead of an enabled button.
+      if (error instanceof ApiError && error.code === 'CONSENT_REQUIRED') {
+        onStudentChanged();
+      }
       setFailure(describeError(error));
     } finally {
       setBusy(false);
@@ -113,27 +109,6 @@ export function EnrollPanel({
       setEnrollment(cancelled);
       onEnrollmentChanged(false);
     } catch (error) {
-      setFailure(describeError(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const recordConsent = async (): Promise<void> => {
-    setBusy(true);
-    setFailure(null);
-    try {
-      await call(
-        getApi().client.PATCH('/students/{id}', {
-          params: { path: { id: student.id } },
-          body: { consented: true },
-        }),
-      );
-      setConsentOpen(false);
-      setAccepted(false);
-      onStudentChanged();
-    } catch (error) {
-      setConsentOpen(false);
       setFailure(describeError(error));
     } finally {
       setBusy(false);
@@ -277,30 +252,14 @@ export function EnrollPanel({
         </p>
       )}
 
-      <ConfirmDialog
-        open={consentOpen}
-        title="Registrar consentimiento"
-        confirmLabel="Registrar consentimiento"
-        confirmDisabled={!accepted}
-        busy={busy}
-        onConfirm={() => void recordConsent()}
-        onCancel={() => {
+      <ConsentDialog
+        student={consentOpen ? student : null}
+        onClose={() => setConsentOpen(false)}
+        onRecorded={() => {
           setConsentOpen(false);
-          setAccepted(false);
+          onStudentChanged();
         }}
-      >
-        <p>{CONSENT_TEXT}</p>
-        <label className={styles.accept}>
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(event) => setAccepted(event.target.checked)}
-          />
-          <span>
-            {student.name} leyó este texto y lo acepta de forma libre y expresa.
-          </span>
-        </label>
-      </ConfirmDialog>
+      />
     </section>
   );
 }

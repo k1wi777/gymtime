@@ -13,7 +13,24 @@ import { createUserSchema, updateUserSchema } from '../users/dto/users.dto.js';
 import { changePasswordSchema, loginSchema } from '../auth/dto/auth.dto.js';
 import { manualAttendanceSchema } from '../attendance/dto/attendance.dto.js';
 import { sendMessageSchema } from '../devices/dto/display.dto.js';
-import { createScheduleSchema } from '../schedules/dto/schedule.dto.js';
+import {
+  assignBodySchema,
+  bulkAssignSchema,
+  copyStudentsSchema,
+  createScheduleSchema,
+  updateScheduleSchema,
+} from '../schedules/dto/schedule.dto.js';
+import {
+  createExceptionSchema,
+  createPeriodSchema,
+  updateExceptionSchema,
+  updatePeriodSchema,
+} from '../schedules/periods/periods.dto.js';
+import { consentBodySchema } from '../students/dto/student.dto.js';
+import {
+  importSchema,
+  previewSchema,
+} from '../students/import/student-import.dto.js';
 import { startEnrollmentSchema } from '../fingerprints/dto/enrollment.dto.js';
 
 Object.assign(process.env, {
@@ -135,6 +152,17 @@ describe('OpenAPI document', () => {
       ['SendMessageDto', sendMessageSchema, 'SendMessageDto'],
       ['CreateScheduleDto', createScheduleSchema, 'CreateScheduleDto'],
       ['StartEnrollmentDto', startEnrollmentSchema, 'StartEnrollmentDto'],
+      ['UpdateScheduleDto', updateScheduleSchema, 'UpdateScheduleDto'],
+      ['AssignStudentDto', assignBodySchema, 'AssignStudentDto'],
+      ['BulkAssignDto', bulkAssignSchema, 'BulkAssignDto'],
+      ['CopyStudentsDto', copyStudentsSchema, 'CopyStudentsDto'],
+      ['CreatePeriodDto', createPeriodSchema, 'CreatePeriodDto'],
+      ['UpdatePeriodDto', updatePeriodSchema, 'UpdatePeriodDto'],
+      ['CreateExceptionDto', createExceptionSchema, 'CreateExceptionDto'],
+      ['UpdateExceptionDto', updateExceptionSchema, 'UpdateExceptionDto'],
+      ['RecordConsentDto', consentBodySchema, 'RecordConsentDto'],
+      ['PreviewDto', previewSchema, 'PreviewDto'],
+      ['ImportDto', importSchema, 'ImportDto'],
     ];
 
     it.each(PAIRS)('%s', (_name, schema, dto) => {

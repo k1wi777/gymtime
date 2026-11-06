@@ -16,6 +16,7 @@ import { InstancesService } from '../schedules/instances.service.js';
 import { ALARM_CONFIG, type AlarmConfig } from './alarm.config.js';
 import {
   ALARM_REPOSITORY,
+  type AlarmHistoryFilter,
   type AlarmRepository,
 } from './domain/alarm.repository.js';
 import { AlarmError } from './domain/alarm.errors.js';
@@ -84,6 +85,16 @@ export class AlarmService implements AlarmPort {
     @Inject(ALARM_CONFIG) private readonly config: AlarmConfig,
   ) {
     this.lastTick = this.clock.now();
+  }
+
+  /** Occurrences, among these, that have alarm events (history that must be kept). */
+  instanceIdsWithAlarms(instanceIds: string[]): Promise<string[]> {
+    return this.events.instanceIdsWithEvents(instanceIds);
+  }
+
+  /** Alarm history, newest first (E22-3). */
+  history(filter: AlarmHistoryFilter) {
+    return this.events.list(filter);
   }
 
   private get timeoutMs(): number {

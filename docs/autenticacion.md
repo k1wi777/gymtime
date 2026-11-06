@@ -29,7 +29,11 @@ Operación = lo que el asistente hace cada día en el gimnasio.
 | `GET /health`, `/docs`, `/docs-json`, `POST /auth/login` | sí | sí | sí | sí |
 | `POST /auth/logout`, `GET /auth/me`, `POST /auth/password` | 401 | sí | sí | 403 |
 | `GET /users`, `POST /users`, `PATCH /users/:id`, `POST /users/:id/reset-password` | 401 | 403 | sí | sí |
-| `GET/POST /students`, `PATCH /students/:id` | 401 | sí | sí | sí |
+| `GET/POST /students`, `PATCH /students/:id`, `GET /students/consent`, `POST /students/:id/consent` | 401 | sí | sí | sí |
+| `GET /panel/students`, `GET /panel/schedules/week`, `GET /periods`, `GET /schedules` | 401 | sí | sí | sí |
+| `POST/PATCH /periods…`, `/periods/:id/activate`, `/deactivate`, `/exceptions…`; `PATCH/DELETE /schedules/:id`; `POST /schedules/:id/students/bulk`, `/copy` | 401 | 403 | sí | sí |
+| `GET /students/import/fields`, `GET /students/import/template`, `POST /students/import/preview`, `POST /students/import` | 401 | 403 | sí | sí |
+| `GET /panel/attendance/history`, `GET /audit`, `GET /history/orders`, `GET /history/alarms` | 401 | 403 | sí | sí |
 | `DELETE /students/:id` | 401 | 403 | sí | sí |
 | `POST /students/:id/enrollments`, `POST /enrollments/:id/cancel`, `GET /enrollments/:id` | 401 | sí | sí | sí |
 | `GET /attendance/open`, `GET /attendance/sessions`, `POST /attendance/entry`, `POST /attendance/exit` | 401 | sí | sí | sí |

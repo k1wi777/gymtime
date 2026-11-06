@@ -3,7 +3,9 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import {
   DuplicateDocumentError,
+  type ConsentRecord,
   type NewStudent,
+  type StudentFilter,
   type StudentPatch,
 } from '../domain/student.js';
 import type { StudentsRepository } from '../domain/students.repository.js';
@@ -18,7 +20,23 @@ export class PrismaStudentsRepository implements StudentsRepository {
 
   async create(data: NewStudent) {
     try {
-      return toStudent(await this.prisma.student.create({ data }));
+      return toStudent(
+        await this.prisma.student.create({ data: toCreateData(data) }),
+      );
+    } catch (error) {
+      if (isPrismaError(error, UNIQUE_VIOLATION)) {
+        throw new DuplicateDocumentError();
+      }
+      throw error;
+    }
+  }
+
+  async createMany(data: NewStudent[]) {
+    try {
+      const rows = await this.prisma.student.createManyAndReturn({
+        data: data.map(toCreateData),
+      });
+      return rows.map(toStudent);
     } catch (error) {
       if (isPrismaError(error, UNIQUE_VIOLATION)) {
         throw new DuplicateDocumentError();
@@ -39,9 +57,27 @@ export class PrismaStudentsRepository implements StudentsRepository {
     return rows.map(toStudent);
   }
 
-  async findAll(filter: { active?: boolean }) {
+  async findByDocuments(documents: string[]) {
+    if (documents.length === 0) return [];
     const rows = await this.prisma.student.findMany({
-      where: filter.active === undefined ? {} : { active: filter.active },
+      where: { document: { in: documents } },
+    });
+    return rows.map(toStudent);
+  }
+
+  async findAll(filter: StudentFilter) {
+    const search = filter.search?.trim();
+    const rows = await this.prisma.student.findMany({
+      where: {
+        ...(filter.active !== undefined && { active: filter.active }),
+        ...(filter.program !== undefined && { program: filter.program }),
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { document: { contains: search } },
+          ],
+        }),
+      },
       orderBy: { name: 'asc' },
     });
     return rows.map(toStudent);
@@ -55,9 +91,17 @@ export class PrismaStudentsRepository implements StudentsRepository {
     return this.updateOrNull(id, { active: false });
   }
 
+  recordConsent(id: string, consent: ConsentRecord) {
+    return this.updateOrNull(id, {
+      consentVersion: consent.version,
+      consentAt: consent.at,
+      consentBy: consent.by,
+    });
+  }
+
   private async updateOrNull(
     id: string,
-    data: StudentPatch | { active: boolean },
+    data: Prisma.StudentUpdateInput | Prisma.StudentUncheckedUpdateInput,
   ) {
     try {
       return toStudent(
@@ -68,6 +112,17 @@ export class PrismaStudentsRepository implements StudentsRepository {
       throw error;
     }
   }
+}
+
+function toCreateData({ consent, ...fields }: NewStudent) {
+  return {
+    ...fields,
+    ...(consent && {
+      consentVersion: consent.version,
+      consentAt: consent.at,
+      consentBy: consent.by,
+    }),
+  };
 }
 
 function isPrismaError(error: unknown, code: string): boolean {

@@ -28,8 +28,31 @@ interface Schedule {
   endTime: string;
   entryOpenMinutes: number | null;
   entryCloseMinutes: number | null;
+  periodId?: string | null;
   students: ScheduleStudent[];
   upcoming: Instance[];
+}
+
+interface Period {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `--period` takes the id or the exact name of the period. */
+async function resolvePeriodId(
+  ctx: CommandContext,
+  value: unknown,
+): Promise<string | undefined> {
+  if (value === undefined) return undefined;
+  const wanted = required(value, '--period');
+  if (UUID.test(wanted)) return wanted;
+  const periods = await ctx.http.request<Period[]>('GET', '/periods');
+  const found = periods.find((p) => p.name === wanted);
+  if (!found) throw new CliError(`No period named "${wanted}"`);
+  return found.id;
 }
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -101,7 +124,7 @@ const create: Command = {
   summary:
     'Create a schedule (times in Bogota); --ends-in makes a quick test one',
   usage:
-    'schedule create --name <name> (--weekday 1-7 | --date YYYY-MM-DD) --start HH:mm --end HH:mm [--student <doc>]... [--entry-open <min>] [--entry-close <min>]\n' +
+    'schedule create --name <name> (--weekday 1-7 | --date YYYY-MM-DD) --start HH:mm --end HH:mm [--period <id|name>] [--student <doc>]... [--entry-open <min>] [--entry-close <min>]\n' +
     '      schedule create --name <name> --ends-in 3m [--student <doc>]...',
   options: {
     name: { type: 'string' },
@@ -110,6 +133,7 @@ const create: Command = {
     start: { type: 'string' },
     end: { type: 'string' },
     'ends-in': { type: 'string' },
+    period: { type: 'string' },
     student: { type: 'string', multiple: true },
     'entry-open': { type: 'string' },
     'entry-close': { type: 'string' },
@@ -117,6 +141,9 @@ const create: Command = {
   async run(ctx) {
     noPositionals(ctx.positionals);
     const body = buildBody(ctx);
+    // A weekly schedule belongs to a period; one-off and quick ones do not.
+    const periodId = await resolvePeriodId(ctx, ctx.values['period']);
+    if (periodId) body['periodId'] = periodId;
     // Resolve every student first so a typo does not leave a half-built schedule.
     const students = await resolveStudents(
       ctx,

@@ -50,6 +50,10 @@ import { InMemoryFingerprintsRepository } from '../../src/fingerprints/infrastru
 import { INSTANCES_REPOSITORY } from '../../src/schedules/domain/instances.repository.js';
 import { SCHEDULES_REPOSITORY } from '../../src/schedules/domain/schedules.repository.js';
 import { InMemoryInstancesRepository } from '../../src/schedules/infrastructure/in-memory-instances.repository.js';
+import { PERIODS_REPOSITORY } from '../../src/schedules/periods/periods.repository.js';
+import { InMemoryPeriodsRepository } from '../../src/schedules/periods/in-memory-periods.repository.js';
+import { IMPORT_BATCHES_REPOSITORY } from '../../src/students/import/import-batches.repository.js';
+import { InMemoryImportBatchesRepository } from '../../src/students/import/in-memory-import-batches.repository.js';
 import { InMemorySchedulesRepository } from '../../src/schedules/infrastructure/in-memory-schedules.repository.js';
 import { STUDENTS_REPOSITORY } from '../../src/students/domain/students.repository.js';
 import { InMemoryStudentsRepository } from '../../src/students/infrastructure/in-memory-students.repository.js';
@@ -94,6 +98,8 @@ export interface InMemoryRepositories {
   enrollments: InMemoryEnrollmentsRepository;
   schedules: InMemorySchedulesRepository;
   instances: InMemoryInstancesRepository;
+  periods: InMemoryPeriodsRepository;
+  importBatches: InMemoryImportBatchesRepository;
   slots: InMemorySlotsRepository;
   attendance: InMemoryAttendanceRepository;
   alarm: InMemoryAlarmRepository;
@@ -144,6 +150,8 @@ function createRepositories(): InMemoryRepositories {
     enrollments: new InMemoryEnrollmentsRepository(fingerprints),
     schedules: new InMemorySchedulesRepository(),
     instances: new InMemoryInstancesRepository(),
+    periods: new InMemoryPeriodsRepository(),
+    importBatches: new InMemoryImportBatchesRepository(),
     slots: new InMemorySlotsRepository(),
     attendance: new InMemoryAttendanceRepository(),
     alarm: new InMemoryAlarmRepository(),
@@ -185,6 +193,10 @@ export async function buildInMemoryApp(
     .useValue(repositories.schedules)
     .overrideProvider(INSTANCES_REPOSITORY)
     .useValue(repositories.instances)
+    .overrideProvider(PERIODS_REPOSITORY)
+    .useValue(repositories.periods)
+    .overrideProvider(IMPORT_BATCHES_REPOSITORY)
+    .useValue(repositories.importBatches)
     .overrideProvider(SLOTS_REPOSITORY)
     .useValue(repositories.slots)
     .overrideProvider(ATTENDANCE_REPOSITORY)

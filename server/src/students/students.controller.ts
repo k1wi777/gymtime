@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -27,6 +28,9 @@ import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
 import { DisplayValidationError } from '../common/display/display.errors.js';
 import { DuplicateDocumentError, type Student } from './domain/student.js';
 import {
+  ConsentTextDto,
+  RecordConsentDto,
+  consentBodySchema,
   CreateStudentDto,
   StudentResponseDto,
   UpdateStudentDto,
@@ -34,7 +38,11 @@ import {
   listStudentsQuerySchema,
   updateStudentSchema,
 } from './dto/student.dto.js';
-import { StudentsService } from './students.service.js';
+import { CONSENT_TEXT, CONSENT_VERSION } from './consent.js';
+import {
+  ConsentVersionStaleError,
+  StudentsService,
+} from './students.service.js';
 import type { z } from 'zod';
 import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 
@@ -67,6 +75,12 @@ export class StudentsController {
   @Get()
   @ApiOperation({ summary: 'List students' })
   @ApiQuery({ name: 'active', required: false, enum: ['true', 'false'] })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Part of the name or of the document',
+  })
+  @ApiQuery({ name: 'program', required: false, description: 'Exact degree' })
   @ApiOkResponse({ type: [StudentResponseDto] })
   list(
     @Query(new ZodValidationPipe(listStudentsQuerySchema))
@@ -74,7 +88,59 @@ export class StudentsController {
   ): Promise<Student[]> {
     const active =
       query.active === undefined ? undefined : query.active === 'true';
-    return this.students.list({ active });
+    return this.students.list({
+      active,
+      search: query.search,
+      program: query.program,
+    });
+  }
+
+  // Declared before `:id` routes so that "consent" is not read as an id.
+  @Get('consent')
+  @ApiOperation({
+    summary: 'Current consent text and its version',
+    description:
+      'The text to read to the student before recording the consent.',
+  })
+  @ApiOkResponse({ type: ConsentTextDto })
+  consentText(): ConsentTextDto {
+    return { version: CONSENT_VERSION, text: CONSENT_TEXT };
+  }
+
+  @Post(':id/consent')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Record the consent of a student (version of the text shown)',
+    description:
+      'Idempotent for the same version. Required before enrolling a fingerprint.',
+  })
+  @ApiBody({ type: RecordConsentDto })
+  @ApiOkResponse({ type: StudentResponseDto })
+  @ApiNotFoundResponse({ description: 'Student not found' })
+  @ApiConflictResponse({
+    description: 'CONSENT_VERSION_STALE: the text changed since it was shown',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid id or body' })
+  async recordConsent(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(consentBodySchema))
+    body: z.infer<typeof consentBodySchema>,
+  ): Promise<Student> {
+    try {
+      return this.orNotFound(
+        await this.students.recordConsent(id, body.version),
+      );
+    } catch (error) {
+      if (error instanceof ConsentVersionStaleError) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'CONSENT_VERSION_STALE',
+          message: error.message,
+          currentVersion: error.current,
+        });
+      }
+      throw error;
+    }
   }
 
   @Patch(':id')

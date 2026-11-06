@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { json, type NextFunction, type Request, type Response } from 'express';
 import type { ConfigService } from '@nestjs/config';
 import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface.js';
 import type { Env } from './config/env.schema.js';
@@ -24,6 +25,13 @@ export const CORS_EXPOSED_HEADERS = ['retry-after'];
 /** Seconds a browser may cache a preflight answer. */
 export const CORS_MAX_AGE = 600;
 
+/**
+ * Body limit of the CSV import: the file travels as text inside the JSON, and
+ * the default 100 kb would not fit a class list. Only those routes get it.
+ */
+export const IMPORT_BODY_LIMIT = '2mb';
+export const IMPORT_PATH = '/students/import';
+
 export function httpOptionsFromEnv(env: ConfigService<Env, true>): HttpOptions {
   return {
     corsOrigins: env.get('CORS_ORIGINS', { infer: true }),
@@ -47,6 +55,15 @@ export function configureHttp(
     };
     express.set('trust proxy', options.trustProxy);
   }
+
+  // Registered before Nest adds its own parser: the first one to read the
+  // body wins, and the rest skip an already parsed request.
+  // Wrapped on purpose: Nest skips its own parser when it finds a layer named
+  // `jsonParser`, which would leave every other route without a body.
+  const importParser = json({ limit: IMPORT_BODY_LIMIT });
+  app.use(IMPORT_PATH, (req: Request, res: Response, next: NextFunction) =>
+    importParser(req, res, next),
+  );
 
   const allowed = new Set(options.corsOrigins);
   const delegate: CorsOptionsDelegate<{ headers: Record<string, unknown> }> = (

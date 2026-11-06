@@ -2,7 +2,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { currentActor } from './actor.js';
 import {
   EVENT_LOG_REPOSITORY,
+  type EventLogQuery,
   type EventLogRepository,
+  type StoredEvent,
 } from './event-log.repository.js';
 
 /**
@@ -25,6 +27,14 @@ export class EventLogService {
     private readonly repository: EventLogRepository,
   ) {}
 
+  /** Reads the trail, newest first; the detail is cleaned once more on the way out. */
+  async search(query: EventLogQuery): Promise<StoredEvent[]> {
+    return (await this.repository.search(query)).map((event) => ({
+      ...event,
+      detail: event.detail ? sanitize(event.detail, true) : null,
+    }));
+  }
+
   async record(type: string, detail?: Record<string, unknown>): Promise<void> {
     try {
       await this.repository.append({
@@ -42,8 +52,17 @@ export class EventLogService {
   }
 }
 
-function sanitize(detail: Record<string, unknown>): Record<string, unknown> {
+/** Contact data is never shown in the audit trail, even if an old row had it. */
+const CONTACT_KEYS = /email|phone|correo|telefono/i;
+
+function sanitize(
+  detail: Record<string, unknown>,
+  alsoContact = false,
+): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(detail).filter(([key]) => !FORBIDDEN_KEYS.test(key)),
+    Object.entries(detail).filter(
+      ([key]) =>
+        !FORBIDDEN_KEYS.test(key) && !(alsoContact && CONTACT_KEYS.test(key)),
+    ),
   );
 }

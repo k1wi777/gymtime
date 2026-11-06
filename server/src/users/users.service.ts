@@ -6,6 +6,7 @@ import type { PanelRole } from '../auth/domain/panel-user.js';
 import { generateTemporaryPassword } from '../auth/temporary-password.js';
 import type { AuthContext } from '../common/auth/auth-context.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
+import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 
 export class AccountNotFoundError extends Error {
   constructor() {
@@ -17,6 +18,15 @@ export class AccountNotFoundError extends Error {
 export class SelfChangeError extends Error {
   constructor() {
     super('You cannot deactivate yourself or change your own role');
+  }
+}
+
+/** The change would leave the system without an active administrator. */
+export class LastAdminError extends Error {
+  constructor() {
+    super(
+      'No se puede desactivar ni degradar al último administrador activo: cree o active otro administrador primero',
+    );
   }
 }
 
@@ -38,6 +48,10 @@ export interface CreatedAccount {
  */
 @Injectable()
 export class UsersService {
+  // Counting the administrators and writing must not interleave, or two
+  // administrators could deactivate each other at the same time.
+  private readonly adminsLock = new KeyedMutex();
+
   constructor(
     private readonly accounts: PanelUsersService,
     private readonly auth: AuthService,
@@ -66,7 +80,17 @@ export class UsersService {
     return { account, temporaryPassword };
   }
 
-  async update(
+  update(
+    caller: AuthContext | undefined,
+    id: string,
+    patch: AccountPatch,
+  ): Promise<Account> {
+    return this.adminsLock.run('admins', () =>
+      this.doUpdate(caller, id, patch),
+    );
+  }
+
+  private async doUpdate(
     caller: AuthContext | undefined,
     id: string,
     patch: AccountPatch,
@@ -78,6 +102,14 @@ export class UsersService {
     const losesAccess = patch.active === false && current.active;
     const changesRole = patch.role !== undefined && patch.role !== current.role;
     if (isSelf && (losesAccess || changesRole)) throw new SelfChangeError();
+    // Applies to the system key too: it may touch other accounts.
+    const losesAdmin =
+      current.role === 'admin' &&
+      current.active &&
+      (losesAccess || (changesRole && patch.role !== 'admin'));
+    if (losesAdmin && (await this.accounts.countActiveAdmins()) <= 1) {
+      throw new LastAdminError();
+    }
 
     const updated = await this.accounts.update(id, patch);
     if (!updated) throw new AccountNotFoundError();

@@ -4,6 +4,8 @@ import type { DeviceCommand, NewDeviceCommand } from './device-command.js';
 export interface DeviceCommandsRepository {
   create(command: NewDeviceCommand): Promise<void>;
   findById(id: string): Promise<DeviceCommand | null>;
+  /** Rows with those ids, in no particular order. */
+  findByIds(ids: string[]): Promise<DeviceCommand[]>;
   /** `sent` with the number of transmissions so far. */
   markSent(id: string, attempts: number): Promise<void>;
   markAcked(id: string): Promise<void>;

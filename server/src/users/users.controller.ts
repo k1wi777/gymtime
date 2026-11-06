@@ -37,6 +37,7 @@ import {
 } from './dto/users.dto.js';
 import {
   AccountNotFoundError,
+  LastAdminError,
   SelfChangeError,
   UsersService,
   type CreatedAccount,
@@ -84,7 +85,8 @@ export class UsersController {
   @ApiOkResponse({ type: AccountResponseDto })
   @ApiNotFoundResponse({ description: 'Account not found' })
   @ApiConflictResponse({
-    description: 'SELF_CHANGE_FORBIDDEN: own deactivation or role change',
+    description:
+      'SELF_CHANGE_FORBIDDEN: own deactivation or role change; LAST_ADMIN: would leave no active administrator',
   })
   async update(
     @Auth() auth: AuthContext | undefined,
@@ -144,6 +146,13 @@ function mapError(error: unknown): unknown {
     return new ConflictException({
       statusCode: 409,
       code: 'SELF_CHANGE_FORBIDDEN',
+      message: error.message,
+    });
+  }
+  if (error instanceof LastAdminError) {
+    return new ConflictException({
+      statusCode: 409,
+      code: 'LAST_ADMIN',
       message: error.message,
     });
   }

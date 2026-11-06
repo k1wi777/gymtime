@@ -8,6 +8,7 @@ export interface NavItem {
 }
 
 const ALL: readonly PanelRole[] = ['asistente', 'admin'];
+const ADMIN: readonly PanelRole[] = ['admin'];
 
 /**
  * The menu. Administrator screens (H9) add their entries here with
@@ -20,6 +21,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/ordenes', label: 'Alarma y mensajes', roles: ALL },
   { href: '/dispositivo', label: 'Dispositivo', roles: ALL },
   { href: '/horarios', label: 'Horarios', roles: ALL },
+  { href: '/admin/periodos', label: 'Periodos', roles: ADMIN },
+  { href: '/admin/horarios', label: 'Gestión de horarios', roles: ADMIN },
+  { href: '/admin/estudiantes', label: 'Estudiantes', roles: ADMIN },
+  { href: '/admin/historial', label: 'Historial', roles: ADMIN },
+  { href: '/admin/auditoria', label: 'Auditoría', roles: ADMIN },
+  { href: '/admin/usuarios', label: 'Usuarios', roles: ADMIN },
 ];
 
 export const visibleItems = (

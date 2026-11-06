@@ -1,52 +1,46 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { studentFieldSchemas } from '@gymtime/shared';
 import { z } from 'zod';
-
-const text = z.string().trim().min(1).max(200);
 
 const MAX_EMAIL_LENGTH = 254;
 const MAX_PHONE_LENGTH = 20;
 
-const email = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .max(MAX_EMAIL_LENGTH)
-  .pipe(z.email());
+const { document, name, program, email, phone, displayName } =
+  studentFieldSchemas;
 
-// Digits, spaces, "+", "-" and parentheses, with at least one digit.
-const phone = z
-  .string()
-  .trim()
-  .max(MAX_PHONE_LENGTH)
-  .regex(/^[0-9 +()-]+$/, 'only digits, spaces, +, - and parentheses')
-  .regex(/[0-9]/, 'must contain at least one digit');
-
-// The exact limit (DISPLAY_COLS) is enforced by the service.
-const displayName = z.string().trim().min(1).max(40);
-
+// The field list lives in `@gymtime/shared` (STUDENT_FIELDS); this is its
+// REST shape. A test checks that no field of the list is missing here.
 export const createStudentSchema = z.strictObject({
-  document: text,
-  name: text,
-  program: text.nullable().optional().default(null),
+  document,
+  name,
+  program: program.nullable().optional().default(null),
   email: email.nullable().optional().default(null),
   phone: phone.nullable().optional().default(null),
   displayName: displayName.optional(),
+  // Shortcut: records the consent of the current text version.
   consented: z.boolean().default(false),
 });
 
 export const updateStudentSchema = z
   .strictObject({
-    name: text.optional(),
-    program: text.nullable().optional(),
+    name: name.optional(),
+    program: program.nullable().optional(),
     email: email.nullable().optional(),
     phone: phone.nullable().optional(),
     displayName: displayName.optional(),
-    consented: z.boolean().optional(),
+    // Consent can be given here but not withdrawn (that is H11).
+    consented: z.literal(true).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'no fields to update');
 
 export const listStudentsQuerySchema = z.strictObject({
   active: z.enum(['true', 'false']).optional(),
+  search: z.string().trim().min(1).max(100).optional(),
+  program: z.string().trim().min(1).max(200).optional(),
+});
+
+export const consentBodySchema = z.strictObject({
+  version: z.string().trim().min(1).max(50),
 });
 
 export class CreateStudentDto {
@@ -79,7 +73,11 @@ export class CreateStudentDto {
       'Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS); generated from the name when omitted',
   })
   displayName?: string;
-  @ApiPropertyOptional({ default: false, description: 'Data-use consent' })
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Shortcut: records the consent of the current text version (see GET /students/consent)',
+  })
   consented?: boolean;
 }
 
@@ -108,8 +106,12 @@ export class UpdateStudentDto {
     description: 'Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS)',
   })
   displayName?: string;
-  @ApiPropertyOptional()
-  consented?: boolean;
+  @ApiPropertyOptional({
+    enum: [true],
+    description:
+      'true records the consent of the current text version; false is rejected (withdrawal is a later work item)',
+  })
+  consented?: true;
 }
 
 export class StudentResponseDto {
@@ -133,6 +135,25 @@ export class StudentResponseDto {
   displayName: string;
   @ApiProperty()
   active: boolean;
-  @ApiProperty()
+  @ApiProperty({ description: 'True while a consent is recorded' })
   consented: boolean;
+  @ApiProperty({ nullable: true, type: String })
+  consentVersion: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'date-time' })
+  consentAt: string | null;
+}
+
+export class ConsentTextDto {
+  @ApiProperty({ example: 'v1-provisional' })
+  version: string;
+  @ApiProperty({ description: 'Text to read to the student before consenting' })
+  text: string;
+}
+
+export class RecordConsentDto {
+  @ApiProperty({
+    example: 'v1-provisional',
+    description: 'Version shown to the student; must be the current one',
+  })
+  version: string;
 }

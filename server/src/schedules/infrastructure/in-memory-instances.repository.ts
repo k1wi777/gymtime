@@ -21,6 +21,29 @@ export class InMemoryInstancesRepository implements InstancesRepository {
     return created;
   }
 
+  async findFromDate(scheduleIds: string[], fromDate: string) {
+    return this.rows
+      .filter((r) => scheduleIds.includes(r.scheduleId) && r.date >= fromDate)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((r) => ({ ...r }));
+  }
+
+  async deleteByIds(ids: string[]) {
+    const doomed = new Set(ids);
+    const before = this.rows.length;
+    for (let i = this.rows.length - 1; i >= 0; i--) {
+      if (doomed.has((this.rows[i] as ScheduleInstance).id)) {
+        this.rows.splice(i, 1);
+      }
+    }
+    return before - this.rows.length;
+  }
+
+  async updateTimes(id: string, startsAt: Date, endsAt: Date) {
+    const row = this.rows.find((r) => r.id === id);
+    if (row) Object.assign(row, { startsAt, endsAt });
+  }
+
   async findInRange(from: Date, to: Date, scheduleIds?: string[]) {
     return this.rows
       .filter(

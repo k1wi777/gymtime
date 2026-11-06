@@ -16,7 +16,11 @@ interface InstanceRow {
 }
 
 const toDomain = (row: InstanceRow): ScheduleInstance => ({
-  ...row,
+  id: row.id,
+  scheduleId: row.scheduleId,
+  startsAt: row.startsAt,
+  endsAt: row.endsAt,
+  status: row.status,
   date: row.date.toISOString().slice(0, 10),
 });
 
@@ -27,10 +31,42 @@ export class PrismaInstancesRepository implements InstancesRepository {
   async createMany(items: NewScheduleInstance[]) {
     if (items.length === 0) return 0;
     const { count } = await this.prisma.scheduleInstance.createMany({
-      data: items.map((i) => ({ ...i, date: new Date(`${i.date}T00:00:00Z`) })),
+      data: items.map((i) => ({
+        ...i,
+        date: new Date(`${i.date}T00:00:00Z`),
+        generatedAt: new Date(),
+      })),
       skipDuplicates: true,
     });
     return count;
+  }
+
+  async findFromDate(scheduleIds: string[], fromDate: string) {
+    if (scheduleIds.length === 0) return [];
+    const rows = await this.prisma.scheduleInstance.findMany({
+      where: {
+        scheduleId: { in: scheduleIds },
+        date: { gte: new Date(`${fromDate}T00:00:00Z`) },
+      },
+      orderBy: [{ date: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toDomain);
+  }
+
+  async deleteByIds(ids: string[]) {
+    if (ids.length === 0) return 0;
+    // The cascade would erase attendance and alarms: the filter keeps them.
+    const { count } = await this.prisma.scheduleInstance.deleteMany({
+      where: { id: { in: ids }, sessions: { none: {} }, alarms: { none: {} } },
+    });
+    return count;
+  }
+
+  async updateTimes(id: string, startsAt: Date, endsAt: Date) {
+    await this.prisma.scheduleInstance.update({
+      where: { id },
+      data: { startsAt, endsAt },
+    });
   }
 
   async findInRange(from: Date, to: Date, scheduleIds?: string[]) {

@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { NewSchedule, Schedule } from '../domain/schedule.js';
+import type {
+  NewSchedule,
+  Schedule,
+  SchedulePatch,
+} from '../domain/schedule.js';
 import type {
   ScheduleAssignment,
   SchedulesRepository,
@@ -26,6 +30,32 @@ export class InMemorySchedulesRepository implements SchedulesRepository {
 
   async findAll() {
     return [...this.schedules.values()].map((s) => ({ ...s }));
+  }
+
+  async findByPeriod(periodId: string) {
+    return [...this.schedules.values()]
+      .filter((s) => s.periodId === periodId)
+      .sort(
+        (a, b) =>
+          (a.weekday ?? 0) - (b.weekday ?? 0) ||
+          a.startTime.localeCompare(b.startTime),
+      )
+      .map((s) => ({ ...s }));
+  }
+
+  async update(id: string, patch: SchedulePatch) {
+    const schedule = this.schedules.get(id);
+    if (!schedule) return null;
+    const updated = { ...schedule, ...patch };
+    this.schedules.set(id, updated);
+    return { ...updated };
+  }
+
+  async delete(id: string) {
+    for (let i = this.assignments.length - 1; i >= 0; i--) {
+      if (this.assignments[i]?.scheduleId === id) this.assignments.splice(i, 1);
+    }
+    return this.schedules.delete(id);
   }
 
   async findByStudent(studentId: string, at: Date) {

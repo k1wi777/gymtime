@@ -5,7 +5,11 @@ import { noPositionals } from './args.js';
 import { findStudentByDocument } from './student.js';
 import type { Command } from './types.js';
 
-export const SESSION_STATUSES = ['abierta', 'cerrada', 'no_registrada'] as const;
+export const SESSION_STATUSES = [
+  'abierta',
+  'cerrada',
+  'no_registrada',
+] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 export interface SessionStudent {
@@ -67,7 +71,10 @@ const open: Command = {
   usage: 'sessions open',
   async run({ http, io, positionals }) {
     noPositionals(positionals);
-    const sessions = await http.request<OpenSession[]>('GET', '/attendance/open');
+    const sessions = await http.request<OpenSession[]>(
+      'GET',
+      '/attendance/open',
+    );
     if (sessions.length === 0) {
       io.out('Nobody is inside right now.');
       return 0;
@@ -101,7 +108,9 @@ function parseStatus(value: unknown): SessionStatus | undefined {
     typeof value !== 'string' ||
     !SESSION_STATUSES.includes(value as SessionStatus)
   ) {
-    throw new UsageError(`--status must be one of ${SESSION_STATUSES.join(', ')}`);
+    throw new UsageError(
+      `--status must be one of ${SESSION_STATUSES.join(', ')}`,
+    );
   }
   return value as SessionStatus;
 }
@@ -143,7 +152,15 @@ const list: Command = {
     }
     io.out(
       formatTable(
-        ['DOCUMENT', 'NAME', 'STATUS', 'ENTERED', 'EXITED', 'SOURCES', 'REASON'],
+        [
+          'DOCUMENT',
+          'NAME',
+          'STATUS',
+          'ENTERED',
+          'EXITED',
+          'SOURCES',
+          'REASON',
+        ],
         sessions.map((session) => [
           session.student.document,
           session.student.name,

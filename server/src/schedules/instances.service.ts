@@ -11,6 +11,12 @@ import {
   type InstancesRepository,
 } from './domain/instances.repository.js';
 import { MAX_ENTRY_MARGIN_MINUTES, type Schedule } from './domain/schedule.js';
+import { occurrenceDates } from './periods/occurrence-dates.js';
+import type { Period, ServiceException } from './periods/period.js';
+import {
+  PERIODS_REPOSITORY,
+  type PeriodsRepository,
+} from './periods/periods.repository.js';
 import type {
   NewScheduleInstance,
   ScheduleInstance,
@@ -38,6 +44,24 @@ export interface RelevantOccurrence extends Occurrence {
   studentIds: string[];
 }
 
+/** Outcome of regenerating occurrences (E18-4). */
+export interface RegenerationResult {
+  created: number;
+  /** Future occurrences without history removed because they no longer apply. */
+  deleted: number;
+  /** Future occurrences moved because their schedule changed hours. */
+  updated: number;
+  /** Occurrences that should change but were kept: they have attendance, an alarm or already started. */
+  kept: number;
+}
+
+/**
+ * Tells which of these occurrence ids have history (attendance sessions,
+ * alarms) and so must never be modified or deleted. Registered by the modules
+ * that own that data; `schedules` does not know them.
+ */
+export type HistoryProbe = (instanceIds: string[]) => Promise<Iterable<string>>;
+
 @Injectable()
 export class InstancesService {
   constructor(
@@ -46,7 +70,36 @@ export class InstancesService {
     @Inject(INSTANCES_REPOSITORY)
     private readonly instances: InstancesRepository,
     @Inject(SCHEDULES_CONFIG) private readonly config: SchedulesConfig,
+    @Inject(PERIODS_REPOSITORY) private readonly periods: PeriodsRepository,
   ) {}
+
+  private readonly historyProbes: HistoryProbe[] = [];
+
+  /** Extension point: a module that stores history of occurrences registers here. */
+  addHistoryProbe(probe: HistoryProbe): void {
+    this.historyProbes.push(probe);
+  }
+
+  /** Occurrence ids (of these) that have attendance or alarms. */
+  async withHistory(instanceIds: string[]): Promise<Set<string>> {
+    if (instanceIds.length === 0) return new Set();
+    const found = await Promise.all(
+      this.historyProbes.map((probe) => probe(instanceIds)),
+    );
+    return new Set(found.flatMap((ids) => [...ids]));
+  }
+
+  /** Ids of every occurrence of a schedule, past and future (history filters). */
+  async idsOfSchedule(scheduleId: string): Promise<string[]> {
+    const all = await this.instances.findFromDate([scheduleId], '0000-01-01');
+    return all.map((i) => i.id);
+  }
+
+  /** True when any occurrence of the schedule has attendance or alarms. */
+  async scheduleHasHistory(scheduleId: string): Promise<boolean> {
+    const all = await this.instances.findFromDate([scheduleId], '0000-01-01');
+    return (await this.withHistory(all.map((i) => i.id))).size > 0;
+  }
 
   /** Idempotent: today and the next days of every schedule; returns how many were created. */
   async ensureHorizon(now: Date): Promise<number> {
@@ -127,7 +180,9 @@ export class InstancesService {
     schedule: Schedule,
     date: string,
   ): Omit<ScheduleInstance, 'id'> | null {
-    if (!occursOn(schedule, date)) return null;
+    // A period's schedules are generated for the whole period, days without
+    // service included: if the day is not stored, it does not occur.
+    if (schedule.periodId !== null || !occursOn(schedule, date)) return null;
     return {
       scheduleId: schedule.id,
       date,
@@ -256,22 +311,147 @@ export class InstancesService {
     return { instance, schedule, window };
   }
 
-  private generate(schedules: Schedule[], now: Date): Promise<number> {
+  /**
+   * Brings the future occurrences of these schedules in line with their
+   * definition (E18-4): creates the missing ones, and removes or moves the
+   * ones that no longer apply, but only while they are in the future and have
+   * no attendance or alarm. Everything else is kept untouched.
+   */
+  async reconcile(
+    scheduleIds: string[],
+    now: Date,
+  ): Promise<RegenerationResult> {
+    const result: RegenerationResult = {
+      created: 0,
+      deleted: 0,
+      updated: 0,
+      kept: 0,
+    };
+    const schedules = (
+      await Promise.all(scheduleIds.map((id) => this.schedules.findById(id)))
+    ).flatMap((s) => (s ? [s] : []));
+    if (schedules.length === 0) return result;
     const today = toBogotaParts(now).date;
-    const items: NewScheduleInstance[] = [];
-    for (let offset = 0; offset <= this.config.instanceHorizonDays; offset++) {
-      const date = addDays(today, offset);
-      for (const schedule of schedules) {
-        if (!occursOn(schedule, date)) continue;
-        items.push({
-          scheduleId: schedule.id,
-          date,
-          startsAt: fromBogota(date, schedule.startTime),
-          endsAt: fromBogota(date, schedule.endTime),
-        });
+    const context = await this.periodContext(schedules);
+    const existing = await this.instances.findFromDate(
+      schedules.map((s) => s.id),
+      today,
+    );
+    const history = await this.withHistory(existing.map((i) => i.id));
+    const toCreate: NewScheduleInstance[] = [];
+    const toDelete: string[] = [];
+    for (const schedule of schedules) {
+      const { period, exceptions } = context(schedule);
+      const to = schedule.date ?? period?.endDate ?? this.horizonEnd(today);
+      const desired = new Map(
+        occurrenceDates(schedule, period, exceptions, { from: today, to }).map(
+          (date) => [date, this.draft(schedule, date)] as const,
+        ),
+      );
+      const current = existing.filter((i) => i.scheduleId === schedule.id);
+      for (const instance of current) {
+        const wanted = desired.get(instance.date);
+        const moved =
+          wanted !== undefined &&
+          (wanted.startsAt.getTime() !== instance.startsAt.getTime() ||
+            wanted.endsAt.getTime() !== instance.endsAt.getTime());
+        if (wanted !== undefined && !moved) continue;
+        if (instance.startsAt <= now || history.has(instance.id)) {
+          result.kept++;
+        } else if (wanted === undefined) {
+          toDelete.push(instance.id);
+        } else {
+          await this.instances.updateTimes(
+            instance.id,
+            wanted.startsAt,
+            wanted.endsAt,
+          );
+          result.updated++;
+        }
       }
+      const have = new Set(current.map((i) => i.date));
+      toCreate.push(
+        ...[...desired.values()].filter((item) => !have.has(item.date)),
+      );
     }
+    const deleted = await this.instances.deleteByIds(toDelete);
+    result.deleted = deleted;
+    result.kept += toDelete.length - deleted;
+    result.created = await this.instances.createMany(toCreate);
+    return result;
+  }
+
+  private horizonEnd(today: string): string {
+    return addDays(today, this.config.instanceHorizonDays);
+  }
+
+  private draft(schedule: Schedule, date: string): NewScheduleInstance {
+    return {
+      scheduleId: schedule.id,
+      date,
+      startsAt: fromBogota(date, schedule.startTime),
+      endsAt: fromBogota(date, schedule.endTime),
+    };
+  }
+
+  /** Resolves the period and days without service of each schedule in two queries. */
+  private async periodContext(schedules: Schedule[]) {
+    const ids = [
+      ...new Set(schedules.flatMap((s) => (s.periodId ? [s.periodId] : []))),
+    ];
+    const [periods, exceptions] =
+      ids.length === 0
+        ? [[], new Map<string, ServiceException[]>()]
+        : await Promise.all([
+            this.periods.findAll(),
+            this.periods.listExceptionsOf(ids),
+          ]);
+    const byId = new Map<string, Period>(periods.map((p) => [p.id, p]));
+    return (schedule: Schedule) => {
+      const period = schedule.periodId
+        ? (byId.get(schedule.periodId) ?? null)
+        : null;
+      return {
+        period,
+        exceptions: period ? (exceptions.get(period.id) ?? []) : [],
+      };
+    };
+  }
+
+  /**
+   * Creates missing occurrences; idempotent. The horizon (today and the next
+   * days) is the safety net; with `wholePeriod` a period's schedules are
+   * filled up to the end of the period.
+   */
+  private async generate(
+    schedules: Schedule[],
+    now: Date,
+    wholePeriod = false,
+  ): Promise<number> {
+    const today = toBogotaParts(now).date;
+    const context = await this.periodContext(schedules);
+    const items = schedules.flatMap((schedule) => {
+      const { period, exceptions } = context(schedule);
+      const to = wholePeriod
+        ? (period?.endDate ?? this.horizonEnd(today))
+        : this.horizonEnd(today);
+      return occurrenceDates(schedule, period, exceptions, {
+        from: today,
+        to,
+      }).map((date) => this.draft(schedule, date));
+    });
     return this.instances.createMany(items);
+  }
+
+  /**
+   * Repairs the active period: every one of its schedules gets all its
+   * missing occurrences. Returns how many were created.
+   */
+  async repairActivePeriod(now: Date): Promise<number> {
+    const active = await this.periods.findActive();
+    if (!active) return 0;
+    const schedules = await this.schedules.findByPeriod(active.id);
+    return this.generate(schedules, now, true);
   }
 }
 

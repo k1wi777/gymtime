@@ -4,6 +4,7 @@ import type { DeviceMessage } from '@gymtime/shared';
 import type { MessageProcessor } from '../devices/message-processor.service.js';
 import type { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { OpenSessionsProvider } from '../sync/domain/open-sessions.provider.js';
+import type { InstancesService } from '../schedules/instances.service.js';
 import type { SyncService } from '../sync/sync.service.js';
 import { AttendanceEventsRegistrar } from './attendance-events.registrar.js';
 import type { AttendanceService } from './attendance.service.js';
@@ -53,6 +54,7 @@ function build() {
     attendance,
     sender,
     events,
+    { addHistoryProbe: vi.fn() } as unknown as InstancesService,
     { cols: 16, rows: 2, resultSeconds: 3 },
   );
   registrar.onModuleInit();

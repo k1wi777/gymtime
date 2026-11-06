@@ -10,6 +10,9 @@
 //   - partial unique index: one active assignment per schedule and student
 //       CREATE UNIQUE INDEX "schedule_students_one_active"
 //         ON "schedule_students" ("schedule_id", "student_id") WHERE "valid_to" IS NULL;
+//   - partial unique index: at most one active period
+//       CREATE UNIQUE INDEX "periods_one_active" ON "periods" ((true)) WHERE "activo";
+//   - CHECKs on periods (inicio <= fin) and service_exceptions (desde <= hasta).
 
 generator client {
   provider            = "prisma-client"
@@ -87,7 +90,14 @@ model Student {
   // The student's degree ("carrera").
   program   String? @map("programa")
   active    Boolean @default(true) @map("activo")
-  consented Boolean @default(false) @map("consentimiento")
+  // Consent to the processing of biometric data (Ley 1581): version of the text
+  // accepted, when and by which panel user (NULL = the system key or a
+  // pre-existing student). `consented` is derived: consent_version IS NOT NULL.
+  consentVersion String?   @map("consent_version")
+  consentAt      DateTime? @map("consent_at") @db.Timestamptz()
+  consentBy      String?   @map("consent_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  importBatchId  String?   @map("import_batch_id") @db.Uuid
   // Short name for the reader LCD (ASCII, up to DISPLAY_COLS). NULL = generated
   // from `name` when read.
   displayName String? @map("display_name")
@@ -100,8 +110,60 @@ model Student {
   enrollments  Enrollment[]
   schedules    ScheduleStudent[]
   sessions     AttendanceSession[]
+  consentUser  PanelUser?   @relation(fields: [consentBy], references: [id], onDelete: SetNull)
+  importBatch  ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  @@index([importBatchId])
   @@map("students")
+}
+
+// Academic period (H9). At most one is active (partial unique index in the
+// migration) and their dates never overlap (checked by the service).
+// CHECK (inicio <= fin) is added by hand in the migration.
+model Period {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @map("nombre")
+  startDate DateTime @map("inicio") @db.Date
+  endDate   DateTime @map("fin") @db.Date
+  active    Boolean  @default(false) @map("activo")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  exceptions ServiceException[]
+  schedules  Schedule[]
+
+  @@map("periods")
+}
+
+// Days without service inside a period (holidays, breaks).
+// CHECK (desde <= hasta) is added by hand in the migration.
+model ServiceException {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  periodId String   @map("period_id") @db.Uuid
+  from     DateTime @map("desde") @db.Date
+  to       DateTime @map("hasta") @db.Date
+  reason   String   @map("motivo")
+
+  period Period @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@index([periodId])
+  @@map("service_exceptions")
+}
+
+// One row per CSV import. Only counts: the error report holds personal data
+// and is never stored.
+model ImportBatch {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename  String    @map("archivo")
+  userId    String?   @map("user_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("fecha") @db.Timestamptz()
+  total     Int
+  valid     Int       @map("validas")
+  errors    Int       @map("con_error")
+
+  user     PanelUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  students Student[]
+
+  @@map("import_batches")
 }
 
 model Fingerprint {
@@ -181,7 +243,11 @@ model Schedule {
   // before endTime when it closes. NULL = use ENTRY_OPEN_MINUTES / ENTRY_CLOSE_MINUTES.
   entryOpenMinutes  Int?      @map("margen_ingreso")
   entryCloseMinutes Int?      @map("margen_cierre_ingreso")
+  // Recurring schedules created since H9 belong to a period; NULL for the
+  // legacy ones and for one-off schedules. A period with schedules is not deleted.
+  periodId          String?   @map("period_id") @db.Uuid
 
+  period    Period?   @relation(fields: [periodId], references: [id], onDelete: Restrict)
   students  ScheduleStudent[]
   instances ScheduleInstance[]
 
@@ -214,6 +280,8 @@ model ScheduleInstance {
   startsAt   DateTime @map("inicio") @db.Timestamptz()
   endsAt     DateTime @map("fin") @db.Timestamptz()
   status     String   @default("scheduled") @map("estado")
+  // Informative: when the generator created the row (NULL for older rows).
+  generatedAt DateTime? @map("generated_at") @db.Timestamptz()
 
   schedule Schedule            @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   sessions AttendanceSession[]
@@ -321,7 +389,9 @@ model PanelUser {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  sessions AuthSession[]
+  sessions      AuthSession[]
+  consents      Student[]
+  importBatches ImportBatch[]
 
   @@map("panel_users")
 }

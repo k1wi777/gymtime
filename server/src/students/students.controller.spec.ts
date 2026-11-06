@@ -5,6 +5,7 @@ import { STUDENTS_REPOSITORY } from './domain/students.repository.js';
 import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
 import { StudentsController } from './students.controller.js';
 import { StudentsService } from './students.service.js';
+import { CLOCK, systemClock } from '../common/time/clock.js';
 import { auditTestProviders } from '../common/audit/testing.js';
 import {
   TEST_ORIGIN,
@@ -30,6 +31,7 @@ describe('StudentsController (HTTP)', () => {
         ...authTestProviders({ corsOrigins: [TEST_ORIGIN] }),
         ...auditTestProviders,
         StudentsService,
+        { provide: CLOCK, useValue: systemClock },
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
       ],
     }).compile();

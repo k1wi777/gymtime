@@ -3,7 +3,10 @@ import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
-import { InstancesService, type Occurrence } from '../schedules/instances.service.js';
+import {
+  InstancesService,
+  type Occurrence,
+} from '../schedules/instances.service.js';
 import type { Student } from '../students/domain/student.js';
 import { StudentsService } from '../students/students.service.js';
 import { SyncService } from '../sync/sync.service.js';
@@ -228,6 +231,24 @@ export class AttendanceService {
     return this.sessions.list(filter).then((rows) => this.compose(rows));
   }
 
+  /** Occurrences, among these, that have sessions (history that must be kept). */
+  async instanceIdsWithSessions(instanceIds: string[]): Promise<string[]> {
+    if (instanceIds.length === 0) return [];
+    const rows = await this.sessions.list({ instanceIds });
+    return [...new Set(rows.map((row) => row.instanceId))];
+  }
+
+  /** One page of the history, newest first, with the total (E22-1). */
+  async pageSessions(
+    filter: AttendanceFilter,
+  ): Promise<{ items: SessionView[]; total: number }> {
+    const [rows, total] = await Promise.all([
+      this.sessions.list({ ...filter, order: 'desc' }),
+      this.sessions.count(filter),
+    ]);
+    return { items: await this.compose(rows), total };
+  }
+
   /** Student ids with an open session, for the sync's open-sessions provider (R17). */
   listOpenStudentIds(): Promise<string[]> {
     return this.sessions.listOpenStudentIds();
@@ -344,9 +365,7 @@ export class AttendanceService {
     });
   }
 
-  private async compose(
-    sessions: AttendanceSession[],
-  ): Promise<SessionView[]> {
+  private async compose(sessions: AttendanceSession[]): Promise<SessionView[]> {
     if (sessions.length === 0) return [];
     const students = await this.students.findByIds([
       ...new Set(sessions.map((s) => s.studentId)),
@@ -378,12 +397,9 @@ export class AttendanceService {
       ];
     });
   }
-
 }
 
-const instanceView = ({
-  instance,
-}: Occurrence): SessionInstanceView => ({
+const instanceView = ({ instance }: Occurrence): SessionInstanceView => ({
   id: instance.id,
   scheduleId: instance.scheduleId,
   startsAt: instance.startsAt,

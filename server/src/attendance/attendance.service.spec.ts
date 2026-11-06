@@ -252,7 +252,10 @@ describe('AttendanceService manual registration (R13, R14)', () => {
     const { ana } = await scheduleWithStudent(f);
     f.setNow(bogota('10:30'));
 
-    const session = await f.service.registerManualEntry(ana.id, 'olvidó huella');
+    const session = await f.service.registerManualEntry(
+      ana.id,
+      'olvidó huella',
+    );
 
     expect(session).toMatchObject({
       studentId: ana.id,
@@ -328,10 +331,16 @@ describe('AttendanceService manual registration (R13, R14)', () => {
   it('reports an unknown student and an unknown slot for manual registration', async () => {
     const f = buildAttendanceFixture();
     await expect(
-      f.service.registerManualEntry('00000000-0000-4000-8000-000000000099', 'x'),
+      f.service.registerManualEntry(
+        '00000000-0000-4000-8000-000000000099',
+        'x',
+      ),
     ).rejects.toBeInstanceOf(AttendanceError);
     await expect(
-      f.service.registerManualEntry('00000000-0000-4000-8000-000000000099', 'x'),
+      f.service.registerManualEntry(
+        '00000000-0000-4000-8000-000000000099',
+        'x',
+      ),
     ).rejects.toMatchObject({ code: 'STUDENT_NOT_FOUND' });
   });
 });
@@ -396,9 +405,9 @@ describe('AttendanceService read models (R15)', () => {
       exitedAt: bogota('10:20'),
     });
     expect(await f.service.listSessions({ studentId: ana.id })).toHaveLength(1);
-    expect(await f.service.listSessions({ instanceId: instance.id })).toHaveLength(
-      2,
-    );
+    expect(
+      await f.service.listSessions({ instanceId: instance.id }),
+    ).toHaveLength(2);
     expect(await f.service.listSessions({ status: 'abierta' })).toHaveLength(1);
     expect(
       await f.service.listSessions({

@@ -19,6 +19,8 @@ import { InMemoryInstancesRepository } from './infrastructure/in-memory-instance
 import { InMemorySchedulesRepository } from './infrastructure/in-memory-schedules.repository.js';
 import { InstancesService } from './instances.service.js';
 import { SCHEDULES_CONFIG } from './schedules.config.js';
+import { PERIODS_REPOSITORY } from './periods/periods.repository.js';
+import { InMemoryPeriodsRepository } from './periods/in-memory-periods.repository.js';
 import { SchedulesController } from './schedules.controller.js';
 import { SchedulesService } from './schedules.service.js';
 import { MONDAY_9AM_BOGOTA, testSchedulesConfig } from './testing.js';
@@ -43,6 +45,7 @@ describe('SchedulesController (HTTP)', () => {
         StudentsService,
         { provide: CLOCK, useValue: { now: () => MONDAY_9AM_BOGOTA } },
         { provide: SCHEDULES_CONFIG, useValue: testSchedulesConfig },
+        { provide: PERIODS_REPOSITORY, useClass: InMemoryPeriodsRepository },
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
         {
           provide: SCHEDULES_REPOSITORY,
@@ -56,11 +59,29 @@ describe('SchedulesController (HTTP)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
+    const period = await moduleRef.get(PERIODS_REPOSITORY).create({
+      name: '2026-2',
+      startDate: '2026-11-01',
+      endDate: '2026-11-30',
+    });
+    weekly = {
+      name: 'Morning',
+      weekday: 1,
+      start: '10:00',
+      end: '11:00',
+      periodId: period.id,
+    };
   });
 
   afterEach(() => app.close());
 
-  const weekly = { name: 'Morning', weekday: 1, start: '10:00', end: '11:00' };
+  let weekly: {
+    name: string;
+    weekday: number;
+    start: string;
+    end: string;
+    periodId: string;
+  };
 
   it('requires the API key on every route', async () => {
     await http().get('/schedules').expect(401);
@@ -114,6 +135,8 @@ describe('SchedulesController (HTTP)', () => {
       students: [],
     });
     expect(created.body.upcoming).toHaveLength(1);
+    // Every Monday of the period, not only the horizon.
+    expect(created.body.regeneration).toMatchObject({ created: 5 });
     const list = await http().get('/schedules').set(auth).expect(200);
     expect(list.body).toHaveLength(1);
     await http().get(`/schedules/${created.body.id}`).set(auth).expect(200);
@@ -134,16 +157,38 @@ describe('SchedulesController (HTTP)', () => {
     });
   });
 
+  const valid = {
+    name: 'Morning',
+    weekday: 1,
+    start: '10:00',
+    end: '11:00',
+    periodId: UNKNOWN_ID,
+  };
+
   it.each([
     ['neither weekday nor date', { name: 'x', start: '10:00', end: '11:00' }],
-    ['end before start', { ...weekly, start: '11:00', end: '10:00' }],
-    ['bad time format', { ...weekly, start: '25:00' }],
+    ['end before start', { ...valid, start: '11:00', end: '10:00' }],
+    ['bad time format', { ...valid, start: '25:00' }],
+    [
+      'a recurring schedule without a period',
+      { name: 'x', weekday: 1, start: '10:00', end: '11:00' },
+    ],
+    [
+      'a one-off schedule with a period',
+      {
+        name: 'x',
+        date: '2026-11-09',
+        start: '10:00',
+        end: '11:00',
+        periodId: UNKNOWN_ID,
+      },
+    ],
     ['missing start and end', { name: 'x', weekday: 1 }],
     [
       'endsInMinutes mixed with a definition',
       { name: 'x', weekday: 1, endsInMinutes: 3 },
     ],
-    ['unknown field', { ...weekly, extra: 1 }],
+    ['unknown field', { ...valid, extra: 1 }],
   ])('rejects %s with 400', async (_label, body) => {
     await http().post('/schedules').set(auth).send(body).expect(400);
   });

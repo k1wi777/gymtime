@@ -32,3 +32,19 @@ export type EventOf<T extends SystemEventType> = Extract<
   SystemEvent,
   { type: T }
 >;
+
+export type Period = Schemas['PeriodResponseDto'];
+export type ServiceException = Schemas['ServiceExceptionDto'];
+export type Regeneration = Schemas['RegenerationDto'];
+export type Week = Schemas['WeekDto'];
+export type PanelStudent = Schemas['PanelStudentDto'];
+export type ImportField = Schemas['ImportFieldDto'];
+export type ImportPreview = Schemas['PreviewResponseDto'];
+export type ImportResult = Schemas['ImportResponseDto'];
+export type InvalidRow = Schemas['InvalidRowDto'];
+export type BulkAssignResult = Schemas['BulkAssignResponseDto'];
+export type ConsentText = Schemas['ConsentTextDto'];
+export type AttendanceHistoryItem = Schemas['AttendanceHistoryItemDto'];
+export type AuditItem = Schemas['AuditItemDto'];
+export type OrderItem = Schemas['OrderItemDto'];
+export type AlarmHistoryItem = Schemas['AlarmHistoryItemDto'];

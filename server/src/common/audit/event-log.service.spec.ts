@@ -60,6 +60,7 @@ describe('EventLogService (R19, R20)', () => {
   it('does not fail the operation when the write fails', async () => {
     const service = new EventLogService({
       append: () => Promise.reject(new Error('db down')),
+      search: () => Promise.reject(new Error('db down')),
     });
     await expect(service.record('x')).resolves.toBeUndefined();
   });

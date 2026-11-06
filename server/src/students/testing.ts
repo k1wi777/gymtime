@@ -1,3 +1,4 @@
+import { systemClock, type Clock } from '../common/time/clock.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
 import { DISPLAY_DEFAULTS } from '@gymtime/shared';
@@ -16,11 +17,13 @@ export const testDisplayConfig: DisplayConfig = {
 export function buildStudentsService(
   repository: StudentsRepository = new InMemoryStudentsRepository(),
   eventLog: InMemoryEventLogRepository = new InMemoryEventLogRepository(),
+  clock: Clock = systemClock,
 ) {
   const service = new StudentsService(
     repository,
     new EventLogService(eventLog),
     testDisplayConfig,
+    clock,
   );
   return { service, eventLog };
 }

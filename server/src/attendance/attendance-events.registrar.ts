@@ -6,6 +6,7 @@ import {
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { MessageProcessor } from '../devices/message-processor.service.js';
 import { OutboundSender } from '../devices/outbound-sender.service.js';
+import { InstancesService } from '../schedules/instances.service.js';
 import { SyncService } from '../sync/sync.service.js';
 import { AttendanceService } from './attendance.service.js';
 import {
@@ -27,10 +28,15 @@ export class AttendanceEventsRegistrar implements OnModuleInit {
     private readonly attendance: AttendanceService,
     private readonly sender: OutboundSender,
     private readonly events: SystemEventsService,
+    private readonly instances: InstancesService,
     @Inject(DISPLAY_CONFIG) private readonly display: DisplayConfig,
   ) {}
 
   onModuleInit(): void {
+    // Occurrences with sessions are history: regenerating schedules keeps them.
+    this.instances.addHistoryProbe((ids) =>
+      this.attendance.instanceIdsWithSessions(ids),
+    );
     this.processor.registerHandler(
       'fingerprint.scan',
       async (deviceId, message) => {

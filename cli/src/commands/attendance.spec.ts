@@ -45,7 +45,14 @@ describe('attendance entry/exit', () => {
   it('registers a manual entry with the reason', async () => {
     const s = server();
     const { code, out } = await invoke(
-      ['attendance', 'entry', '--student', '123', '--reason', 'olvidó la huella'],
+      [
+        'attendance',
+        'entry',
+        '--student',
+        '123',
+        '--reason',
+        'olvidó la huella',
+      ],
       { fetch: s.fetch },
     );
     expect(code).toBe(0);

@@ -42,6 +42,13 @@ export class PrismaDeviceCommandsRepository implements DeviceCommandsRepository 
     });
   }
 
+  findByIds(ids: string[]): Promise<DeviceCommand[]> {
+    return this.prisma.deviceCommand.findMany({
+      where: { id: { in: ids } },
+      select: COLUMNS,
+    });
+  }
+
   async markSent(id: string, attempts: number): Promise<void> {
     await this.prisma.deviceCommand.updateMany({
       where: { id, status: { in: ['pending', 'sent'] } },

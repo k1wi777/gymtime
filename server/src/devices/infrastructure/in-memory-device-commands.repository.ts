@@ -20,6 +20,15 @@ export class InMemoryDeviceCommandsRepository implements DeviceCommandsRepositor
     return Promise.resolve(this.commands.get(id) ?? null);
   }
 
+  findByIds(ids: string[]): Promise<DeviceCommand[]> {
+    return Promise.resolve(
+      ids.flatMap((id) => {
+        const command = this.commands.get(id);
+        return command ? [command] : [];
+      }),
+    );
+  }
+
   markSent(id: string, attempts: number): Promise<void> {
     return this.update(id, ['pending', 'sent'], { status: 'sent', attempts });
   }

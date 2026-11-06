@@ -34,6 +34,21 @@ export class PanelUsersService {
     return (await this.users.list()).map(toAccount);
   }
 
+  /** Active administrators; the system must never reach zero. */
+  async countActiveAdmins(): Promise<number> {
+    return (await this.users.list()).filter(
+      (user) => user.role === 'admin' && user.active,
+    ).length;
+  }
+
+  /** Accounts by id (audit trail names), in one query's worth of data. */
+  async findByIds(ids: string[]): Promise<Account[]> {
+    const wanted = new Set(ids);
+    return (await this.users.list())
+      .filter((user) => wanted.has(user.id))
+      .map(toAccount);
+  }
+
   async findById(id: string): Promise<Account | null> {
     const user = await this.users.findById(id);
     return user ? toAccount(user) : null;

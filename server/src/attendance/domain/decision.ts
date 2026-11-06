@@ -36,8 +36,7 @@ export function decide(input: DecisionInput): Decision {
   const mine = input.activeOccurrences.filter((o) =>
     o.studentIds.includes(student.id),
   );
-  if (mine.length === 0)
-    return { kind: 'denied', reason: 'NOT_IN_SCHEDULE' };
+  if (mine.length === 0) return { kind: 'denied', reason: 'NOT_IN_SCHEDULE' };
 
   const applicable = pickApplicable(mine, at);
   // Only this occurrence counts: a closed session in another schedule does

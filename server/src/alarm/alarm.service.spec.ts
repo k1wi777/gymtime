@@ -429,7 +429,9 @@ describe('AlarmService screen message (R12, R13)', () => {
     );
     expect(call?.[2]).toEqual({ supersedesPrevious: true });
     // The alarm text is not an operator message: nothing audited.
-    expect(f.eventLog.entries).toEqual([]);
+    expect(
+      f.eventLog.entries.filter((e) => !e.type.startsWith('schedule.')),
+    ).toEqual([]);
   });
 
   it('resends it to a reconnecting device with the remaining seconds', async () => {

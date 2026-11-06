@@ -44,9 +44,14 @@ function server() {
 describe('sessions open', () => {
   it('lists who is inside with the entry time in Bogota', async () => {
     const s = server();
-    const { code, out } = await invoke(['sessions', 'open'], { fetch: s.fetch });
+    const { code, out } = await invoke(['sessions', 'open'], {
+      fetch: s.fetch,
+    });
     expect(code).toBe(0);
-    expect(s.calls[0]).toMatchObject({ method: 'GET', path: '/attendance/open' });
+    expect(s.calls[0]).toMatchObject({
+      method: 'GET',
+      path: '/attendance/open',
+    });
     expect(out).toContain('123');
     expect(out).toContain('Ana');
     expect(out).toContain('2026-11-02 10:10');
@@ -80,10 +85,9 @@ describe('sessions list', () => {
 
   it('rejects an invalid status or limit as a usage error', async () => {
     const s = server();
-    const badStatus = await invoke(
-      ['sessions', 'list', '--status', 'open'],
-      { fetch: s.fetch },
-    );
+    const badStatus = await invoke(['sessions', 'list', '--status', 'open'], {
+      fetch: s.fetch,
+    });
     expect(badStatus.code).toBe(2);
     expect(badStatus.err).toContain('--status');
     const badLimit = await invoke(['sessions', 'list', '--limit', '0'], {

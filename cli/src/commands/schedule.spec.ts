@@ -98,6 +98,45 @@ describe('schedule create', () => {
     expect(out).not.toContain('gym sync');
   });
 
+  it('sends the period given by id or by name', async () => {
+    const periodId = '11111111-1111-4111-8111-111111111111';
+    const s = fakeServer((call: Call) => {
+      if (call.method === 'GET' && call.path === '/periods') {
+        return { body: [{ id: periodId, name: '2026-2', active: true }] };
+      }
+      if (call.method === 'POST') return { status: 201, body: schedule() };
+      return { status: 404 };
+    });
+    const base = [
+      'schedule',
+      'create',
+      '--name',
+      'M',
+      '--weekday',
+      '1',
+      '--start',
+      '10:00',
+      '--end',
+      '11:00',
+    ];
+    for (const period of ['2026-2', periodId]) {
+      const { code } = await invoke([...base, '--period', period], {
+        fetch: s.fetch,
+        now: () => NOW,
+      });
+      expect(code).toBe(0);
+    }
+    const posts = s.calls.filter((c) => c.method === 'POST');
+    expect(posts.map((c) => (c.body as { periodId: string }).periodId)).toEqual(
+      [periodId, periodId],
+    );
+    const missing = await invoke([...base, '--period', 'nope'], {
+      fetch: s.fetch,
+    });
+    expect(missing.code).toBe(1);
+    expect(missing.err).toContain('No period named "nope"');
+  });
+
   it('sends only endsInMinutes for --ends-in and tells to run gym sync', async () => {
     const quick = schedule({
       weekday: null,

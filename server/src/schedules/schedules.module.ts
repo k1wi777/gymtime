@@ -7,6 +7,11 @@ import { INSTANCES_REPOSITORY } from './domain/instances.repository.js';
 import { SCHEDULES_REPOSITORY } from './domain/schedules.repository.js';
 import { PrismaInstancesRepository } from './infrastructure/prisma-instances.repository.js';
 import { PrismaSchedulesRepository } from './infrastructure/prisma-schedules.repository.js';
+import { PERIODS_REPOSITORY } from './periods/periods.repository.js';
+import { PrismaPeriodsRepository } from './periods/prisma-periods.repository.js';
+import { OccurrenceRepairJob } from './periods/occurrence-repair.job.js';
+import { PeriodsController } from './periods/periods.controller.js';
+import { PeriodsService } from './periods/periods.service.js';
 import { InstancesService } from './instances.service.js';
 import {
   SCHEDULES_CONFIG,
@@ -18,7 +23,7 @@ import { SchedulesService } from './schedules.service.js';
 
 @Module({
   imports: [StudentsModule],
-  controllers: [SchedulesController],
+  controllers: [SchedulesController, PeriodsController],
   providers: [
     {
       provide: SCHEDULES_CONFIG,
@@ -32,9 +37,12 @@ import { SchedulesService } from './schedules.service.js';
     { provide: CLOCK, useValue: systemClock },
     { provide: SCHEDULES_REPOSITORY, useClass: PrismaSchedulesRepository },
     { provide: INSTANCES_REPOSITORY, useClass: PrismaInstancesRepository },
+    { provide: PERIODS_REPOSITORY, useClass: PrismaPeriodsRepository },
     InstancesService,
     SchedulesService,
+    PeriodsService,
+    OccurrenceRepairJob,
   ],
-  exports: [SchedulesService, InstancesService],
+  exports: [SchedulesService, InstancesService, PeriodsService],
 })
 export class SchedulesModule {}

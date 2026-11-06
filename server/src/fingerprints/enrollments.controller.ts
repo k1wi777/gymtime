@@ -43,7 +43,8 @@ export class EnrollmentsController {
   @ApiCreatedResponse({ type: EnrollmentResponseDto })
   @ApiNotFoundResponse({ description: 'Student not found' })
   @ApiConflictResponse({
-    description: 'Student inactive, device busy or device unavailable',
+    description:
+      'Student inactive or without consent (CONSENT_REQUIRED), device busy or device unavailable',
   })
   @ApiBadRequestResponse({ description: 'Invalid id or body' })
   async start(

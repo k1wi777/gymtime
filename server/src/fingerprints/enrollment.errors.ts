@@ -1,6 +1,7 @@
 export type EnrollmentErrorCode =
   | 'STUDENT_NOT_FOUND'
   | 'STUDENT_INACTIVE'
+  | 'CONSENT_REQUIRED'
   | 'DEVICE_UNAVAILABLE'
   | 'DEVICE_BUSY'
   | 'ENROLLMENT_NOT_FOUND'

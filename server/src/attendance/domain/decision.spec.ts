@@ -15,6 +15,8 @@ const student = (over: Partial<Student> = {}): Student => ({
   displayName: 'Ana',
   active: true,
   consented: true,
+  consentVersion: null,
+  consentAt: null,
   ...over,
 });
 
@@ -56,6 +58,7 @@ const occurrence = (
     endTime: end,
     entryOpenMinutes: null,
     entryCloseMinutes: null,
+    periodId: null,
   },
   window: { opensAt: at(open), closesAt: at(close) },
   studentIds,
@@ -71,9 +74,10 @@ const base = {
 
 describe('decide (R1, R5-R7)', () => {
   it('denies an unknown slot without any other check', () => {
-    expect(
-      decide({ ...base, student: null, openSession: session() }),
-    ).toEqual({ kind: 'denied', reason: 'UNKNOWN_SLOT' });
+    expect(decide({ ...base, student: null, openSession: session() })).toEqual({
+      kind: 'denied',
+      reason: 'UNKNOWN_SLOT',
+    });
   });
 
   it('registers the exit first, even after the end or when inactive (R3)', () => {
@@ -89,9 +93,10 @@ describe('decide (R1, R5-R7)', () => {
   });
 
   it('denies an inactive student without an open session', () => {
-    expect(
-      decide({ ...base, student: student({ active: false }) }),
-    ).toEqual({ kind: 'denied', reason: 'STUDENT_INACTIVE' });
+    expect(decide({ ...base, student: student({ active: false }) })).toEqual({
+      kind: 'denied',
+      reason: 'STUDENT_INACTIVE',
+    });
   });
 
   it('denies when no occurrence is active', () => {

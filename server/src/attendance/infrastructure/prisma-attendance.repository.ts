@@ -113,18 +113,33 @@ export class PrismaAttendanceRepository implements AttendanceRepository {
   }
 
   async list(filter: AttendanceFilter = {}) {
+    const dir = filter.order === 'desc' ? 'desc' : 'asc';
     const rows = await this.prisma.attendanceSession.findMany({
-      where: {
-        ...(filter.studentId && { studentId: filter.studentId }),
-        ...(filter.instanceId && { instanceId: filter.instanceId }),
-        ...(filter.status && { status: filter.status }),
-        ...((filter.from || filter.to) && {
-          enteredAt: { gte: filter.from, lte: filter.to },
-        }),
-      },
-      orderBy: [{ enteredAt: 'asc' }, { id: 'asc' }],
+      where: where(filter),
+      orderBy: [{ enteredAt: dir }, { id: dir }],
+      ...(filter.offset && { skip: filter.offset }),
       ...(filter.limit && { take: filter.limit }),
     });
     return rows.map(toDomain);
   }
+
+  count(filter: AttendanceFilter = {}) {
+    return this.prisma.attendanceSession.count({ where: where(filter) });
+  }
+}
+
+function where(filter: AttendanceFilter) {
+  return {
+    ...(filter.studentId && { studentId: filter.studentId }),
+    ...(filter.studentIds && { studentId: { in: filter.studentIds } }),
+    ...(filter.instanceId && { instanceId: filter.instanceId }),
+    ...(filter.instanceIds && { instanceId: { in: filter.instanceIds } }),
+    ...(filter.source && {
+      OR: [{ entrySource: filter.source }, { exitSource: filter.source }],
+    }),
+    ...(filter.status && { status: filter.status }),
+    ...((filter.from || filter.to) && {
+      enteredAt: { gte: filter.from, lte: filter.to },
+    }),
+  };
 }

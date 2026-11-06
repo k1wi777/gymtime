@@ -143,10 +143,11 @@ describe('SchedulesService students and queries (R3, R4)', () => {
       e.type.startsWith('schedule.'),
     );
     expect(events.map((e) => e.type)).toEqual([
+      'schedule.created',
       'schedule.student_assigned',
       'schedule.student_unassigned',
     ]);
-    expect(events[0]).toMatchObject({
+    expect(events[1]).toMatchObject({
       actor: { type: 'system', id: null },
       detail: { scheduleId: schedule.id, studentId: ana.id },
     });

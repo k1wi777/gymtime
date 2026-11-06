@@ -9,6 +9,7 @@ const base = {
   endTime: '11:00:00',
   entryOpenMinutes: null,
   entryCloseMinutes: null,
+  periodId: null,
 };
 
 describe('InMemorySchedulesRepository', () => {

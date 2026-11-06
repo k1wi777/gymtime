@@ -125,6 +125,8 @@ export class HttpError extends CliError {
   constructor(
     readonly status: number,
     message: string,
+    /** Stable `code` of the error body, when the server sent one. */
+    readonly code: string | null = null,
   ) {
     super(message);
   }
@@ -140,7 +142,20 @@ function httpError(
   if (status === 401) {
     return new HttpError(status, `${base}: the admin API key was rejected`);
   }
-  return new HttpError(status, detail ? `${base}: ${detail}` : base);
+  return new HttpError(
+    status,
+    detail ? `${base}: ${detail}` : base,
+    serverCode(text),
+  );
+}
+
+function serverCode(text: string): string | null {
+  try {
+    const code = (JSON.parse(text) as { code?: unknown } | null)?.code;
+    return typeof code === 'string' ? code : null;
+  } catch {
+    return null;
+  }
 }
 
 /** NestJS error bodies carry `message` as a string or a list of strings. */

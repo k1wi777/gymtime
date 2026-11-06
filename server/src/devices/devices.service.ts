@@ -57,6 +57,13 @@ export class DevicesService {
     return this.repository.upsertOnline(deviceId, firmwareVersion, at);
   }
 
+  /** Current delivery status of commands by id (order history). */
+  async commandStatuses(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.commands.findByIds(ids);
+    return new Map(rows.map((row) => [row.id, row.status]));
+  }
+
   /** Creates the device row if missing (commands need it for the foreign key). */
   ensureDevice(deviceId: string): Promise<void> {
     return this.repository.ensure(deviceId);

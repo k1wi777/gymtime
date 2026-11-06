@@ -28,7 +28,7 @@ Para quien no pudo usar la huella.
 ## Enrolar huella
 
 1. Entre a **Enrolar huella** y pulse «Elegir» en el estudiante.
-2. El estudiante debe tener **consentimiento** registrado. Sin él, el botón «Iniciar enrolamiento» queda desactivado. Si el estudiante lo firmó y falta anotarlo, use «Registrar consentimiento…», lea el texto con el estudiante y marque la casilla.
+2. El estudiante debe tener **consentimiento** registrado. Sin él, el botón «Iniciar enrolamiento» queda desactivado. Si el estudiante lo firmó y falta anotarlo, use «Registrar consentimiento…»: el panel muestra el texto vigente que guarda el servidor; léalo con el estudiante y marque la casilla. El servidor guarda la versión del texto, la fecha y quién lo registró. Si intenta enrolar sin consentimiento, el servidor lo rechaza con el aviso «Falta el consentimiento del estudiante».
 3. Pulse «Iniciar enrolamiento» y siga las indicaciones: el estudiante pone el dedo, lo retira y lo pone de nuevo en el lector.
 4. Termina con «Huella registrada». Puede cancelar con «Cancelar enrolamiento». Mientras dura, el lector no registra asistencia.
 5. Si el lector falla o se acaba el tiempo, use «Intentar de nuevo».
@@ -56,4 +56,4 @@ La huella se carga en el lector antes del próximo horario del estudiante.
 
 ## Sobre los datos de huella
 
-Solo se guarda la plantilla cifrada, nunca la imagen. Sin consentimiento no se debe enrolar: por ahora esta regla la hace cumplir el panel (el botón se desactiva), no el servidor; la validación del servidor llegará con el hito H11.
+Solo se guarda la plantilla cifrada, nunca la imagen. Sin consentimiento no se puede enrolar: lo exige el servidor (no solo el panel). Los estudiantes que ya existían antes de esta versión quedan con el consentimiento provisional `v1-provisional`, fechado el día de su registro.

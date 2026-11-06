@@ -292,4 +292,63 @@ describe('UsersController (R11-R14, R22, R23)', () => {
     await http().get('/users').set(KEY).expect(200);
     expect(res.body.mustChangePassword).toBe(true);
   });
+
+  describe('last administrator (E21-2)', () => {
+    const patchAs = (
+      credential: Record<string, string>,
+      id: string,
+      body: object,
+    ) =>
+      http()
+        .patch(`/users/${id}`)
+        .set(credential)
+        .set(panelHeaders())
+        .send(body);
+
+    it('refuses to deactivate or demote the only active administrator, even with the system key', async () => {
+      const only = await seedAccount(moduleRef, 'only', { role: 'admin' });
+      const deactivate = await patchAs(KEY, only.id, { active: false });
+      expect(deactivate.status).toBe(409);
+      expect(deactivate.body.code).toBe('LAST_ADMIN');
+      expect(deactivate.body.message).toMatch(/último administrador/);
+      const demote = await patchAs(KEY, only.id, { role: 'asistente' });
+      expect(demote.body.code).toBe('LAST_ADMIN');
+      expect(auditLog().filter((e) => e.type === 'user.deactivated')).toEqual(
+        [],
+      );
+    });
+
+    it('does not count deactivated administrators, and allows it with another active one', async () => {
+      const a = await seedAccount(moduleRef, 'a', { role: 'admin' });
+      await seedAccount(moduleRef, 'gone', { role: 'admin', active: false });
+      expect((await patchAs(KEY, a.id, { active: false })).body.code).toBe(
+        'LAST_ADMIN',
+      );
+      const b = await seedAccount(moduleRef, 'b', { role: 'admin' });
+      await patchAs(KEY, a.id, { active: false }).expect(200);
+      expect((await patchAs(KEY, b.id, { role: 'asistente' })).body.code).toBe(
+        'LAST_ADMIN',
+      );
+    });
+
+    it('lets assistants change freely: only administrators are protected', async () => {
+      await seedAccount(moduleRef, 'boss', { role: 'admin' });
+      const ana = await seedAccount(moduleRef, 'ana');
+      await patchAs(KEY, ana.id, { active: false }).expect(200);
+    });
+
+    it('two administrators deactivating each other at once leave at least one', async () => {
+      const a = await seedAccount(moduleRef, 'a', { role: 'admin' });
+      const b = await seedAccount(moduleRef, 'b', { role: 'admin' });
+      const results = await Promise.all([
+        patchAs(KEY, a.id, { active: false }),
+        patchAs(KEY, b.id, { active: false }),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      const accounts = await http().get('/users').set(KEY).expect(200);
+      expect(
+        accounts.body.filter((u: { active: boolean }) => u.active),
+      ).toHaveLength(1);
+    });
+  });
 });

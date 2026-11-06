@@ -611,7 +611,11 @@ describe('enrollment (R17)', () => {
   it('cannot start without consent; it is registered only after an explicit confirmation', async () => {
     const user = userEvent.setup();
     const fake = setup();
-    fake.route('PATCH /students/b', () =>
+    fake.route('GET /students/consent', {
+      version: 'v9',
+      text: 'Texto vigente del servidor',
+    });
+    fake.route('POST /students/b/consent', () =>
       json({ ...noConsent, consented: true }),
     );
     app(<Enrolar />);
@@ -629,6 +633,10 @@ describe('enrollment (R17)', () => {
       screen.getByRole('button', { name: 'Registrar consentimiento…' }),
     );
     const dialog = screen.getByRole('dialog');
+    // The text comes from the server, not from the panel.
+    expect(
+      await within(dialog).findByText('Texto vigente del servidor'),
+    ).toBeTruthy();
     const confirm = within(dialog).getByRole('button', {
       name: 'Registrar consentimiento',
     }) as HTMLButtonElement;
@@ -642,10 +650,10 @@ describe('enrollment (R17)', () => {
     ]);
     await user.click(confirm);
     await waitFor(() =>
-      expect(fake.calls('PATCH /students/b')).toHaveLength(1),
+      expect(fake.calls('POST /students/b/consent')).toHaveLength(1),
     );
-    expect(await fake.calls('PATCH /students/b')[0]?.json()).toEqual({
-      consented: true,
+    expect(await fake.calls('POST /students/b/consent')[0]?.json()).toEqual({
+      version: 'v9',
     });
     await waitFor(() =>
       expect(

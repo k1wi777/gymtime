@@ -143,6 +143,46 @@ sql -c "INSERT INTO auth_sessions (user_id, token_hash, expires_at) VALUES ('000
 sql -c "DELETE FROM panel_users WHERE username = 'tester'" >/dev/null
 expect "deleting an account deletes its sessions (H7)" "0" "SELECT count(*) FROM auth_sessions"
 
+echo "== H9: periods, consent and import batches =="
+expect "legacy recurring schedule keeps a NULL period and its occurrences" "NULL|2" \
+  "SELECT coalesce(period_id::text, 'NULL') || '|' || (SELECT count(*) FROM schedule_instances WHERE schedule_id = s.id) FROM schedules s WHERE id = '00000000-0000-4000-8000-0000000000a1'"
+expect "existing students with consent get the current text version" "v1-provisional|v1-provisional|NULL" \
+  "SELECT (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1001') || '|' || (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1002') || '|' || (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1003')"
+expect "their consent date is the registration date and nobody authored it" "2|0" \
+  "SELECT count(*) FILTER (WHERE consent_at = created_at) || '|' || count(*) FILTER (WHERE consent_by IS NOT NULL) FROM students WHERE consent_version IS NOT NULL"
+expect "no student carries the old 'legacy' label" "0" \
+  "SELECT count(*) FROM students WHERE consent_version = 'legacy'"
+expect "the student without consent has no date either" "1" \
+  "SELECT count(*) FROM students WHERE documento = '1003' AND consent_at IS NULL AND consent_by IS NULL"
+expect "the boolean column is gone" "0" \
+  "SELECT count(*) FROM information_schema.columns WHERE table_name = 'students' AND column_name = 'consentimiento'"
+expect "periods, exceptions and import batches start empty" "0|0|0" \
+  "SELECT (SELECT count(*) FROM periods) || '|' || (SELECT count(*) FROM service_exceptions) || '|' || (SELECT count(*) FROM import_batches)"
+expect "existing students belong to no import batch" "0" \
+  "SELECT count(*) FROM students WHERE import_batch_id IS NOT NULL"
+sql -c "INSERT INTO periods (id, nombre, inicio, fin, activo) VALUES ('00000000-0000-4000-8000-0000000000d1', '2026-2', '2026-08-01', '2026-12-01', true)" >/dev/null
+if sql -c "INSERT INTO periods (nombre, inicio, fin, activo) VALUES ('Otro', '2027-01-01', '2027-05-01', true)" >/dev/null 2>&1; then
+  fail "a second active period was accepted"
+fi
+echo "ok   at most one active period"
+if sql -c "INSERT INTO periods (nombre, inicio, fin) VALUES ('Mal', '2027-05-01', '2027-01-01')" >/dev/null 2>&1; then
+  fail "a period ending before it starts was accepted"
+fi
+echo "ok   a period cannot end before it starts"
+if sql -c "INSERT INTO service_exceptions (period_id, desde, hasta, motivo) VALUES ('00000000-0000-4000-8000-0000000000d1', '2026-10-05', '2026-10-01', 'x')" >/dev/null 2>&1; then
+  fail "an exception ending before it starts was accepted"
+fi
+echo "ok   an exception cannot end before it starts"
+sql -c "UPDATE schedules SET period_id = '00000000-0000-4000-8000-0000000000d1' WHERE id = '00000000-0000-4000-8000-0000000000a1'" >/dev/null
+if sql -c "DELETE FROM periods WHERE id = '00000000-0000-4000-8000-0000000000d1'" >/dev/null 2>&1; then
+  fail "a period with schedules was deleted"
+fi
+echo "ok   a period with schedules is not deleted"
+sql -c "UPDATE schedules SET period_id = NULL WHERE id = '00000000-0000-4000-8000-0000000000a1'" >/dev/null
+sql -c "INSERT INTO service_exceptions (period_id, desde, hasta, motivo) VALUES ('00000000-0000-4000-8000-0000000000d1', '2026-10-12', '2026-10-12', 'Festivo')" >/dev/null
+sql -c "DELETE FROM periods WHERE id = '00000000-0000-4000-8000-0000000000d1'" >/dev/null
+expect "deleting a period deletes its exceptions" "0" "SELECT count(*) FROM service_exceptions"
+
 echo "== Constraints =="
 if sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null 2>&1; then
   fail "a second active assignment of the same pair was accepted"

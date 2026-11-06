@@ -6,7 +6,10 @@ import type {
   CloseAlarmEvent,
   NewAlarmEvent,
 } from '../domain/alarm-event.js';
-import type { AlarmRepository } from '../domain/alarm.repository.js';
+import type {
+  AlarmHistoryFilter,
+  AlarmRepository,
+} from '../domain/alarm.repository.js';
 
 interface AlarmRow {
   id: string;
@@ -45,6 +48,34 @@ export class PrismaAlarmRepository implements AlarmRepository {
       orderBy: { startedAt: 'asc' },
     });
     return row ? toDomain(row) : null;
+  }
+
+  async instanceIdsWithEvents(instanceIds: string[]) {
+    if (instanceIds.length === 0) return [];
+    const rows = await this.prisma.alarmEvent.findMany({
+      where: { instanceId: { in: instanceIds } },
+      select: { instanceId: true },
+      distinct: ['instanceId'],
+    });
+    return rows.map((row) => row.instanceId);
+  }
+
+  async list(filter: AlarmHistoryFilter) {
+    const where = {
+      ...((filter.from || filter.to) && {
+        startedAt: { gte: filter.from, lte: filter.to },
+      }),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.alarmEvent.findMany({
+        where,
+        orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+        skip: filter.offset,
+        take: filter.limit,
+      }),
+      this.prisma.alarmEvent.count({ where }),
+    ]);
+    return { items: rows.map(toDomain), total };
   }
 
   async close(id: string, data: CloseAlarmEvent): Promise<AlarmEvent | null> {

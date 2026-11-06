@@ -140,6 +140,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit trail (administrator)
+         * @description Newest first, paginated by cursor (`before` = `nextBefore` of the previous page). `type` matches by prefix (`student.`).
+         */
+        get: operations["PanelAdminController_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -319,6 +339,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/history/alarms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alarm history (administrator)
+         * @description Schedule, start, end, how it was closed and the sessions closed; `closedByActor` is the audit actor closest in time for manual and button closures.
+         */
+        get: operations["PanelAdminController_alarms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/history/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders sent to the reader (administrator)
+         * @description Screen messages, alarm on/off and syncs, with who gave the order, when and the result.
+         */
+        get: operations["PanelAdminController_orders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/panel/attendance/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History of entries and exits (administrator)
+         * @description Filters: date range of the entry, schedule, student, origin (`device` fingerprint or `manual`), status and a name/document search. Manual rows carry the reason and who registered them. The offline origin does not exist yet.
+         */
+        get: operations["PanelAdminController_attendanceHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/panel/fingerprints": {
         parameters: {
             query?: never;
@@ -356,6 +436,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/panel/schedules/week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weekly view of the recurring schedules of a period
+         * @description Day, hour and number of students assigned for each schedule; the days without service of the week are flagged. Defaults: active period, current week.
+         */
+        get: operations["PanelAdminController_week"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/panel/schedules/{id}/roster": {
         parameters: {
             query?: never;
@@ -373,6 +473,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/panel/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Students with fingerprint and consent state
+         * @description Search by name or document, filter by degree, state and fingerprint (`none` = not enrolled yet); paginated.
+         */
+        get: operations["PanelAdminController_students"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List periods with their days without service */
+        get: operations["PeriodsController_list"];
+        put?: never;
+        /** Create a period (inactive) */
+        post: operations["PeriodsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/periods/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A period with its days without service */
+        get: operations["PeriodsController_get"];
+        put?: never;
+        post?: never;
+        /** Delete a period without schedules */
+        delete: operations["PeriodsController_remove"];
+        options?: never;
+        head?: never;
+        /** Edit a period; changing its dates regenerates the occurrences */
+        patch: operations["PeriodsController_update"];
+        trace?: never;
+    };
+    "/periods/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make this the only active period
+         * @description The previously active period is deactivated.
+         */
+        post: operations["PeriodsController_activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/periods/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate a period (its occurrences are kept) */
+        post: operations["PeriodsController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/periods/{id}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add days without service and regenerate the occurrences */
+        post: operations["PeriodsController_addException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/periods/{id}/exceptions/{exceptionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove days without service and regenerate */
+        delete: operations["PeriodsController_removeException"];
+        options?: never;
+        head?: never;
+        /** Edit days without service and regenerate */
+        patch: operations["PeriodsController_updateException"];
+        trace?: never;
+    };
     "/schedules": {
         parameters: {
             query?: never;
@@ -385,7 +614,7 @@ export interface paths {
         put?: never;
         /**
          * Create a recurring or one-off schedule (Bogota times)
-         * @description Give weekday or date plus start and end, or only `endsInMinutes` for a test schedule that starts now.
+         * @description A recurring schedule (`weekday`) needs a `periodId` and gets all its occurrences for the whole period, skipping the days without service (see `regeneration`). A one-off schedule (`date`) or the quick form (`endsInMinutes`, a test schedule that starts now) does not depend on any period.
          */
         post: operations["SchedulesController_create"];
         delete?: never;
@@ -422,6 +651,54 @@ export interface paths {
         get: operations["SchedulesController_get"];
         put?: never;
         post?: never;
+        /**
+         * Delete a schedule without history
+         * @description Rejected with SCHEDULE_HAS_ATTENDANCE when any of its occurrences has attendance or alarms: the history is kept.
+         */
+        delete: operations["SchedulesController_remove"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a schedule and regenerate its future occurrences
+         * @description Only future occurrences without attendance or alarms change; the others are kept (see `regeneration`).
+         */
+        patch: operations["SchedulesController_update"];
+        trace?: never;
+    };
+    "/schedules/{id}/students/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign many students by document
+         * @description Assigns the active students that exist and reports apart the unknown documents, the deactivated students and those already assigned; it never aborts because of them.
+         */
+        post: operations["SchedulesController_bulkAssign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{id}/students/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy the current student list of another schedule
+         * @description Only active students; those already assigned are not duplicated.
+         */
+        post: operations["SchedulesController_copyStudents"];
         delete?: never;
         options?: never;
         head?: never;
@@ -436,7 +713,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Assign a student (idempotent) */
+        /** Assign a student (idempotent), optionally from a date */
         put: operations["SchedulesController_assign"];
         post?: never;
         /** Remove a student from a schedule (idempotent) */
@@ -464,6 +741,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/students/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current consent text and its version
+         * @description The text to read to the student before recording the consent.
+         */
+        get: operations["StudentsController_consentText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/students/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import the valid rows of a CSV
+         * @description Validates again in the server and creates only the valid rows; an existing or repeated document is a row error and never overwrites data. The students are left without consent.
+         */
+        post: operations["StudentImportController_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/students/import/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Student fields: key, label, required (the single definition) */
+        get: operations["StudentImportController_fields"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/students/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a CSV and validate it without storing anything
+         * @description Without `mapping`: headers, suggested mapping and sample rows. With `mapping`: also every row validated, with the errors by row and reason.
+         */
+        post: operations["StudentImportController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/students/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CSV template with the header and two sample rows */
+        get: operations["StudentImportController_template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/students/{id}": {
         parameters: {
             query?: never;
@@ -480,6 +851,26 @@ export interface paths {
         head?: never;
         /** Edit name, program (carrera), email, phone, display name or consent (not the document) */
         patch: operations["StudentsController_update"];
+        trace?: never;
+    };
+    "/students/{id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the consent of a student (version of the text shown)
+         * @description Idempotent for the same version. Required before enrolling a fingerprint.
+         */
+        post: operations["StudentsController_recordConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/students/{id}/enrollments": {
@@ -625,6 +1016,26 @@ export interface components {
              */
             type: "alarm";
         };
+        AlarmHistoryDto: {
+            items: components["schemas"]["AlarmHistoryItemDto"][];
+            total: number;
+        };
+        AlarmHistoryItemDto: {
+            /** @enum {string|null} */
+            closedBy: "all_exited" | "button" | "cli" | "timeout" | null;
+            /** @description Who silenced it: the audit event closest in time (manual or button) */
+            closedByActor: components["schemas"]["HistoryActorDto"] | null;
+            closedSessions: number;
+            /** Format: date-time */
+            endedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            schedule: components["schemas"]["HistoryScheduleDto"] | null;
+            /** Format: date-time */
+            scheduleStartsAt: string | null;
+            /** Format: date-time */
+            startedAt: string;
+        };
         AlarmOffResultDto: {
             /** @enum {string} */
             closedBy: "all_exited" | "button" | "cli" | "timeout";
@@ -657,6 +1068,13 @@ export interface components {
             /** @description Dotted path of the invalid field */
             path: string;
         };
+        AssignStudentDto: {
+            /**
+             * Format: date-time
+             * @description Start of the validity; now by default, never in the past
+             */
+            validFrom?: string;
+        };
         AttendanceDataDto: {
             /** @enum {string} */
             change: "entry" | "exit";
@@ -679,6 +1097,67 @@ export interface components {
              * @enum {string}
              */
             type: "attendance";
+        };
+        AttendanceHistoryDto: {
+            items: components["schemas"]["AttendanceHistoryItemDto"][];
+            total: number;
+        };
+        AttendanceHistoryItemDto: {
+            /** Format: date-time */
+            enteredAt: string;
+            /** @description Who registered the entry by hand (null when by fingerprint) */
+            entryBy: components["schemas"]["HistoryActorDto"] | null;
+            /** @enum {string} */
+            entrySource: "device" | "manual";
+            /** @description Who registered the exit by hand (null when by fingerprint) */
+            exitBy: components["schemas"]["HistoryActorDto"] | null;
+            /** @enum {string|null} */
+            exitSource: "device" | "manual" | null;
+            /** Format: date-time */
+            exitedAt: string | null;
+            /** Format: uuid */
+            id: string;
+            manualReason: string | null;
+            schedule: components["schemas"]["HistoryScheduleDto"];
+            /** Format: date-time */
+            startsAt: string;
+            /** @enum {string} */
+            status: "abierta" | "cerrada" | "no_registrada";
+            student: components["schemas"]["HistoryStudentDto"];
+        };
+        AuditItemDto: {
+            actor: components["schemas"]["HistoryActorDto"];
+            /** Format: date-time */
+            createdAt: string;
+            /** @description Ids, counts and field names; never biometric data, credentials or contact data */
+            detail: {
+                [key: string]: unknown;
+            } | null;
+            id: number;
+            /** @example student.created */
+            type: string;
+        };
+        AuditPageDto: {
+            items: components["schemas"]["AuditItemDto"][];
+            /** @description Pass as `before` to get the next (older) page; null at the end */
+            nextBefore: number | null;
+        };
+        BulkAssignDto: {
+            /** @description Student documents (at most 500) */
+            documents: string[];
+        };
+        BulkAssignResponseDto: {
+            alreadyAssigned: components["schemas"]["BulkAssignedStudentDto"][];
+            assigned: components["schemas"]["BulkAssignedStudentDto"][];
+            inactive: components["schemas"]["BulkAssignedStudentDto"][];
+            /** @description Documents with no student */
+            notFound: string[];
+        };
+        BulkAssignedStudentDto: {
+            document: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         ChangePasswordDto: {
             /** Format: password */
@@ -709,6 +1188,49 @@ export interface components {
              */
             type: "command";
         };
+        ConsentTextDto: {
+            /** @description Text to read to the student before consenting */
+            text: string;
+            /** @example v1-provisional */
+            version: string;
+        };
+        CopyStudentsDto: {
+            /**
+             * Format: uuid
+             * @description Schedule to copy the list from
+             */
+            fromScheduleId: string;
+        };
+        CopyStudentsResponseDto: {
+            alreadyAssigned: number;
+            assigned: number;
+            skippedInactive: number;
+        };
+        CreateExceptionDto: {
+            /** @example 2026-10-12 */
+            from: string;
+            /** @example Festivo */
+            reason: string;
+            /**
+             * @description Inclusive
+             * @example 2026-10-12
+             */
+            to: string;
+        };
+        CreatePeriodDto: {
+            /**
+             * @description Bogota date
+             * @example 2026-11-27
+             */
+            endDate: string;
+            /** @example 2026-2 */
+            name: string;
+            /**
+             * @description Bogota date
+             * @example 2026-08-03
+             */
+            startDate: string;
+        };
         CreateScheduleDto: {
             /**
              * @description Bogota date
@@ -728,6 +1250,11 @@ export interface components {
             entryOpenMinutes?: number;
             name: string;
             /**
+             * Format: uuid
+             * @description Period of a recurring schedule (required with `weekday`, forbidden with `date`)
+             */
+            periodId?: string;
+            /**
              * @description Bogota time
              * @example 18:00
              */
@@ -737,7 +1264,7 @@ export interface components {
         };
         CreateStudentDto: {
             /**
-             * @description Data-use consent
+             * @description Shortcut: records the consent of the current text version (see GET /students/consent)
              * @default false
              */
             consented: boolean;
@@ -832,6 +1359,10 @@ export interface components {
             /** Format: uuid */
             studentId: string;
         };
+        ExceptionResultDto: {
+            exception: components["schemas"]["ServiceExceptionDto"];
+            regeneration: components["schemas"]["RegenerationDto"];
+        };
         HealthDto: {
             /** @enum {string} */
             database: "up" | "down";
@@ -839,6 +1370,54 @@ export interface components {
             status: "ok" | "error";
             /** @description Seconds since the process started */
             uptime: number;
+        };
+        HistoryActorDto: {
+            id: string | null;
+            /** @description Account name when the actor is a panel user that still exists */
+            name: string | null;
+            /** @enum {string} */
+            type: "user" | "system" | "device";
+        };
+        HistoryScheduleDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        HistoryStudentDto: {
+            document: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ImportDto: {
+            /** @description CSV text (at most 1 MB, 5000 rows) */
+            content: string;
+            /** @description Original file name, kept in the batch record */
+            filename: string;
+            /** @description Column index of the file for each field key */
+            mapping: {
+                [key: string]: number | null;
+            };
+        };
+        ImportFieldDto: {
+            /** @description False for the document: it is not editable */
+            editable: boolean;
+            example: string;
+            help: string | null;
+            /** @example document */
+            key: string;
+            /** @example Documento */
+            label: string;
+            required: boolean;
+        };
+        ImportResponseDto: {
+            /** Format: uuid */
+            batchId: string;
+            /** @description Students created */
+            created: number;
+            /** @description Not stored: this response is the only copy of the report */
+            invalidRows: components["schemas"]["InvalidRowDto"][];
+            total: number;
         };
         InstanceDto: {
             /** @example 2026-11-02 */
@@ -849,6 +1428,11 @@ export interface components {
             id: string;
             /** Format: date-time */
             startsAt: string;
+        };
+        InvalidRowDto: {
+            errors: components["schemas"]["RowErrorDto"][];
+            /** @description Line of the file; the header is line 1 */
+            row: number;
         };
         KeepaliveDataDto: Record<string, never>;
         KeepaliveEventDto: {
@@ -879,6 +1463,27 @@ export interface components {
             id: string;
             instance: components["schemas"]["SessionInstanceDto"];
             student: components["schemas"]["SessionStudentDto"];
+        };
+        OrderItemDto: {
+            actor: components["schemas"]["HistoryActorDto"];
+            /** Format: date-time */
+            createdAt: string;
+            deviceId: string | null;
+            id: number;
+            sessionsClosed: number | null;
+            /** @description Result: delivery status of a message or sync status */
+            status: string | null;
+            /** @description Text of a message sent to the screen */
+            text: string | null;
+            /**
+             * @description display.message_sent, alarm.manual_on, alarm.manual_off, alarm.button_off or sync.triggered
+             * @example alarm.manual_on
+             */
+            type: string;
+        };
+        OrdersPageDto: {
+            items: components["schemas"]["OrderItemDto"][];
+            nextBefore: number | null;
         };
         PanelCountsDto: {
             exited: number;
@@ -936,6 +1541,84 @@ export interface components {
             source: "device" | "manual" | null;
             /** Format: uuid */
             studentId: string;
+        };
+        PanelStudentDto: {
+            active: boolean;
+            /** Format: date-time */
+            consentAt: string | null;
+            consentVersion: string | null;
+            /** @description True while a consent is recorded */
+            consented: boolean;
+            /** @description Name drawn on the reader LCD */
+            displayName: string;
+            document: string;
+            email: string | null;
+            /** Format: date-time */
+            fingerprintEnrolledAt: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            phone: string | null;
+            /** @description Degree (carrera) */
+            program: string | null;
+        };
+        PanelStudentsDto: {
+            items: components["schemas"]["PanelStudentDto"][];
+            /** @description Matches before pagination */
+            total: number;
+        };
+        PeriodResponseDto: {
+            /** @description At most one period is active */
+            active: boolean;
+            /** @example 2026-11-27 */
+            endDate: string;
+            exceptions: components["schemas"]["ServiceExceptionDto"][];
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Only when changing the dates regenerated occurrences */
+            regeneration?: components["schemas"]["RegenerationDto"];
+            /** @description Recurring schedules of the period */
+            schedulesCount: number;
+            /** @example 2026-08-03 */
+            startDate: string;
+        };
+        PreviewDto: {
+            /** @description CSV text (at most 1 MB, 5000 rows) */
+            content: string;
+            /** @description Column index of the file for each field key (see GET /students/import/fields); when given, the whole file is validated */
+            mapping?: {
+                [key: string]: number | null;
+            };
+        };
+        PreviewResponseDto: {
+            /** @enum {string} */
+            delimiter: "," | ";";
+            headers: string[];
+            /** @description First rows of the file */
+            sample: string[][];
+            /** @description Suggested column for each field (by header name) */
+            suggestedMapping: {
+                [key: string]: number | null;
+            };
+            validation?: components["schemas"]["ValidationSummaryDto"];
+        };
+        RecordConsentDto: {
+            /**
+             * @description Version shown to the student; must be the current one
+             * @example v1-provisional
+             */
+            version: string;
+        };
+        RegenerationDto: {
+            /** @description Occurrences created */
+            created: number;
+            /** @description Future occurrences without history that no longer apply */
+            deleted: number;
+            /** @description Occurrences that should change but were kept (attendance, alarm or already started) */
+            kept: number;
+            /** @description Future occurrences moved to the new hours */
+            updated: number;
         };
         ResolveResponseDto: {
             occurrence: components["schemas"]["ResolvedOccurrenceDto"] | null;
@@ -1004,6 +1687,10 @@ export interface components {
             /** Format: uuid */
             studentId: string;
         };
+        RowErrorDto: {
+            field: string | null;
+            message: string;
+        };
         ScanDataDto: {
             deviceId: string;
             /** @enum {string|null} */
@@ -1034,6 +1721,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: uuid */
+            periodId: string | null;
+            /** @description Only on create and edit: what happened to the occurrences */
+            regeneration?: components["schemas"]["RegenerationDto"];
             /** @example 18:00:00 */
             startTime: string;
             students: components["schemas"]["ScheduleStudentDto"][];
@@ -1066,6 +1757,15 @@ export interface components {
              * @enum {string}
              */
             status: "acked" | "queued" | "failed";
+        };
+        ServiceExceptionDto: {
+            /** @example 2026-10-12 */
+            from: string;
+            /** Format: uuid */
+            id: string;
+            reason: string;
+            /** @example 2026-10-12 */
+            to: string;
         };
         SessionDto: {
             /** Format: date-time */
@@ -1106,6 +1806,10 @@ export interface components {
         };
         StudentResponseDto: {
             active: boolean;
+            /** Format: date-time */
+            consentAt: string | null;
+            consentVersion: string | null;
+            /** @description True while a consent is recorded */
             consented: boolean;
             /** @description Name drawn on the reader LCD */
             displayName: string;
@@ -1136,8 +1840,41 @@ export interface components {
             /** @description Templates loaded into the reader */
             templates: number;
         };
+        UpdateExceptionDto: {
+            from?: string;
+            reason?: string;
+            to?: string;
+        };
+        UpdatePeriodDto: {
+            /** @example 2026-11-27 */
+            endDate?: string;
+            name?: string;
+            /** @example 2026-08-03 */
+            startDate?: string;
+        };
+        UpdateScheduleDto: {
+            /**
+             * @description Bogota time
+             * @example 19:00
+             */
+            end?: string;
+            entryCloseMinutes?: number | null;
+            entryOpenMinutes?: number | null;
+            name?: string;
+            /**
+             * @description Bogota time
+             * @example 18:00
+             */
+            start?: string;
+            /** @description Recurring only */
+            weekday?: number;
+        };
         UpdateStudentDto: {
-            consented?: boolean;
+            /**
+             * @description true records the consent of the current text version; false is rejected (withdrawal is a later work item)
+             * @enum {boolean}
+             */
+            consented?: true;
             /** @description Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS) */
             displayName?: string;
             email?: string | null;
@@ -1152,6 +1889,50 @@ export interface components {
             name?: string;
             /** @enum {string} */
             role?: "asistente" | "admin";
+        };
+        ValidationSummaryDto: {
+            invalidRows: components["schemas"]["InvalidRowDto"][];
+            total: number;
+            valid: number;
+        };
+        WeekDayDto: {
+            /** @description Reason when the day is without service, otherwise null */
+            closedReason: string | null;
+            /** @example 2026-11-02 */
+            date: string;
+            weekday: number;
+        };
+        WeekDto: {
+            days: components["schemas"]["WeekDayDto"][];
+            period: components["schemas"]["WeekPeriodDto"] | null;
+            schedules: components["schemas"]["WeekScheduleDto"][];
+            /**
+             * @description Monday of the week
+             * @example 2026-11-02
+             */
+            weekStart: string;
+        };
+        WeekPeriodDto: {
+            active: boolean;
+            /** @example 2026-11-27 */
+            endDate: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @example 2026-08-03 */
+            startDate: string;
+        };
+        WeekScheduleDto: {
+            /** @description Students assigned right now */
+            assignedCount: number;
+            /** @example 19:00:00 */
+            endTime: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @example 18:00:00 */
+            startTime: string;
+            weekday: number;
         };
     };
     responses: never;
@@ -1532,6 +2313,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionDto"][];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PanelAdminController_audit: {
+        parameters: {
+            query?: {
+                /** @description ISO instant, inclusive */
+                from?: unknown;
+                /** @description ISO instant, inclusive */
+                to?: unknown;
+                type?: unknown;
+                actorId?: unknown;
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPageDto"];
                 };
             };
             /** @description Invalid query */
@@ -2022,6 +2858,170 @@ export interface operations {
             };
         };
     };
+    PanelAdminController_alarms: {
+        parameters: {
+            query?: {
+                /** @description ISO instant, inclusive */
+                from?: unknown;
+                /** @description ISO instant, inclusive */
+                to?: unknown;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlarmHistoryDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PanelAdminController_orders: {
+        parameters: {
+            query?: {
+                /** @description ISO instant, inclusive */
+                from?: unknown;
+                /** @description ISO instant, inclusive */
+                to?: unknown;
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdersPageDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PanelAdminController_attendanceHistory: {
+        parameters: {
+            query?: {
+                /** @description ISO instant, inclusive */
+                from?: unknown;
+                /** @description ISO instant, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                studentId?: unknown;
+                source?: "device" | "manual";
+                status?: "abierta" | "cerrada" | "no_registrada";
+                search?: unknown;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceHistoryDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PanelController_fingerprints: {
         parameters: {
             query?: never;
@@ -2096,6 +3096,56 @@ export interface operations {
             };
         };
     };
+    PanelAdminController_week: {
+        parameters: {
+            query?: {
+                /** @description Any Bogota day of the week wanted; the Monday is derived */
+                weekStart?: unknown;
+                periodId?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PanelController_roster: {
         parameters: {
             query: {
@@ -2146,6 +3196,596 @@ export interface operations {
                 };
             };
             /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PanelAdminController_students: {
+        parameters: {
+            query?: {
+                offset?: unknown;
+                limit?: unknown;
+                fingerprint?: "none" | "enrolled";
+                program?: unknown;
+                active?: "true" | "false";
+                search?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PanelStudentsDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"][];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePeriodDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"];
+                };
+            };
+            /** @description Invalid body or INVALID_RANGE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_OVERLAP: the message names the conflicting period */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_HAS_SCHEDULES */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePeriodDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_OVERLAP or PERIOD_EXCLUDES_EXCEPTION */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_OVERLAP */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodResponseDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_addException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExceptionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionResultDto"];
+                };
+            };
+            /** @description INVALID_RANGE or EXCEPTION_OUT_OF_PERIOD */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_removeException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegenerationDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND or EXCEPTION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PeriodsController_updateException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExceptionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionResultDto"];
+                };
+            };
+            /** @description INVALID_RANGE or EXCEPTION_OUT_OF_PERIOD */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description PERIOD_NOT_FOUND or EXCEPTION_NOT_FOUND */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2234,6 +3874,15 @@ export interface operations {
             };
             /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description SCHEDULE_OVERLAP: overlaps another schedule of the period and day */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2350,13 +3999,12 @@ export interface operations {
             };
         };
     };
-    SchedulesController_assign: {
+    SchedulesController_remove: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: string;
-                studentId: string;
             };
             cookie?: never;
         };
@@ -2368,7 +4016,259 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Invalid id */
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description SCHEDULE_HAS_ATTENDANCE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SchedulesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScheduleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponseDto"];
+                };
+            };
+            /** @description Invalid body or definition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description SCHEDULE_OVERLAP */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SchedulesController_bulkAssign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkAssignDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkAssignResponseDto"];
+                };
+            };
+            /** @description Invalid body (at most 500 documents) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SchedulesController_copyStudents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopyStudentsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopyStudentsResponseDto"];
+                };
+            };
+            /** @description Invalid body or same schedule */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SchedulesController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AssignStudentDto"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid id or `validFrom` in the past */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2465,6 +4365,10 @@ export interface operations {
     StudentsController_list: {
         parameters: {
             query?: {
+                /** @description Exact degree */
+                program?: unknown;
+                /** @description Part of the name or of the document */
+                search?: unknown;
                 active?: "true" | "false";
             };
             header?: never;
@@ -2551,6 +4455,227 @@ export interface operations {
             };
             /** @description Document already exists */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentsController_consentText: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentTextDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentImportController_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResponseDto"];
+                };
+            };
+            /** @description Invalid body, INVALID_CSV or MAPPING_INCOMPLETE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description IMPORT_CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentImportController_fields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportFieldDto"][];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentImportController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResponseDto"];
+                };
+            };
+            /** @description Invalid body, INVALID_CSV or MAPPING_INCOMPLETE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentImportController_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2678,6 +4803,76 @@ export interface operations {
             };
         };
     };
+    StudentsController_recordConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordConsentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponseDto"];
+                };
+            };
+            /** @description Invalid id or body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Student not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description CONSENT_VERSION_STALE: the text changed since it was shown */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     EnrollmentsController_start: {
         parameters: {
             query?: never;
@@ -2737,7 +4932,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Student inactive, device busy or device unavailable */
+            /** @description Student inactive or without consent (CONSENT_REQUIRED), device busy or device unavailable */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2940,7 +5135,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description SELF_CHANGE_FORBIDDEN: own deactivation or role change */
+            /** @description SELF_CHANGE_FORBIDDEN: own deactivation or role change; LAST_ADMIN: would leave no active administrator */
             409: {
                 headers: {
                     [name: string]: unknown;

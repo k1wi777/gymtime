@@ -145,9 +145,9 @@ describe('InMemoryAttendanceRepository', () => {
     expect(await repo.list({ studentId: 's1' })).toHaveLength(2);
     expect(await repo.list({ instanceId: 'i1' })).toHaveLength(2);
     expect(await repo.list({ status: 'abierta' })).toHaveLength(2);
-    expect(await repo.list({ from: at('09:30'), to: at('11:30') })).toHaveLength(
-      1,
-    );
+    expect(
+      await repo.list({ from: at('09:30'), to: at('11:30') }),
+    ).toHaveLength(1);
     expect(await repo.list({ limit: 1 })).toHaveLength(1);
     expect((await repo.list())[0].enteredAt).toEqual(at('09:00'));
   });

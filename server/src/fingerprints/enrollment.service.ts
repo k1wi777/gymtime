@@ -83,6 +83,14 @@ export class EnrollmentService {
     if (!student.active) {
       throw new EnrollmentError('STUDENT_INACTIVE', 'Student is inactive');
     }
+    // Ley 1581: the server, not the client, refuses a biometric capture
+    // without a recorded consent.
+    if (!student.consented) {
+      throw new EnrollmentError(
+        'CONSENT_REQUIRED',
+        'El estudiante no tiene el consentimiento registrado',
+      );
+    }
     const target = deviceId ?? (await this.devices.getOnlineDeviceId());
     if (!target) {
       throw new EnrollmentError(

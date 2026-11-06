@@ -31,9 +31,8 @@ Object.assign(process.env, {
   LOGIN_RATE_LIMIT: '1000',
 });
 
-const { buildInMemoryApp, bogotaAt } = await import(
-  '../support/scenario-app.js'
-);
+const { buildInMemoryApp, bogotaAt } =
+  await import('../support/scenario-app.js');
 type InMemoryApp = Awaited<ReturnType<typeof buildInMemoryApp>>;
 const { DeviceClient } = await import('@gymtime/simulator');
 const { fastHasher } = await import('../../src/auth/testing.js');
@@ -101,7 +100,8 @@ async function startDevice(app: InMemoryApp): Promise<Device> {
   );
   device.start();
   for (let i = 0; i < 200 && device.state !== 'online'; i++) await sleep(25);
-  if (device.state !== 'online') throw new Error('the simulated reader did not connect');
+  if (device.state !== 'online')
+    throw new Error('the simulated reader did not connect');
   return device;
 }
 
@@ -112,7 +112,12 @@ async function seed(app: InMemoryApp): Promise<Omit<World, 'app' | 'device'>> {
     ['nueva', 'asistente', true],
   ] as const) {
     await app.repositories.users.create({
-      name: username === 'ana' ? 'Ana Asistente' : username === 'boss' ? 'Jefe Admin' : 'Nueva Asistente',
+      name:
+        username === 'ana'
+          ? 'Ana Asistente'
+          : username === 'boss'
+            ? 'Jefe Admin'
+            : 'Nueva Asistente',
       username,
       passwordHash: await fastHasher.hash(PASSWORD),
       role,
@@ -138,7 +143,11 @@ async function build(previous?: World): Promise<World> {
 async function populate(w: World): Promise<void> {
   const { app } = w;
   const create = async (document: string, name: string, consented = true) => {
-    const res = await api(app, 'POST', '/students', { document, name, consented });
+    const res = await api(app, 'POST', '/students', {
+      document,
+      name,
+      consented,
+    });
     w.students[document] = { id: res.json.id, document, name };
     return res.json.id as string;
   };
@@ -175,12 +184,19 @@ async function populate(w: World): Promise<void> {
     end: '15:00',
   });
   w.laterScheduleId = later.json.id;
-  await api(app, 'PUT', `/schedules/${w.laterScheduleId}/students/${w.students['1004']?.id}`);
+  await api(
+    app,
+    'PUT',
+    `/schedules/${w.laterScheduleId}/students/${w.students['1004']?.id}`,
+  );
   await api(app, 'POST', '/sync');
 }
 
 /** Open SSE streams would keep `close()` waiting forever: drop them first. */
-async function shutdown(app: { app: { getHttpServer(): Server }; close(): Promise<void> }): Promise<void> {
+async function shutdown(app: {
+  app: { getHttpServer(): Server };
+  close(): Promise<void>;
+}): Promise<void> {
   app.app.getHttpServer().closeAllConnections();
   await app.close();
 }
@@ -239,7 +255,8 @@ async function control(path: string, body: any): Promise<unknown> {
     case '/control/scan': {
       const w = world!;
       const student = w.students[String(body.document)];
-      if (!student) throw new Error(`unknown document ${String(body.document)}`);
+      if (!student)
+        throw new Error(`unknown document ${String(body.document)}`);
       w.device!.scan(await slotOf(w, student.id));
       return { ok: true };
     }
@@ -274,7 +291,11 @@ async function control(path: string, body: any): Promise<unknown> {
       return { ok: true };
     }
     case '/control/sessions': {
-      const res = await api(world!.app, 'GET', '/attendance/sessions?limit=200');
+      const res = await api(
+        world!.app,
+        'GET',
+        '/attendance/sessions?limit=200',
+      );
       return res.json;
     }
     default:
@@ -298,7 +319,9 @@ function startControlServer(): Server {
       .then((result) => send(200, result))
       .catch((error: unknown) => {
         const status = (error as { status?: number }).status ?? 500;
-        send(status, { error: error instanceof Error ? error.message : String(error) });
+        send(status, {
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
   });
   server.listen(CONTROL_PORT, '127.0.0.1');

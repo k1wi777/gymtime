@@ -144,26 +144,30 @@ const EDIT_FLAGS = [
 const edit: Command = {
   group: 'student',
   action: 'edit',
-  summary: 'Edit a student (name, program, contact data or LCD name)',
+  summary:
+    'Edit a student (name, program, contact data, LCD name) or record their consent',
   usage:
-    'student edit <document> [--name <name>] [--program <program>] [--email <email>] [--phone <phone>] [--display-name <text>]',
+    'student edit <document> [--name <name>] [--program <program>] [--email <email>] [--phone <phone>] [--display-name <text>] [--consented]',
   options: {
     name: { type: 'string' },
     program: { type: 'string' },
     email: { type: 'string' },
     phone: { type: 'string' },
     'display-name': { type: 'string' },
+    consented: { type: 'boolean' },
   },
   async run({ http, io, values, positionals }: CommandContext) {
     const [document, ...extra] = positionals;
     if (document === undefined || extra.length > 0) {
       throw new UsageError('expected exactly one <document>');
     }
-    const patch: Record<string, string> = {};
+    const patch: Record<string, string | boolean> = {};
     for (const [flag, field] of EDIT_FLAGS) {
       const value = values[flag];
       if (typeof value === 'string') patch[field] = value;
     }
+    // Records the consent of the current text; it cannot be withdrawn here.
+    if (values['consented'] === true) patch['consented'] = true;
     if (Object.keys(patch).length === 0) {
       throw new UsageError('nothing to change: give at least one option');
     }

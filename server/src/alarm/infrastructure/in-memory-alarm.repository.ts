@@ -4,7 +4,10 @@ import type {
   CloseAlarmEvent,
   NewAlarmEvent,
 } from '../domain/alarm-event.js';
-import type { AlarmRepository } from '../domain/alarm.repository.js';
+import type {
+  AlarmHistoryFilter,
+  AlarmRepository,
+} from '../domain/alarm.repository.js';
 
 export class InMemoryAlarmRepository implements AlarmRepository {
   private readonly rows = new Map<string, AlarmEvent>();
@@ -38,6 +41,37 @@ export class InMemoryAlarmRepository implements AlarmRepository {
       (row) => row.instanceId === instanceId && row.endedAt === null,
     );
     return event ? { ...event } : null;
+  }
+
+  async instanceIdsWithEvents(instanceIds: string[]) {
+    const wanted = new Set(instanceIds);
+    return [
+      ...new Set(
+        [...this.rows.values()]
+          .filter((row) => wanted.has(row.instanceId))
+          .map((row) => row.instanceId),
+      ),
+    ];
+  }
+
+  async list(filter: AlarmHistoryFilter) {
+    const matching = [...this.rows.values()]
+      .filter(
+        (row) =>
+          (!filter.from || row.startedAt >= filter.from) &&
+          (!filter.to || row.startedAt <= filter.to),
+      )
+      .sort(
+        (a, b) =>
+          b.startedAt.getTime() - a.startedAt.getTime() ||
+          b.id.localeCompare(a.id),
+      );
+    return {
+      items: matching
+        .slice(filter.offset, filter.offset + filter.limit)
+        .map((row) => ({ ...row })),
+      total: matching.length,
+    };
   }
 
   async close(id: string, data: CloseAlarmEvent): Promise<AlarmEvent | null> {

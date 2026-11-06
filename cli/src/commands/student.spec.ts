@@ -179,6 +179,20 @@ describe('student edit', () => {
     expect(out).toContain('Student updated.');
   });
 
+  it('records the consent with --consented', async () => {
+    const server = fakeServer((call) =>
+      call.method === 'GET' ? { body: [ana, luis] } : { body: ana },
+    );
+    const { code } = await invoke(['student', 'edit', '123', '--consented'], {
+      fetch: server.fetch,
+    });
+    expect(code).toBe(0);
+    expect(server.calls[1]).toMatchObject({
+      method: 'PATCH',
+      body: { consented: true },
+    });
+  });
+
   it('needs a document and at least one option, and knows missing students', async () => {
     expect((await invoke(['student', 'edit'])).code).toBe(2);
     expect((await invoke(['student', 'edit', '123'])).code).toBe(2);

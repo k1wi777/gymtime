@@ -12,6 +12,8 @@ const student = {
   displayName: 'Ana M.',
   active: true,
   consented: true,
+  consentVersion: null,
+  consentAt: null,
 };
 
 describe('scan.result payloads (R10, R11)', () => {
@@ -82,7 +84,10 @@ describe('scan.result payloads (R10, R11)', () => {
   });
 
   it('answers an unrecognised fingerprint with `unknown`', () => {
-    const message = buildUnknownScanResult(`00000000-0000-4000-8000-000000000005`, at);
+    const message = buildUnknownScanResult(
+      `00000000-0000-4000-8000-000000000005`,
+      at,
+    );
     expect(message).toMatchObject({
       type: 'scan.result',
       ref: `00000000-0000-4000-8000-000000000005`,

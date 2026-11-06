@@ -95,21 +95,39 @@ export class InMemoryAttendanceRepository implements AttendanceRepository {
   }
 
   async list(filter: AttendanceFilter = {}) {
-    return [...this.rows.values()]
-      .filter(
-        (r) =>
-          (!filter.studentId || r.studentId === filter.studentId) &&
-          (!filter.instanceId || r.instanceId === filter.instanceId) &&
-          (!filter.status || r.status === filter.status) &&
-          (!filter.from || r.enteredAt >= filter.from) &&
-          (!filter.to || r.enteredAt <= filter.to),
-      )
+    const sign = filter.order === 'desc' ? -1 : 1;
+    const offset = filter.offset ?? 0;
+    return this.matching(filter)
       .sort(
         (a, b) =>
-          a.enteredAt.getTime() - b.enteredAt.getTime() ||
-          a.id.localeCompare(b.id),
+          sign *
+          (a.enteredAt.getTime() - b.enteredAt.getTime() ||
+            a.id.localeCompare(b.id)),
       )
-      .slice(0, filter.limit ?? undefined)
+      .slice(
+        offset,
+        filter.limit === undefined ? undefined : offset + filter.limit,
+      )
       .map((r) => ({ ...r }));
+  }
+
+  async count(filter: AttendanceFilter = {}) {
+    return this.matching(filter).length;
+  }
+
+  private matching(filter: AttendanceFilter): AttendanceSession[] {
+    return [...this.rows.values()].filter(
+      (r) =>
+        (!filter.studentId || r.studentId === filter.studentId) &&
+        (!filter.studentIds || filter.studentIds.includes(r.studentId)) &&
+        (!filter.instanceId || r.instanceId === filter.instanceId) &&
+        (!filter.instanceIds || filter.instanceIds.includes(r.instanceId)) &&
+        (!filter.source ||
+          r.entrySource === filter.source ||
+          r.exitSource === filter.source) &&
+        (!filter.status || r.status === filter.status) &&
+        (!filter.from || r.enteredAt >= filter.from) &&
+        (!filter.to || r.enteredAt <= filter.to),
+    );
   }
 }

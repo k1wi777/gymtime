@@ -151,6 +151,26 @@ describe('enroll start', () => {
     ).toHaveLength(0);
   });
 
+  it('tells how to record the consent when the server requires it', async () => {
+    const server = scenario([], (call) =>
+      call.method === 'POST'
+        ? {
+            status: 409,
+            body: { code: 'CONSENT_REQUIRED', message: 'Falta consentimiento' },
+          }
+        : undefined,
+    );
+    const { code, err } = await invoke(
+      ['enroll', 'start', '--student', '123'],
+      {
+        fetch: server.fetch,
+      },
+    );
+    expect(code).toBe(1);
+    expect(err).toContain('no recorded consent');
+    expect(err).toContain('gym student edit 123 --consented');
+  });
+
   it('cancels the open enrollment on Ctrl+C and exits non-zero', async () => {
     const controller = new AbortController();
     const server = scenario([state('in_progress', 'place_finger')]);

@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import { DevicesService } from '../devices/devices.service.js';
+import { InstancesService } from '../schedules/instances.service.js';
 import { AlarmService } from './alarm.service.js';
 
 /**
@@ -15,10 +16,15 @@ export class AlarmRegistrar implements OnModuleInit {
     private readonly attendance: AttendanceService,
     private readonly devices: DevicesService,
     private readonly alarm: AlarmService,
+    private readonly instances: InstancesService,
   ) {}
 
   onModuleInit(): void {
     this.attendance.setAlarmPort(this.alarm);
+    // Occurrences with alarm events are history: regenerating schedules keeps them.
+    this.instances.addHistoryProbe((ids) =>
+      this.alarm.instanceIdsWithAlarms(ids),
+    );
     this.devices.onConnected((deviceId) => {
       this.alarm.onDeviceConnected(deviceId);
     });

@@ -1,5 +1,6 @@
 import type {
   AttendanceSession,
+  AttendanceSource,
   CloseAttendanceSession,
   NewAttendanceSession,
   SessionStatus,
@@ -7,13 +8,22 @@ import type {
 
 export interface AttendanceFilter {
   studentId?: string;
+  /** Any of these students (e.g. the result of a name search). */
+  studentIds?: string[];
   instanceId?: string;
+  /** Any of these occurrences (e.g. all those of a schedule). */
+  instanceIds?: string[];
+  /** `entrySource` or `exitSource` equals this. */
+  source?: AttendanceSource;
   status?: SessionStatus;
   /** Inclusive lower bound of `enteredAt`. */
   from?: Date;
   /** Inclusive upper bound of `enteredAt`. */
   to?: Date;
   limit?: number;
+  offset?: number;
+  /** Default `asc` (oldest entry first). */
+  order?: 'asc' | 'desc';
 }
 
 export interface AttendanceRepository {
@@ -39,8 +49,10 @@ export interface AttendanceRepository {
     data: { manualReason: string },
   ): Promise<number>;
   listOpenStudentIds(): Promise<string[]>;
-  /** Sessions matching the filter, oldest entry first. */
+  /** Sessions matching the filter (oldest entry first unless `order` says otherwise). */
   list(filter?: AttendanceFilter): Promise<AttendanceSession[]>;
+  /** How many sessions match the filter, ignoring `limit`, `offset` and `order`. */
+  count(filter?: AttendanceFilter): Promise<number>;
 }
 
 export const ATTENDANCE_REPOSITORY = Symbol('ATTENDANCE_REPOSITORY');

@@ -10,7 +10,8 @@ interface StudentRow {
   phone: string | null;
   displayName: string | null;
   active: boolean;
-  consented: boolean;
+  consentVersion: string | null;
+  consentAt: Date | null;
 }
 
 /**
@@ -28,6 +29,8 @@ export function toStudent(row: StudentRow): Student {
     displayName:
       row.displayName ?? generateDisplayName(row.name, DISPLAY_DEFAULTS.cols),
     active: row.active,
-    consented: row.consented,
+    consented: row.consentVersion !== null,
+    consentVersion: row.consentVersion,
+    consentAt: row.consentAt,
   };
 }

@@ -160,6 +160,53 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
         .expect(201)
     ).body.id as string;
 
+  it('refuses to enroll without a recorded consent and accepts it afterwards (R17)', async () => {
+    const device = await connectDevice(url, clients);
+    const studentId = (
+      await request(httpUrl)
+        .post('/students')
+        .set(auth)
+        .send({ document: '900', name: 'Sin consentimiento' })
+        .expect(201)
+    ).body.id as string;
+    const refused = await request(httpUrl)
+      .post(`/students/${studentId}/enrollments`)
+      .set(auth)
+      .expect(409);
+    expect(refused.body.code).toBe('CONSENT_REQUIRED');
+
+    const current = (
+      await request(httpUrl).get('/students/consent').set(auth).expect(200)
+    ).body as { version: string; text: string };
+    expect(current.text).toMatch(/huella/);
+    // A stale version is rejected: what was shown is what gets stored.
+    const stale = await request(httpUrl)
+      .post(`/students/${studentId}/consent`)
+      .set(auth)
+      .send({ version: 'v0' })
+      .expect(409);
+    expect(stale.body.code).toBe('CONSENT_VERSION_STALE');
+    const recorded = await request(httpUrl)
+      .post(`/students/${studentId}/consent`)
+      .set(auth)
+      .send({ version: current.version })
+      .expect(200);
+    expect(recorded.body).toMatchObject({
+      consented: true,
+      consentVersion: current.version,
+    });
+    await startEnrollment(studentId, device);
+  });
+
+  it('rejects consented: false when editing a student', async () => {
+    const studentId = await createStudent('901');
+    await request(httpUrl)
+      .patch(`/students/${studentId}`)
+      .set(auth)
+      .send({ consented: false })
+      .expect(400);
+  });
+
   /** Starts an enrollment over REST while the device acks enroll.start. */
   async function startEnrollment(
     studentId: string,
