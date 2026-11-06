@@ -21,13 +21,13 @@ export class AlarmStatusDto {
   @ApiProperty({ enum: ALARM_REASONS, nullable: true })
   reason: AlarmReason | null;
 
-  @ApiProperty({ format: 'uuid', nullable: true })
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
   instanceId: string | null;
 
   @ApiProperty({ type: Number, nullable: true })
   durationSec: number | null;
 
-  @ApiProperty({ format: 'date-time', nullable: true })
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
   startedAt: string | null;
 
   @ApiProperty()

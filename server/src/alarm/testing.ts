@@ -56,6 +56,7 @@ export function buildAlarmFixture(
 ) {
   const sf = buildSchedulesFixture(start);
   const attendanceRepo = new InMemoryAttendanceRepository();
+  const systemEvents = new SystemEventsService();
   const attendance = new AttendanceService(
     attendanceRepo,
     {} as SyncService,
@@ -64,6 +65,7 @@ export function buildAlarmFixture(
     { onInstanceEmptied() {}, onButtonPressed() {} },
     sf.clock,
     new EventLogService(sf.eventLogRepo),
+    systemEvents,
   );
   const events = new InMemoryAlarmRepository();
   const devices = new DevicesService(
@@ -71,7 +73,6 @@ export function buildAlarmFixture(
     new InMemoryDeviceCommandsRepository(),
   );
   const link = fakeAlarmSender();
-  const systemEvents = new SystemEventsService();
   const eventLog = new EventLogService(sf.eventLogRepo);
   const display = new DisplayService(
     devices,

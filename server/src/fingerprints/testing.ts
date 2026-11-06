@@ -1,3 +1,4 @@
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import { randomBytes } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
@@ -32,6 +33,7 @@ export function buildEnrollmentFixture(
   const cipher = new TemplateCipher({
     get: () => randomBytes(32).toString('base64'),
   } as unknown as ConfigService<Env, true>);
+  const events = new SystemEventsService();
   const service = new EnrollmentService(
     students,
     devices,
@@ -42,9 +44,11 @@ export function buildEnrollmentFixture(
     defaultFingerprintsConfig,
     clock,
     new EventLogService(eventLog),
+    events,
   );
   return {
     service,
+    events,
     students,
     eventLog,
     devices,

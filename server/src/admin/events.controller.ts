@@ -1,6 +1,8 @@
 import { Controller, Get, Logger, Req, Res } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiOkResponse,
+  getSchemaPath,
   ApiOperation,
   ApiProduces,
   ApiTags,
@@ -11,6 +13,7 @@ import { AuthService } from '../auth/auth.service.js';
 import { Auth, type AuthContext } from '../common/auth/auth-context.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { formatSseEvent } from './sse.js';
+import { SSE_EVENT_DTOS } from '../openapi/sse-events.dto.js';
 import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 export const SSE_KEEPALIVE_MS = 15_000;
@@ -28,8 +31,11 @@ export const SSE_MAX_BUFFERED_BYTES = 256 * 1024;
  * abandoned screen must still expire; the panel keeps the session alive with
  * the user's activity (`GET /auth/me`).
  */
+const EVENT_MODELS = Object.values(SSE_EVENT_DTOS);
+
 @ApiTags('events')
 @ApiAuth()
+@ApiExtraModels(...EVENT_MODELS)
 @Controller('events')
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
@@ -42,7 +48,28 @@ export class EventsController {
   @Get()
   @ApiOperation({ summary: 'Live system events (Server-Sent Events)' })
   @ApiProduces('text/event-stream')
-  @ApiOkResponse({ description: 'Stream of SystemEvent frames' })
+  @ApiOkResponse({
+    description:
+      'Server-Sent Events. Each frame is `event: <type>` and `data: <JSON>` where the JSON is the schema below (type, at, data); a keepalive arrives every 15 s.',
+    content: {
+      'text/event-stream': {
+        schema: {
+          oneOf: EVENT_MODELS.map((model) => ({
+            $ref: getSchemaPath(model),
+          })),
+          discriminator: {
+            propertyName: 'type',
+            mapping: Object.fromEntries(
+              Object.entries(SSE_EVENT_DTOS).map(([type, model]) => [
+                type,
+                getSchemaPath(model),
+              ]),
+            ),
+          },
+        },
+      },
+    },
+  })
   stream(
     @Req() req: Request,
     @Res() res: Response,

@@ -487,3 +487,47 @@ describe('AttendanceService.recordUnknown / recordButton', () => {
     expect(f.onButtonPressed).not.toHaveBeenCalled();
   });
 });
+
+describe('AttendanceService live events (H8 R3)', () => {
+  it('publishes an attendance event for each entry and exit, by fingerprint and by hand', async () => {
+    const f = buildAttendanceFixture();
+    const { ana } = await scheduleWithStudent(f);
+    const received: unknown[] = [];
+    f.events.events.subscribe((event) => {
+      if (event.type === 'attendance') received.push(event.data);
+    });
+    f.slot(ana);
+
+    f.setNow(bogota('10:30'));
+    await f.service.recordScan('dev', 5, 0);
+    f.setNow(bogota('10:40'));
+    await f.service.recordScan('dev', 5, 0);
+
+    const other = await f.newStudent('2');
+    const schedule = await f.weekly('B', '10:00', '11:00');
+    await f.schedules.assignStudent(schedule.schedule.id, other.id);
+    f.setNow(bogota('10:45'));
+    await f.service.registerManualEntry(other.id, 'sin huella');
+    await f.service.registerManualExit(other.id, 'salida');
+
+    expect(received).toMatchObject([
+      { change: 'entry', source: 'device', studentId: ana.id },
+      { change: 'exit', source: 'device', studentId: ana.id },
+      { change: 'entry', source: 'manual', studentId: other.id },
+      { change: 'exit', source: 'manual', studentId: other.id },
+    ]);
+    expect(received[0]).toHaveProperty('sessionId');
+    expect(received[0]).toHaveProperty('instanceId');
+  });
+
+  it('publishes nothing for a denied scan', async () => {
+    const f = buildAttendanceFixture();
+    const received: unknown[] = [];
+    f.events.events.subscribe((event) => received.push(event));
+    f.slot(null);
+
+    await f.service.recordScan('dev', 5, 0);
+
+    expect(received).toEqual([]);
+  });
+});

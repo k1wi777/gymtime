@@ -22,6 +22,7 @@ import {
   type FingerprintsConfig,
 } from './fingerprints.config.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { validateTemplate } from './template-validator.js';
 
@@ -62,6 +63,7 @@ export class EnrollmentService {
     @Inject(FINGERPRINTS_CONFIG) private readonly config: FingerprintsConfig,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly eventLog: EventLogService,
+    private readonly events: SystemEventsService,
   ) {}
 
   /**
@@ -112,6 +114,7 @@ export class EnrollmentService {
         `Enrollment already ${enrollment.status}`,
       );
     }
+    this.publish(cancelled);
     this.logger.log({ event: 'enrollment_cancelled', enrollmentId: id });
     void this.sendCancel(cancelled);
     await this.eventLog.record('enrollment.cancelled', {
@@ -150,10 +153,12 @@ export class EnrollmentService {
     await this.deviceLock.run(deviceId, async () => {
       const enrollment = await this.findForEvent(deviceId, enrollmentId);
       if (!enrollment) return;
-      await this.enrollments.transition(enrollment.id, IN_PROGRESS, {
-        status: 'in_progress',
-        step,
-      });
+      this.publish(
+        await this.enrollments.transition(enrollment.id, IN_PROGRESS, {
+          status: 'in_progress',
+          step,
+        }),
+      );
     });
   }
 
@@ -168,10 +173,12 @@ export class EnrollmentService {
       if (!enrollment) return null;
       const checked = validateTemplate(template, this.config);
       if (!checked.ok) {
-        await this.enrollments.transition(enrollment.id, IN_PROGRESS, {
-          status: 'failed',
-          failureReason: `${checked.code}: ${checked.reason}`,
-        });
+        this.publish(
+          await this.enrollments.transition(enrollment.id, IN_PROGRESS, {
+            status: 'failed',
+            failureReason: `${checked.code}: ${checked.reason}`,
+          }),
+        );
         this.logger.warn({
           event: 'enrollment_template_rejected',
           enrollmentId,
@@ -185,6 +192,7 @@ export class EnrollmentService {
         { template: encrypted.data, iv: encrypted.iv },
       );
       if (done) {
+        this.publish(done);
         this.logger.log({
           event: 'enrollment_done',
           enrollmentId,
@@ -220,10 +228,12 @@ export class EnrollmentService {
     await this.deviceLock.run(deviceId, async () => {
       const enrollment = await this.findForEvent(deviceId, enrollmentId);
       if (!enrollment) return;
-      await this.enrollments.transition(enrollment.id, OPEN_STATUSES, {
-        status: 'failed',
-        failureReason: reason,
-      });
+      this.publish(
+        await this.enrollments.transition(enrollment.id, OPEN_STATUSES, {
+          status: 'failed',
+          failureReason: reason,
+        }),
+      );
       this.logger.log({ event: 'enrollment_failed', enrollmentId, reason });
     });
   }
@@ -237,6 +247,7 @@ export class EnrollmentService {
         OPEN_STATUSES,
         { status: 'cancelled' },
       );
+      this.publish(cancelled);
       if (cancelled) void this.sendCancel(cancelled);
     }
     await this.fingerprints.deleteByStudent(student.id);
@@ -261,6 +272,7 @@ export class EnrollmentService {
       deviceId,
       expiresAt,
     });
+    this.publish(enrollment);
     const result = await this.sender.sendCommand(
       deviceId,
       this.message('enroll.start', {
@@ -270,10 +282,12 @@ export class EnrollmentService {
       }),
     );
     if (result === 'failed') {
-      await this.enrollments.transition(enrollment.id, ['pending'], {
-        status: 'failed',
-        failureReason: 'DEVICE_UNAVAILABLE',
-      });
+      this.publish(
+        await this.enrollments.transition(enrollment.id, ['pending'], {
+          status: 'failed',
+          failureReason: 'DEVICE_UNAVAILABLE',
+        }),
+      );
       void this.sendCancel(enrollment);
       throw new EnrollmentError(
         'DEVICE_UNAVAILABLE',
@@ -289,6 +303,7 @@ export class EnrollmentService {
       ['pending'],
       { status: 'in_progress' },
     );
+    this.publish(started);
     return started ?? this.require(enrollment.id);
   }
 
@@ -299,6 +314,7 @@ export class EnrollmentService {
       { status: 'expired' },
     );
     if (!expired) return false;
+    this.publish(expired);
     this.logger.warn({
       event: 'enrollment_expired',
       enrollmentId: enrollment.id,
@@ -322,6 +338,22 @@ export class EnrollmentService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  /**
+   * Tells the live panels about a change. Null means the compare-and-set lost
+   * (nothing changed), so nothing is published. Never carries the template.
+   */
+  private publish(enrollment: Enrollment | null): void {
+    if (!enrollment) return;
+    this.events.emit('enrollment', {
+      enrollmentId: enrollment.id,
+      studentId: enrollment.studentId,
+      deviceId: enrollment.deviceId,
+      status: enrollment.status,
+      step: enrollment.step,
+      failureReason: enrollment.failureReason,
+    });
   }
 
   /** The open enrollment an event refers to, or null (ignored, R15). */

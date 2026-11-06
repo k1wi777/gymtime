@@ -35,6 +35,7 @@ Operación = lo que el asistente hace cada día en el gimnasio.
 | `GET /attendance/open`, `GET /attendance/sessions`, `POST /attendance/entry`, `POST /attendance/exit` | 401 | sí | sí | sí |
 | `GET /alarm/status`, `POST /alarm/on`, `/alarm/test`, `/alarm/off` | 401 | sí | sí | sí |
 | `GET /devices/status`, `POST /devices/messages`, `POST /sync` | 401 | sí | sí | sí |
+| `GET /panel/now`, `GET /panel/schedules/:id/roster`, `GET /panel/fingerprints` | 401 | sí | sí | sí |
 | `GET /events` (SSE) | 401 | sí | sí | sí |
 | `GET /schedules`, `GET /schedules/:id`, `GET /schedules/resolve` | 401 | sí | sí | sí |
 | `POST /schedules`, `PUT/DELETE /schedules/:id/students/:studentId` | 401 | 403 | sí | sí |
@@ -140,6 +141,12 @@ await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students`, {
   actividad real del usuario para mantener viva la sesión, y al cerrarse el
   stream o recibir un 401 llevar al usuario al inicio de sesión.
 - Las conexiones con `x-api-key` no se revalidan.
+
+Cada frame es `event: <tipo>` y `data: {type, at, data}`. Tipos: `device.connected`,
+`device.disconnected`, `scan`, `command`, `alarm`, `keepalive` y, desde H8,
+`attendance` (una sesión se abrió o cerró, por huella o a mano) y `enrollment`
+(un enrolamiento cambió de estado o paso; nunca lleva la plantilla). Su forma
+exacta está en `server/openapi.json` (`GET /events`, esquemas `*EventDto`).
 
 ## 7. Configuración
 

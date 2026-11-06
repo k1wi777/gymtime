@@ -56,17 +56,20 @@ export class CreateStudentDto {
   name: string;
   @ApiPropertyOptional({
     nullable: true,
+    type: String,
     description: 'Degree of the student (carrera)',
   })
   program?: string | null;
   @ApiPropertyOptional({
     nullable: true,
+    type: String,
     maxLength: MAX_EMAIL_LENGTH,
     description: 'Optional contact email (valid format)',
   })
   email?: string | null;
   @ApiPropertyOptional({
     nullable: true,
+    type: String,
     maxLength: MAX_PHONE_LENGTH,
     description: 'Optional phone: digits, spaces, +, - and parentheses',
   })
@@ -85,12 +88,21 @@ export class UpdateStudentDto {
   name?: string;
   @ApiPropertyOptional({
     nullable: true,
+    type: String,
     description: 'Degree of the student (carrera)',
   })
   program?: string | null;
-  @ApiPropertyOptional({ nullable: true, maxLength: MAX_EMAIL_LENGTH })
+  @ApiPropertyOptional({
+    nullable: true,
+    type: String,
+    maxLength: MAX_EMAIL_LENGTH,
+  })
   email?: string | null;
-  @ApiPropertyOptional({ nullable: true, maxLength: MAX_PHONE_LENGTH })
+  @ApiPropertyOptional({
+    nullable: true,
+    type: String,
+    maxLength: MAX_PHONE_LENGTH,
+  })
   phone?: string | null;
   @ApiPropertyOptional({
     description: 'Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS)',

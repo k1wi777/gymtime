@@ -113,6 +113,10 @@ export interface InMemoryAppOptions {
    * simulated without leaving the process.
    */
   repositories?: InMemoryRepositories;
+  /** Port to listen on; 0 (default) lets the OS pick a free one. */
+  port?: number;
+  /** Interface to listen on; `::` accepts `localhost` over IPv4 and IPv6. */
+  host?: string;
 }
 
 export interface InMemoryApp {
@@ -229,7 +233,7 @@ export async function buildInMemoryApp(
     app,
     httpOptionsFromEnv(app.get<ConfigService<Env, true>>(ConfigService)),
   );
-  await app.listen(0, '127.0.0.1');
+  await app.listen(options.port ?? 0, options.host ?? '127.0.0.1');
   await Promise.race([firstPass, delay(1000)]);
   recoverSpy.mockRestore();
 

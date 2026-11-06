@@ -1,0 +1,130 @@
+'use client';
+
+import { useState } from 'react';
+import { call, getApi } from '@/api/client';
+import type { Student } from '@/api/types';
+import { useResync } from '@/live/live-provider';
+import { useResource } from '@/lib/use-resource';
+import { Badge } from '@/ui/Badge';
+import { DataTable, type Column, type SelectFilter } from '@/ui/DataTable';
+import { EnrollPanel } from './EnrollPanel';
+
+export function Enrolar() {
+  const students = useResource(
+    (signal) =>
+      call(
+        getApi().client.GET('/students', {
+          params: { query: { active: 'true' } },
+          signal,
+        }),
+      ),
+    [],
+  );
+  const fingerprints = useResource(
+    (signal) => call(getApi().client.GET('/panel/fingerprints', { signal })),
+    [],
+  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  useResync(() => {
+    students.reload();
+    fingerprints.reload();
+  });
+
+  const withFingerprint = new Set(fingerprints.data?.studentIds ?? []);
+  const selected = students.data?.find((s) => s.id === selectedId);
+
+  const columns: Column<Student>[] = [
+    {
+      key: 'name',
+      header: 'Nombre',
+      render: (s) => s.name,
+      sortValue: (s) => s.name,
+    },
+    { key: 'document', header: 'Documento', render: (s) => s.document },
+    {
+      key: 'consent',
+      header: 'Consentimiento',
+      render: (s) =>
+        s.consented ? (
+          <Badge tone="success">Registrado</Badge>
+        ) : (
+          <Badge tone="warning">Falta</Badge>
+        ),
+    },
+    {
+      key: 'fingerprint',
+      header: 'Huella',
+      render: (s) =>
+        withFingerprint.has(s.id) ? (
+          <Badge tone="success">Con huella</Badge>
+        ) : (
+          <Badge tone="warning">Sin huella</Badge>
+        ),
+    },
+    {
+      key: 'action',
+      header: 'Acción',
+      render: (s) => (
+        <button
+          type="button"
+          className="btn"
+          disabled={running && s.id !== selectedId}
+          onClick={() => setSelectedId(s.id)}
+          aria-label={`Elegir a ${s.name}`}
+        >
+          Elegir
+        </button>
+      ),
+    },
+  ];
+
+  const selects: SelectFilter<Student>[] = [
+    {
+      id: 'fingerprint',
+      label: 'Huella',
+      options: [
+        { value: 'with', label: 'Con huella' },
+        { value: 'without', label: 'Sin huella' },
+      ],
+      matches: (s, value) =>
+        value === 'with'
+          ? withFingerprint.has(s.id)
+          : !withFingerprint.has(s.id),
+    },
+  ];
+
+  return (
+    <div className="stack">
+      <h1>Enrolar huella</h1>
+      <p className="muted">
+        Elija al estudiante y pídale que ponga el dedo en el lector cuando el
+        panel lo indique.
+      </p>
+      {selected && (
+        <EnrollPanel
+          key={selected.id}
+          student={selected}
+          hasFingerprint={withFingerprint.has(selected.id)}
+          onStudentChanged={students.reload}
+          onEnrollmentChanged={(isRunning) => {
+            setRunning(isRunning);
+            if (!isRunning) fingerprints.reload();
+          }}
+        />
+      )}
+      <DataTable
+        caption="Estudiantes"
+        columns={columns}
+        rows={students.data}
+        rowKey={(s) => s.id}
+        loading={students.loading}
+        error={students.error}
+        onRetry={students.reload}
+        searchText={(s) => `${s.name} ${s.document}`}
+        selects={selects}
+        emptyMessage="No hay estudiantes que coincidan."
+      />
+    </div>
+  );
+}

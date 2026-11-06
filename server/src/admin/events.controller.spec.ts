@@ -9,6 +9,7 @@ import {
   SSE_KEEPALIVE_MS,
   SSE_MAX_BUFFERED_BYTES,
 } from './events.controller.js';
+import { alarmData, scanData } from '../common/events/testing.js';
 
 // Only the system credential reaches the plain streams: no session lookup.
 const systemAuth = {} as AuthService;
@@ -49,7 +50,7 @@ describe('EventsController (R11, R12)', () => {
     const { res, headers, chunks } = fakeResponse();
 
     controller.stream(fakeRequest(), res);
-    events.emit('scan', { deviceId: 'd1', slot: 5, result: 'entry' });
+    events.emit('scan', scanData());
 
     expect(headers['Content-Type']).toBe('text/event-stream');
     expect(headers['Cache-Control']).toBe('no-cache, no-transform');
@@ -78,7 +79,7 @@ describe('EventsController (R11, R12)', () => {
 
     controller.stream(req, res);
     req.emit('close');
-    events.emit('alarm', { on: true });
+    events.emit('alarm', alarmData());
 
     expect(response.end).toHaveBeenCalledTimes(1);
     expect(chunks).toHaveLength(0);
@@ -91,8 +92,8 @@ describe('EventsController (R11, R12)', () => {
     response.writableLength = SSE_MAX_BUFFERED_BYTES + 1;
 
     controller.stream(fakeRequest(), res);
-    events.emit('alarm', { on: true });
-    events.emit('alarm', { on: false });
+    events.emit('alarm', alarmData());
+    events.emit('alarm', alarmData({ on: false }));
 
     expect(response.writableLength).toBeGreaterThan(SSE_MAX_BUFFERED_BYTES);
     expect(response.write).toHaveBeenCalledTimes(1);
@@ -173,7 +174,7 @@ describe('EventsController with a session cookie (R13, R20)', () => {
 
   it('keeps streaming events to a live session', async () => {
     const { events, chunks } = await open();
-    events.emit('alarm', { on: true });
+    events.emit('alarm', alarmData());
     expect(chunks[0]).toContain('event: alarm');
   });
 });

@@ -13,3 +13,9 @@ server/src/generated/
 
 # OpenCode agent adapter artifacts
 .opencode/
+
+# Panel (Next.js)
+.next/
+next-env.d.ts
+playwright-report/
+test-results/

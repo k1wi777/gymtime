@@ -257,11 +257,9 @@ describe('OutboundSender command events (R13)', () => {
     sender.handleAck('d1', msg.id);
     await result;
 
-    expect(received.map((event) => event.data.status)).toEqual([
-      'pending',
-      'sent',
-      'acked',
-    ]);
+    expect(
+      received.map((event) => (event.data as { status?: string }).status),
+    ).toEqual(['pending', 'sent', 'acked']);
     expect(received[0]?.data).toMatchObject({
       deviceId: 'd1',
       commandId: msg.id,

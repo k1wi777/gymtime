@@ -1,0 +1,4456 @@
+{
+  "components": {
+    "schemas": {
+      "AccountResponseDto": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "mustChangePassword": {
+            "description": "The next request must be a password change",
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "asistente",
+              "admin"
+            ],
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "username",
+          "role",
+          "active",
+          "mustChangePassword",
+          "lastLoginAt",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "AccountWithTemporaryPasswordDto": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "mustChangePassword": {
+            "description": "The next request must be a password change",
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "asistente",
+              "admin"
+            ],
+            "type": "string"
+          },
+          "temporaryPassword": {
+            "description": "Shown only in this response; the user must change it at first sign-in",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "username",
+          "role",
+          "active",
+          "mustChangePassword",
+          "lastLoginAt",
+          "createdAt",
+          "temporaryPassword"
+        ],
+        "type": "object"
+      },
+      "AlarmDataDto": {
+        "properties": {
+          "closedBy": {
+            "enum": [
+              "all_exited",
+              "button",
+              "cli",
+              "timeout"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "END_BEEP",
+              "PENDING_EXIT",
+              "MANUAL",
+              "TEST",
+              "CLEARED"
+            ],
+            "type": "string"
+          },
+          "sessionsClosed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "on",
+          "reason",
+          "closedBy",
+          "sessionsClosed"
+        ],
+        "type": "object"
+      },
+      "AlarmEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AlarmDataDto"
+          },
+          "type": {
+            "enum": [
+              "alarm"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "AlarmOffResultDto": {
+        "properties": {
+          "closedBy": {
+            "enum": [
+              "all_exited",
+              "button",
+              "cli",
+              "timeout"
+            ],
+            "type": "string"
+          },
+          "sessionsClosed": {
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AlarmStatusDto"
+          }
+        },
+        "required": [
+          "closedBy",
+          "sessionsClosed",
+          "status"
+        ],
+        "type": "object"
+      },
+      "AlarmStatusDto": {
+        "properties": {
+          "durationSec": {
+            "nullable": true,
+            "type": "number"
+          },
+          "instanceId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "openSessions": {
+            "type": "number"
+          },
+          "reason": {
+            "enum": [
+              "END_BEEP",
+              "PENDING_EXIT",
+              "MANUAL",
+              "TEST",
+              "CLEARED"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "on",
+          "reason",
+          "instanceId",
+          "durationSec",
+          "startedAt",
+          "openSessions"
+        ],
+        "type": "object"
+      },
+      "ApiErrorDto": {
+        "properties": {
+          "code": {
+            "description": "Stable error code, when there is one",
+            "type": "string"
+          },
+          "error": {
+            "description": "HTTP reason phrase added by Nest",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ApiErrorIssueDto"
+            },
+            "type": "array"
+          },
+          "message": {
+            "type": "string"
+          },
+          "statusCode": {
+            "example": 400,
+            "type": "number"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ],
+        "type": "object"
+      },
+      "ApiErrorIssueDto": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "description": "Dotted path of the invalid field",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "message"
+        ],
+        "type": "object"
+      },
+      "AttendanceDataDto": {
+        "properties": {
+          "change": {
+            "enum": [
+              "entry",
+              "exit"
+            ],
+            "type": "string"
+          },
+          "instanceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "device",
+              "manual"
+            ],
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "change",
+          "source",
+          "studentId",
+          "studentName",
+          "instanceId",
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "AttendanceEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AttendanceDataDto"
+          },
+          "type": {
+            "enum": [
+              "attendance"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "ChangePasswordDto": {
+        "properties": {
+          "currentPassword": {
+            "format": "password",
+            "type": "string"
+          },
+          "newPassword": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 10,
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "type": "object"
+      },
+      "CommandDataDto": {
+        "properties": {
+          "attempts": {
+            "type": "number"
+          },
+          "commandId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "commandType": {
+            "description": "Protocol message type",
+            "example": "alarm.set",
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sent",
+              "acked",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "commandId",
+          "commandType",
+          "status",
+          "attempts"
+        ],
+        "type": "object"
+      },
+      "CommandEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CommandDataDto"
+          },
+          "type": {
+            "enum": [
+              "command"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "CreateScheduleDto": {
+        "properties": {
+          "date": {
+            "description": "Bogota date",
+            "example": "2026-11-02",
+            "type": "string"
+          },
+          "end": {
+            "description": "Bogota time",
+            "example": "19:00",
+            "type": "string"
+          },
+          "endsInMinutes": {
+            "description": "Quick test schedule: today, starting now, ending in N minutes",
+            "type": "number"
+          },
+          "entryCloseMinutes": {
+            "description": "Minutes before the end when entry closes",
+            "type": "number"
+          },
+          "entryOpenMinutes": {
+            "description": "Minutes before the start when entry opens",
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "start": {
+            "description": "Bogota time",
+            "example": "18:00",
+            "type": "string"
+          },
+          "weekday": {
+            "description": "1 = Monday ... 7 = Sunday",
+            "maximum": 7,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateStudentDto": {
+        "properties": {
+          "consented": {
+            "default": false,
+            "description": "Data-use consent",
+            "type": "boolean"
+          },
+          "displayName": {
+            "description": "Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS); generated from the name when omitted",
+            "type": "string"
+          },
+          "document": {
+            "description": "Unique identity document",
+            "type": "string"
+          },
+          "email": {
+            "description": "Optional contact email (valid format)",
+            "maxLength": 254,
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "description": "Optional phone: digits, spaces, +, - and parentheses",
+            "maxLength": 20,
+            "nullable": true,
+            "type": "string"
+          },
+          "program": {
+            "description": "Degree of the student (carrera)",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "document",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateUserDto": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "asistente",
+              "admin"
+            ],
+            "type": "string"
+          },
+          "username": {
+            "description": "Case-insensitive, 3-50 chars: a-z, 0-9, dot, dash, underscore",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "username",
+          "role"
+        ],
+        "type": "object"
+      },
+      "DeviceConnectedDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "firmwareVersion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "firmwareVersion"
+        ],
+        "type": "object"
+      },
+      "DeviceConnectedEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeviceConnectedDataDto"
+          },
+          "type": {
+            "enum": [
+              "device.connected"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "DeviceDisconnectedDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "closed",
+              "replaced",
+              "heartbeat_timeout",
+              "server_shutdown"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "DeviceDisconnectedEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeviceDisconnectedDataDto"
+          },
+          "type": {
+            "enum": [
+              "device.disconnected"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "DeviceStatusDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "firmwareVersion": {
+            "nullable": true,
+            "type": "string"
+          },
+          "lastConnectedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "pendingCommands": {
+            "description": "Orders in pending or sent that the device has not confirmed yet",
+            "type": "number"
+          }
+        },
+        "required": [
+          "deviceId",
+          "online",
+          "lastConnectedAt",
+          "firmwareVersion",
+          "pendingCommands"
+        ],
+        "type": "object"
+      },
+      "EnrollmentDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "enrollmentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "failureReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "in_progress",
+              "done",
+              "failed",
+              "expired",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "step": {
+            "nullable": true,
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enrollmentId",
+          "studentId",
+          "deviceId",
+          "status",
+          "step",
+          "failureReason"
+        ],
+        "type": "object"
+      },
+      "EnrollmentEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/EnrollmentDataDto"
+          },
+          "type": {
+            "enum": [
+              "enrollment"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "EnrollmentResponseDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "failureReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "in_progress",
+              "done",
+              "failed",
+              "expired",
+              "cancelled"
+            ],
+            "type": "string"
+          },
+          "step": {
+            "nullable": true,
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "studentId",
+          "deviceId",
+          "status",
+          "step",
+          "failureReason",
+          "expiresAt"
+        ],
+        "type": "object"
+      },
+      "HealthDto": {
+        "properties": {
+          "database": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "type": "string"
+          },
+          "uptime": {
+            "description": "Seconds since the process started",
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "uptime",
+          "database"
+        ],
+        "type": "object"
+      },
+      "InstanceDto": {
+        "properties": {
+          "date": {
+            "example": "2026-11-02",
+            "type": "string"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object"
+      },
+      "KeepaliveDataDto": {
+        "properties": {},
+        "type": "object"
+      },
+      "KeepaliveEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/KeepaliveDataDto"
+          },
+          "type": {
+            "enum": [
+              "keepalive"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "LoginDto": {
+        "properties": {
+          "password": {
+            "format": "password",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "type": "object"
+      },
+      "ManualAttendanceDto": {
+        "properties": {
+          "reason": {
+            "description": "Mandatory reason of the manual registration",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "OpenSessionDto": {
+        "properties": {
+          "enteredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "instance": {
+            "$ref": "#/components/schemas/SessionInstanceDto"
+          },
+          "student": {
+            "$ref": "#/components/schemas/SessionStudentDto"
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "enteredAt",
+          "instance"
+        ],
+        "type": "object"
+      },
+      "PanelCountsDto": {
+        "properties": {
+          "exited": {
+            "type": "number"
+          },
+          "expected": {
+            "type": "number"
+          },
+          "inside": {
+            "type": "number"
+          },
+          "missing": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expected",
+          "inside",
+          "exited",
+          "missing"
+        ],
+        "type": "object"
+      },
+      "PanelCurrentDto": {
+        "properties": {
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "entryClosesAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "entryOpen": {
+            "description": "True while new entries are still accepted",
+            "type": "boolean"
+          },
+          "instanceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "remainingSeconds": {
+            "description": "Seconds until endsAt, never negative",
+            "type": "number"
+          },
+          "scheduleId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scheduleName": {
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduleId",
+          "scheduleName",
+          "instanceId",
+          "startsAt",
+          "endsAt",
+          "entryClosesAt",
+          "entryOpen",
+          "remainingSeconds"
+        ],
+        "type": "object"
+      },
+      "PanelFingerprintsDto": {
+        "properties": {
+          "studentIds": {
+            "description": "Students with an active fingerprint",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "studentIds"
+        ],
+        "type": "object"
+      },
+      "PanelNowDto": {
+        "properties": {
+          "alarm": {
+            "$ref": "#/components/schemas/AlarmStatusDto"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/PanelCountsDto"
+          },
+          "current": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PanelCurrentDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "exited": {
+            "items": {
+              "$ref": "#/components/schemas/PanelPersonDto"
+            },
+            "type": "array"
+          },
+          "inside": {
+            "items": {
+              "$ref": "#/components/schemas/PanelPersonDto"
+            },
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/PanelPersonDto"
+            },
+            "type": "array"
+          },
+          "serverNow": {
+            "description": "Server clock",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serverNow",
+          "current",
+          "counts",
+          "inside",
+          "exited",
+          "missing",
+          "alarm"
+        ],
+        "type": "object"
+      },
+      "PanelPersonDto": {
+        "properties": {
+          "displayName": {
+            "description": "Short name drawn on the reader LCD",
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "enteredAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "exitedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "hasFingerprint": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sessionStatus": {
+            "enum": [
+              "abierta",
+              "cerrada",
+              "no_registrada"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "device",
+              "manual"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "name",
+          "document",
+          "displayName",
+          "hasFingerprint",
+          "enteredAt",
+          "exitedAt",
+          "source",
+          "sessionStatus"
+        ],
+        "type": "object"
+      },
+      "ResolveResponseDto": {
+        "properties": {
+          "occurrence": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResolvedOccurrenceDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "occurrence"
+        ],
+        "type": "object"
+      },
+      "ResolvedOccurrenceDto": {
+        "properties": {
+          "entryClosesAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "entryOpen": {
+            "type": "boolean"
+          },
+          "entryOpensAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "instance": {
+            "$ref": "#/components/schemas/InstanceDto"
+          },
+          "scheduleId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scheduleName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduleId",
+          "scheduleName",
+          "instance",
+          "entryOpensAt",
+          "entryClosesAt",
+          "entryOpen"
+        ],
+        "type": "object"
+      },
+      "RosterCountsDto": {
+        "properties": {
+          "attended": {
+            "type": "number"
+          },
+          "expected": {
+            "description": "Who had to attend",
+            "type": "number"
+          },
+          "missing": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expected",
+          "attended",
+          "missing"
+        ],
+        "type": "object"
+      },
+      "RosterDto": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/RosterCountsDto"
+          },
+          "date": {
+            "example": "2026-11-02",
+            "type": "string"
+          },
+          "occurrence": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RosterOccurrenceDto"
+              }
+            ],
+            "description": "Null when the schedule has no occurrence on that date",
+            "nullable": true,
+            "type": "object"
+          },
+          "phase": {
+            "enum": [
+              "past",
+              "current",
+              "future"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RosterRowDto"
+            },
+            "type": "array"
+          },
+          "scheduleId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scheduleName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "scheduleId",
+          "scheduleName",
+          "date",
+          "occurrence",
+          "phase",
+          "counts",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "RosterOccurrenceDto": {
+        "properties": {
+          "date": {
+            "example": "2026-11-02",
+            "type": "string"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "instanceId": {
+            "description": "Null when the occurrence is only projected from the schedule (not generated yet)",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instanceId",
+          "date",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object"
+      },
+      "RosterRowDto": {
+        "properties": {
+          "assigned": {
+            "description": "False for someone who attended without being assigned",
+            "type": "boolean"
+          },
+          "displayName": {
+            "description": "Short name drawn on the reader LCD",
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "enteredAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "exitedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "hasFingerprint": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sessionStatus": {
+            "enum": [
+              "abierta",
+              "cerrada",
+              "no_registrada"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "device",
+              "manual"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "attended",
+              "missing",
+              "expected"
+            ],
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "name",
+          "document",
+          "displayName",
+          "hasFingerprint",
+          "enteredAt",
+          "exitedAt",
+          "source",
+          "sessionStatus",
+          "state",
+          "assigned"
+        ],
+        "type": "object"
+      },
+      "ScanDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "UNKNOWN_SLOT",
+              "NO_ACTIVE_SCHEDULE",
+              "NOT_IN_SCHEDULE",
+              "OUTSIDE_ENTRY_WINDOW",
+              "ALREADY_EXITED",
+              "STUDENT_INACTIVE"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "entry",
+              "exit",
+              "denied",
+              "unknown"
+            ],
+            "type": "string"
+          },
+          "slot": {
+            "nullable": true,
+            "type": "number"
+          },
+          "studentId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "studentName": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "slot",
+          "result",
+          "studentId",
+          "studentName",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ScanEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ScanDataDto"
+          },
+          "type": {
+            "enum": [
+              "scan"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "ScheduleResponseDto": {
+        "properties": {
+          "date": {
+            "nullable": true,
+            "type": "string"
+          },
+          "endTime": {
+            "example": "19:00:00",
+            "type": "string"
+          },
+          "entryCloseMinutes": {
+            "nullable": true,
+            "type": "number"
+          },
+          "entryOpenMinutes": {
+            "nullable": true,
+            "type": "number"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startTime": {
+            "example": "18:00:00",
+            "type": "string"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleStudentDto"
+            },
+            "type": "array"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/InstanceDto"
+            },
+            "type": "array"
+          },
+          "weekday": {
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "weekday",
+          "date",
+          "startTime",
+          "endTime",
+          "entryOpenMinutes",
+          "entryCloseMinutes",
+          "students",
+          "upcoming"
+        ],
+        "type": "object"
+      },
+      "ScheduleStudentDto": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "document": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "name",
+          "active"
+        ],
+        "type": "object"
+      },
+      "SendMessageDto": {
+        "properties": {
+          "deviceId": {
+            "description": "Target device; defaults to the only online or known one",
+            "type": "string"
+          },
+          "durationSec": {
+            "description": "Seconds on screen; defaults to DISPLAY_RESULT_SECONDS",
+            "maximum": 60,
+            "minimum": 1,
+            "type": "number"
+          },
+          "line1": {
+            "description": "First LCD line (accents are removed)",
+            "type": "string"
+          },
+          "line2": {
+            "description": "Second LCD line",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line1"
+        ],
+        "type": "object"
+      },
+      "SendMessageResultDto": {
+        "properties": {
+          "commandId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "status": {
+            "description": "acked: the reader confirmed; queued: device offline, delivered on reconnect; failed: not confirmed",
+            "enum": [
+              "acked",
+              "queued",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "commandId",
+          "deviceId",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SessionDto": {
+        "properties": {
+          "enteredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "entrySource": {
+            "enum": [
+              "device",
+              "manual"
+            ],
+            "type": "string"
+          },
+          "exitSource": {
+            "enum": [
+              "device",
+              "manual"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "exitedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "instance": {
+            "$ref": "#/components/schemas/SessionInstanceDto"
+          },
+          "manualReason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "abierta",
+              "cerrada",
+              "no_registrada"
+            ],
+            "type": "string"
+          },
+          "student": {
+            "$ref": "#/components/schemas/SessionStudentDto"
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "enteredAt",
+          "instance",
+          "exitedAt",
+          "entrySource",
+          "exitSource",
+          "status",
+          "manualReason"
+        ],
+        "type": "object"
+      },
+      "SessionInstanceDto": {
+        "properties": {
+          "endsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "scheduleId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scheduleId",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object"
+      },
+      "SessionStudentDto": {
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "name"
+        ],
+        "type": "object"
+      },
+      "StartEnrollmentDto": {
+        "properties": {
+          "deviceId": {
+            "description": "Target device; defaults to the only online device",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StudentResponseDto": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "consented": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "description": "Name drawn on the reader LCD",
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "program": {
+            "description": "Degree (carrera)",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "name",
+          "program",
+          "email",
+          "phone",
+          "displayName",
+          "active",
+          "consented"
+        ],
+        "type": "object"
+      },
+      "SyncResultDto": {
+        "properties": {
+          "chunks": {
+            "description": "Chunks acknowledged by the reader",
+            "type": "number"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "error": {
+            "enum": [
+              "PLAN_FAILED",
+              "CHUNK_FAILED"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "omitted": {
+            "description": "Students left out for lack of slots",
+            "type": "number"
+          },
+          "reason": {
+            "enum": [
+              "connected",
+              "enrollment",
+              "before_start",
+              "after_end",
+              "manual",
+              "attendance"
+            ],
+            "type": "string"
+          },
+          "scheduleId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "syncId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "templates": {
+            "description": "Templates loaded into the reader",
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "syncId",
+          "deviceId",
+          "reason",
+          "templates",
+          "chunks",
+          "scheduleId",
+          "omitted",
+          "error"
+        ],
+        "type": "object"
+      },
+      "UpdateStudentDto": {
+        "properties": {
+          "consented": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "description": "Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS)",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 254,
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "maxLength": 20,
+            "nullable": true,
+            "type": "string"
+          },
+          "program": {
+            "description": "Degree of the student (carrera)",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateUserDto": {
+        "properties": {
+          "active": {
+            "description": "false deactivates and signs the user out",
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "asistente",
+              "admin"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "admin-key": {
+        "in": "header",
+        "name": "x-api-key",
+        "type": "apiKey"
+      },
+      "session": {
+        "in": "cookie",
+        "name": "gt_session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "Attendance and alarm backend for GymTime",
+    "title": "GymTime API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/alarm/off": {
+      "post": {
+        "operationId": "AlarmController_off",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmOffResultDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Alarm not on; body carries the code"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Silence the siren and mark the open sessions no_registrada",
+        "tags": [
+          "alarm"
+        ]
+      }
+    },
+    "/alarm/on": {
+      "post": {
+        "operationId": "AlarmController_on",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No device online; body carries the code"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Turn the siren on continuously (reason MANUAL)",
+        "tags": [
+          "alarm"
+        ]
+      }
+    },
+    "/alarm/status": {
+      "get": {
+        "operationId": "AlarmController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Current siren state and open sessions",
+        "tags": [
+          "alarm"
+        ]
+      }
+    },
+    "/alarm/test": {
+      "post": {
+        "operationId": "AlarmController_test",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmStatusDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No device online; body carries the code"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Sound the short test beep (reason TEST)",
+        "tags": [
+          "alarm"
+        ]
+      }
+    },
+    "/attendance/entry": {
+      "post": {
+        "operationId": "AttendanceController_entry",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAttendanceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Rule violation; body carries the code"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Register an entry manually (reason mandatory)",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/attendance/exit": {
+      "post": {
+        "operationId": "AttendanceController_exit",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAttendanceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Rule violation; body carries the code"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Register an exit manually (reason mandatory)",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/attendance/open": {
+      "get": {
+        "operationId": "AttendanceController_open",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OpenSessionDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Students who are inside right now",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/attendance/sessions": {
+      "get": {
+        "operationId": "AttendanceController_sessions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "abierta",
+                "cerrada",
+                "no_registrada"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "instanceId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid query"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Attendance sessions with optional filters",
+        "tags": [
+          "attendance"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "Send the `x-gymtime-client: panel` header and an allowed Origin. The failure answer is the same for every cause.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "INVALID_CREDENTIALS"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "RATE_LIMITED (Retry-After)"
+          }
+        },
+        "summary": "Sign in; sets the httpOnly session cookie (public)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Revoke the current session and clear the cookie",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Account of the current session, with its role",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password": {
+      "post": {
+        "description": "Revokes the other sessions of the account.",
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Policy violation or wrong current password"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Change the own password (clears the forced change)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/devices/messages": {
+      "post": {
+        "description": "Persisted and delivered like any order: when the device is offline it is queued and sent on reconnection.",
+        "operationId": "DevicesController_sendMessage",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendMessageResultDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body or lines that do not fit the screen"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No device known (NO_DEVICE)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Show a message on the reader LCD (display.message)",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/devices/status": {
+      "get": {
+        "operationId": "DevicesController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceStatusDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Connection state of every known device",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/enrollments/{id}": {
+      "get": {
+        "operationId": "EnrollmentsController_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Enrollment not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "State of an enrollment",
+        "tags": [
+          "enrollments"
+        ]
+      }
+    },
+    "/enrollments/{id}/cancel": {
+      "post": {
+        "operationId": "EnrollmentsController_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Enrollment not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Enrollment already finished"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Cancel an open enrollment",
+        "tags": [
+          "enrollments"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "EventsController_stream",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "alarm": "#/components/schemas/AlarmEventDto",
+                      "attendance": "#/components/schemas/AttendanceEventDto",
+                      "command": "#/components/schemas/CommandEventDto",
+                      "device.connected": "#/components/schemas/DeviceConnectedEventDto",
+                      "device.disconnected": "#/components/schemas/DeviceDisconnectedEventDto",
+                      "enrollment": "#/components/schemas/EnrollmentEventDto",
+                      "keepalive": "#/components/schemas/KeepaliveEventDto",
+                      "scan": "#/components/schemas/ScanEventDto"
+                    },
+                    "propertyName": "type"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DeviceConnectedEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeviceDisconnectedEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ScanEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CommandEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AlarmEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AttendanceEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EnrollmentEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/KeepaliveEventDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Server-Sent Events. Each frame is `event: <type>` and `data: <JSON>` where the JSON is the schema below (type, at, data); a keepalive arrives every 15 s."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Live system events (Server-Sent Events)",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthDto"
+                }
+              }
+            },
+            "description": "Service up and database reachable"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthDto"
+                }
+              }
+            },
+            "description": "Database not responding"
+          }
+        },
+        "summary": "Liveness and database check (public)",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/panel/fingerprints": {
+      "get": {
+        "operationId": "PanelController_fingerprints",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelFingerprintsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Students that already have an enrolled fingerprint",
+        "tags": [
+          "panel"
+        ]
+      }
+    },
+    "/panel/now": {
+      "get": {
+        "description": "Who is inside, who left and who is missing, the time left and the alarm. `current` is null when no schedule is in progress (then `inside` lists whoever is still inside).",
+        "operationId": "PanelController_now",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelNowDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Snapshot of the schedule in progress",
+        "tags": [
+          "panel"
+        ]
+      }
+    },
+    "/panel/schedules/{id}/roster": {
+      "get": {
+        "operationId": "PanelController_roster",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Bogota day",
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "example": "2026-11-02"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RosterDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id or date"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Who had to attend a schedule on a date, who did and who did not",
+        "tags": [
+          "panel"
+        ]
+      }
+    },
+    "/schedules": {
+      "get": {
+        "operationId": "SchedulesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "List schedules with students and upcoming dates",
+        "tags": [
+          "schedules"
+        ]
+      },
+      "post": {
+        "description": "Give weekday or date plus start and end, or only `endsInMinutes` for a test schedule that starts now.",
+        "operationId": "SchedulesController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body or definition"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Create a recurring or one-off schedule (Bogota times)",
+        "tags": [
+          "schedules"
+        ]
+      }
+    },
+    "/schedules/resolve": {
+      "get": {
+        "operationId": "SchedulesController_resolve",
+        "parameters": [
+          {
+            "description": "ISO-8601 instant",
+            "in": "query",
+            "name": "at",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid query"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Schedule that applies to a student at an instant (default: now)",
+        "tags": [
+          "schedules"
+        ]
+      }
+    },
+    "/schedules/{id}": {
+      "get": {
+        "operationId": "SchedulesController_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "A schedule with its students and upcoming dates",
+        "tags": [
+          "schedules"
+        ]
+      }
+    },
+    "/schedules/{id}/students/{studentId}": {
+      "delete": {
+        "operationId": "SchedulesController_unassign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Schedule or student not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove a student from a schedule (idempotent)",
+        "tags": [
+          "schedules"
+        ]
+      },
+      "put": {
+        "operationId": "SchedulesController_assign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Schedule or student not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Assign a student (idempotent)",
+        "tags": [
+          "schedules"
+        ]
+      }
+    },
+    "/students": {
+      "get": {
+        "operationId": "StudentsController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StudentResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "List students",
+        "tags": [
+          "students"
+        ]
+      },
+      "post": {
+        "operationId": "StudentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Document already exists"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Create a student",
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/students/{id}": {
+      "delete": {
+        "operationId": "StudentsController_deactivate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Deactivate a student (logical); removes its fingerprint",
+        "tags": [
+          "students"
+        ]
+      },
+      "patch": {
+        "operationId": "StudentsController_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id or body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Edit name, program (carrera), email, phone, display name or consent (not the document)",
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/students/{id}/enrollments": {
+      "post": {
+        "operationId": "EnrollmentsController_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartEnrollmentDto"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id or body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student inactive, device busy or device unavailable"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Start the fingerprint enrollment of a student",
+        "tags": [
+          "enrollments"
+        ]
+      }
+    },
+    "/sync": {
+      "post": {
+        "description": "Synchronous: answers when every chunk was acknowledged or the sync failed.",
+        "operationId": "SyncController_run",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResultDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No device is online"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Load the online reader with the current templates and schedule",
+        "tags": [
+          "sync"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "UsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "List the panel accounts",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountWithTemporaryPasswordDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "USERNAME_TAKEN"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Create an account with a server-generated temporary password",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "patch": {
+        "operationId": "UsersController_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Account not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "SELF_CHANGE_FORBIDDEN: own deactivation or role change"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Edit name or role, or deactivate / reactivate an account",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/reset-password": {
+      "post": {
+        "operationId": "UsersController_resetPassword",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountWithTemporaryPasswordDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Account not found"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Reset the password to a new temporary one and sign the user out",
+        "tags": [
+          "users"
+        ]
+      }
+    }
+  },
+  "servers": [],
+  "tags": [
+    {
+      "description": "",
+      "name": "health"
+    }
+  ]
+}

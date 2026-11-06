@@ -13,6 +13,7 @@ import { DevicesModule } from './devices/devices.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { FingerprintsModule } from './fingerprints/fingerprints.module.js';
 import { HealthModule } from './health/health.module.js';
+import { PanelModule } from './panel/panel.module.js';
 import { SchedulesModule } from './schedules/schedules.module.js';
 import { StudentsModule } from './students/students.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -36,6 +37,7 @@ import { UsersModule } from './users/users.module.js';
     AttendanceModule,
     AlarmModule,
     AdminModule,
+    PanelModule,
   ],
 })
 export class AppModule {}

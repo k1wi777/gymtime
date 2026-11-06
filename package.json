@@ -25,6 +25,9 @@
     "migrate:deploy": "npm run migrate:deploy --workspace server",
     "db:generate": "npm run db:generate --workspace server",
     "simulator": "npm run build -w shared -w simulator && npm start -w simulator --",
-    "gym": "npm run build -w shared -w cli --silent && node cli/dist/main.js"
+    "gym": "npm run build -w shared -w cli --silent && node cli/dist/main.js",
+    "install:web": "npm --prefix web install",
+    "dev:server": "echo \"API on port 3001 (the panel takes 3000)\" && PORT=3001 npm run start:dev -w server",
+    "dev:web": "npm --prefix web run dev"
   }
 }

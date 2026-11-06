@@ -89,11 +89,13 @@ export class EnrollmentsController {
 }
 
 function toHttp(error: EnrollmentError) {
+  // The code lets the panel tell the cases apart without parsing the message.
+  const body = { code: error.code, message: error.message };
   switch (error.code) {
     case 'STUDENT_NOT_FOUND':
     case 'ENROLLMENT_NOT_FOUND':
-      return new NotFoundException(error.message);
+      return new NotFoundException(body);
     default:
-      return new ConflictException(error.message);
+      return new ConflictException(body);
   }
 }

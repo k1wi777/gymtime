@@ -6,6 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Public } from '../common/auth/roles.decorator.js';
+import { HealthDto } from './health.dto.js';
 import { PrismaService } from '../database/prisma.service.js';
 
 const DB_TIMEOUT_MS = 2000;
@@ -18,8 +19,14 @@ export class HealthController {
 
   @Get()
   @ApiOperation({ summary: 'Liveness and database check (public)' })
-  @ApiOkResponse({ description: 'Service up and database reachable' })
-  @ApiServiceUnavailableResponse({ description: 'Database not responding' })
+  @ApiOkResponse({
+    type: HealthDto,
+    description: 'Service up and database reachable',
+  })
+  @ApiServiceUnavailableResponse({
+    type: HealthDto,
+    description: 'Database not responding',
+  })
   async check() {
     const base = { uptime: Math.round(process.uptime()) };
     try {

@@ -35,5 +35,8 @@ export const ApiAuth = (): MethodDecorator & ClassDecorator =>
     ApiSecurity('admin-key'),
     ApiSecurity('session'),
     ApiUnauthorizedResponse({ description: 'No valid credential' }),
-    ApiForbiddenResponse({ description: 'Role not allowed' }),
+    ApiForbiddenResponse({
+      description:
+        'Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)',
+    }),
   );

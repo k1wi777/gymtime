@@ -46,6 +46,15 @@ export class FingerprintsService {
     return Math.min(SLOT_MAX, this.config.enrollSlot - 1);
   }
 
+  /** Which of these students have an active fingerprint (no template is read out). */
+  async findStudentIdsWithFingerprint(
+    studentIds: string[],
+  ): Promise<Set<string>> {
+    if (studentIds.length === 0) return new Set();
+    const rows = await this.fingerprints.findActiveByStudents(studentIds);
+    return new Set(rows.map((row) => row.studentId));
+  }
+
   /**
    * Decrypts, in memory only, the active fingerprint of each active student.
    * Anything else is reported by student id, never by content.

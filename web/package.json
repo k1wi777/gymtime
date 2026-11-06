@@ -1,0 +1,47 @@
+{
+  "name": "gymtime-web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "GymTime panel (Next.js): assistant and administrator screens",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.7 <25"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "oxlint --type-aware src/ tests/",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "gen:api": "openapi-typescript ../server/openapi.json -o src/api/schema.d.ts",
+    "gen:api:check": "openapi-typescript ../server/openapi.json -o src/api/schema.d.ts --check",
+    "test": "vitest run && npm run gen:api:check",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "^16.4.5",
+    "openapi-fetch": "^0.17.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "jsdom": "^31.0.0",
+    "openapi-typescript": "^7.13.0",
+    "oxlint": "^1.91.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.6",
+    "vitest": "^4.1.12"
+  },
+  "type": "module"
+}

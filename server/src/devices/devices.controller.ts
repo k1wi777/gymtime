@@ -28,6 +28,7 @@ import {
   sendMessageSchema,
 } from './dto/display.dto.js';
 import { ApiAuth } from '../common/auth/roles.decorator.js';
+import { DeviceStatusDto } from './dto/device-status.dto.js';
 
 @ApiTags('devices')
 @ApiAuth()
@@ -40,10 +41,7 @@ export class DevicesController {
 
   @Get('status')
   @ApiOperation({ summary: 'Connection state of every known device' })
-  @ApiOkResponse({
-    description:
-      'deviceId, online, lastConnectedAt, firmwareVersion and pendingCommands',
-  })
+  @ApiOkResponse({ type: [DeviceStatusDto] })
   status(): Promise<DeviceStatus[]> {
     return this.devices.listStatus();
   }

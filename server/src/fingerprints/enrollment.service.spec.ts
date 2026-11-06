@@ -303,3 +303,67 @@ describe('EnrollmentService audit (R22)', () => {
     expect(JSON.stringify(traces)).not.toMatch(/template|plantilla/i);
   });
 });
+
+describe('EnrollmentService live events (H8 R3)', () => {
+  const collect = (fx: ReturnType<typeof buildEnrollmentFixture>) => {
+    const received: Array<{ status: string; step: string | null }> = [];
+    fx.events.events.subscribe((event) => {
+      if (event.type === 'enrollment') received.push(event.data);
+    });
+    return received;
+  };
+
+  it('publishes each transition of a successful enrollment, never the template', async () => {
+    const fx = buildEnrollmentFixture();
+    await fx.devices.markOnline('d1', '1.0.0');
+    const student = await fx.newStudent();
+    const received = collect(fx);
+
+    const enrollment = await fx.service.start(student.id);
+    await fx.service.handleProgress('d1', enrollment.id, 'place_again');
+    await fx.service.handleDone('d1', enrollment.id, validTemplate());
+
+    expect(received.map((e) => e.status)).toEqual([
+      'pending',
+      'in_progress',
+      'in_progress',
+      'done',
+    ]);
+    expect(received[2]?.step).toBe('place_again');
+    expect(JSON.stringify(received)).not.toContain(validTemplate());
+    expect(received[3]).toMatchObject({
+      enrollmentId: enrollment.id,
+      studentId: student.id,
+      deviceId: 'd1',
+    });
+  });
+
+  it('publishes failure, cancellation and expiry once, and ignores lost races', async () => {
+    const fx = buildEnrollmentFixture();
+    await fx.devices.markOnline('d1', '1.0.0');
+    const student = await fx.newStudent();
+    const received = collect(fx);
+
+    const failed = await fx.service.start(student.id);
+    await fx.service.handleFailed('d1', failed.id, 'timeout');
+    const cancelled = await fx.service.start(student.id);
+    await fx.service.cancel(cancelled.id);
+    await fx.service.handleProgress('d1', cancelled.id, 'late');
+    const expired = await fx.service.start(student.id);
+    fx.advance(60 * 60 * 1000);
+    await fx.service.expireOverdue();
+
+    expect(received.map((e) => e.status)).toEqual([
+      'pending',
+      'in_progress',
+      'failed',
+      'pending',
+      'in_progress',
+      'cancelled',
+      'pending',
+      'in_progress',
+      'expired',
+    ]);
+    expect(expired.id).not.toBe(cancelled.id);
+  });
+});

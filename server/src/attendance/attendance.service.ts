@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { InstancesService, type Occurrence } from '../schedules/instances.service.js';
 import type { Student } from '../students/domain/student.js';
@@ -74,6 +75,7 @@ export class AttendanceService {
     @Inject(ALARM_PORT) private alarm: AlarmPort,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly eventLog: EventLogService,
+    private readonly events: SystemEventsService,
   ) {}
 
   /** The alarm module replaces the initial no-op once it is wired. */
@@ -153,6 +155,7 @@ export class AttendanceService {
         manualReason: reason,
       });
       await this.recordManual('entry', session);
+      this.publish('entry', 'manual', student, session);
       return session;
     });
   }
@@ -172,8 +175,26 @@ export class AttendanceService {
       });
       if (!closed) throw new AttendanceError('NO_OPEN_SESSION');
       await this.recordManual('exit', closed);
+      this.publish('exit', 'manual', student, closed);
       await this.notifyAlarmIfEmpty(closed.instanceId);
       return closed;
+    });
+  }
+
+  /** Tells the live panels that a session changed (after it was saved). */
+  private publish(
+    change: 'entry' | 'exit',
+    source: AttendanceSource,
+    student: Student,
+    session: AttendanceSession,
+  ): void {
+    this.events.emit('attendance', {
+      change,
+      source,
+      studentId: student.id,
+      studentName: student.name,
+      instanceId: session.instanceId,
+      sessionId: session.id,
     });
   }
 
@@ -265,13 +286,14 @@ export class AttendanceService {
     manualReason: string | null,
   ): Promise<void> {
     if (decision.kind === 'entry') {
-      await this.sessions.create({
+      const created = await this.sessions.create({
         studentId: student.id,
         instanceId: decision.occurrence.instance.id,
         enteredAt: at,
         entrySource: source,
         manualReason,
       });
+      this.publish('entry', source, student, created);
       return;
     }
     if (decision.kind === 'exit') {
@@ -280,7 +302,10 @@ export class AttendanceService {
         exitSource: source,
         manualReason,
       });
-      if (closed) await this.notifyAlarmIfEmpty(closed.instanceId);
+      if (closed) {
+        this.publish('exit', source, student, closed);
+        await this.notifyAlarmIfEmpty(closed.instanceId);
+      }
     }
   }
 

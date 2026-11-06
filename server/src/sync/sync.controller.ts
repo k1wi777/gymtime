@@ -22,7 +22,16 @@ export class SyncResultDto implements SyncResult {
   syncId: string;
   @ApiProperty()
   deviceId: string;
-  @ApiProperty()
+  @ApiProperty({
+    enum: [
+      'connected',
+      'enrollment',
+      'before_start',
+      'after_end',
+      'manual',
+      'attendance',
+    ] satisfies SyncReason[],
+  })
   reason: SyncReason;
   @ApiProperty({ description: 'Templates loaded into the reader' })
   templates: number;

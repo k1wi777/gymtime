@@ -1,8 +1,8 @@
 # GymTime
 
-Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`.
+Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`, más el panel `web/` (Next.js, fuera de los workspaces).
 
-**Estado:** iteración 1 completa: hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat, eventos en vivo y pruebas integrales A1–A12) cerrados. El panel web queda para la siguiente iteración; el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** iteración 1 completa: hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat, eventos en vivo y pruebas integrales A1–A12) cerrados. El panel web arranca en la siguiente iteración con H8 (base y panel del asistente); el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
@@ -12,6 +12,7 @@ Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQ
 | `shared/` | Protocolo y esquemas compartidos. |
 | `simulator/` | ESP32 simulado. |
 | `cli/` | Comando `gym`. |
+| `web/` | Panel web (Next.js 16, React 19): vistas del asistente. Proyecto aparte, con su propio `package.json`. |
 | `docs/` | Documentación para firmware y protocolo. |
 
 ## Puesta en marcha
@@ -41,6 +42,24 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Las órdenes de enrolamiento y de alarma se guardan en `device_commands` antes de enviarse: si el lector está desconectado se entregan al reconectar, con el mismo `id` y en orden.
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
 - Cuentas del panel (roles `asistente` y `admin`, sesión por cookie, bloqueo, CORS y CSRF): variables `COOKIE_*`, `CORS_ORIGINS`, `SESSION_*`, `LOGIN_*`, `TRUST_PROXY` y `FIRST_ADMIN_*` del `.env.example`, descritas en [`docs/autenticacion.md`](docs/autenticacion.md). La CLI y los scripts con `x-api-key` siguen funcionando igual. Para crear el primer administrador define `FIRST_ADMIN_USERNAME` y `FIRST_ADMIN_PASSWORD` antes de arrancar con la tabla de cuentas vacía.
+
+## Panel web (`web/`)
+
+El panel es un proyecto Next.js independiente: no forma parte de los workspaces, así que se instala por separado. Llama a la API directamente desde el navegador (cookie de sesión + CORS), por lo que la API y el panel usan puertos distintos.
+
+```bash
+npm run install:web          # npm --prefix web install
+cp web/.env.example web/.env.local
+# .env de la API: PORT=3001 y CORS_ORIGINS=http://localhost:3000
+npm run dev:server           # API en http://localhost:3001 (PORT=3001)
+npm run dev:web              # panel en http://localhost:3000
+```
+
+- `NEXT_PUBLIC_API_URL` (en `web/.env.local`) es la URL de la API; se incrusta en el build y nunca debe contener secretos.
+- Primer acceso: crea el administrador con `FIRST_ADMIN_USERNAME`/`FIRST_ADMIN_PASSWORD` (ver arriba) e inicia sesión en `http://localhost:3000`.
+- Manual de uso para el asistente: [`docs/manual_asistente.md`](docs/manual_asistente.md).
+- Los tipos de la API se generan de `server/openapi.json` (`npm --prefix web run gen:api`); si cambias los DTO del servidor, regenera con `npm --prefix server run openapi:export` y luego `gen:api`.
+- Pruebas del panel: `npm --prefix web test` (componentes, sin navegador) y `npm --prefix web run test:e2e` (Playwright con el Chrome del sistema contra un servidor en memoria; lento).
 
 ## Simulador y firmware
 
@@ -102,6 +121,8 @@ npm run lint
 npm run format:check
 npm test            # pruebas unitarias de todos los workspaces
 npm run test:e2e    # pruebas e2e (lentas)
+npm --prefix web test   # panel: componentes (vitest + jsdom) y tipos de la API al día
+npm --prefix web run test:e2e  # panel en Chrome real (lento; ver «Panel web»)
 npm run test:scenarios  # escenarios integrales A1–A12 con el simulador
 npm run test:migration  # migra una base de la iteración 1 y verifica datos e índices (requiere PostgreSQL, p. ej. docker compose up -d)
 ```
@@ -139,6 +160,7 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 ## Documentación
 
 - [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
+- [`docs/manual_asistente.md`](docs/manual_asistente.md): manual del panel para el asistente del gimnasio.
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar los problemas comunes (sección 8).
 - [`docs/protocolo_v0.md`](docs/protocolo_v0.md): protocolo.
@@ -146,7 +168,7 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 
 ## Scripts (raíz)
 
-`npm run simulator`, `npm run gym`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`.
+`npm run simulator`, `npm run gym`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`, `install:web`, `dev:server` (API en el puerto 3001) y `dev:web`.
 
 ## Notas
 

@@ -15,6 +15,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -101,6 +102,7 @@ export class AuthController {
   @HttpCode(204)
   @ApiAuth()
   @ApiOperation({ summary: 'Revoke the current session and clear the cookie' })
+  @ApiNoContentResponse({ description: 'Session revoked' })
   async logout(
     @Auth() auth: AuthContext | undefined,
     @Res({ passthrough: true }) res: Response,

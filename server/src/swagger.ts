@@ -1,27 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { SESSION_COOKIE } from './auth/cookie.js';
-
-export const ADMIN_KEY_HEADER = 'x-api-key';
+import { SwaggerModule } from '@nestjs/swagger';
+import { buildOpenApiDocument } from './openapi/build-document.js';
 
 /** Publishes Swagger UI at /docs and the OpenAPI JSON at /docs-json. */
 export function setupSwagger(app: INestApplication): void {
-  const config = new DocumentBuilder()
-    .setTitle('GymTime API')
-    .setDescription('Attendance and alarm backend for GymTime')
-    .setVersion('0.0.1')
-    .addApiKey(
-      { type: 'apiKey', in: 'header', name: ADMIN_KEY_HEADER },
-      'admin-key',
-    )
-    .addCookieAuth(
-      SESSION_COOKIE,
-      { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE },
-      'session',
-    )
-    .addTag('health')
-    .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config), {
+  SwaggerModule.setup('docs', app, buildOpenApiDocument(app), {
     jsonDocumentUrl: 'docs-json',
   });
 }

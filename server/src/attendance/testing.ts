@@ -1,3 +1,4 @@
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import type { Clock } from '../common/time/clock.js';
 import {
@@ -24,6 +25,7 @@ export function buildAttendanceFixture(start: Date = MONDAY_9AM_BOGOTA) {
   const alarm: AlarmPort = { onInstanceEmptied, onButtonPressed };
   const findStudentBySlot = vi.fn();
   const sync = { findStudentBySlot } as unknown as SyncService;
+  const events = new SystemEventsService();
   const service = new AttendanceService(
     repository,
     sync,
@@ -32,11 +34,13 @@ export function buildAttendanceFixture(start: Date = MONDAY_9AM_BOGOTA) {
     alarm,
     clock,
     new EventLogService(schedules.eventLogRepo),
+    events,
   );
 
   return {
     ...schedules,
     service,
+    events,
     repository,
     alarm,
     onInstanceEmptied,

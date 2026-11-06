@@ -71,7 +71,7 @@ export class OpenSessionDto {
 }
 
 export class SessionDto extends OpenSessionDto {
-  @ApiProperty({ format: 'date-time', nullable: true })
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
   exitedAt: string | null;
   @ApiProperty({ enum: ATTENDANCE_SOURCES })
   entrySource: AttendanceSource;

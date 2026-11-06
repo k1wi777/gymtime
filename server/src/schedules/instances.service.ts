@@ -107,6 +107,36 @@ export class InstancesService {
     );
   }
 
+  /** The occurrence of a schedule on a Bogota calendar date, or null. */
+  async findOnDate(
+    scheduleId: string,
+    date: string,
+  ): Promise<ScheduleInstance | null> {
+    const from = fromBogota(date, '00:00');
+    const to = new Date(fromBogota(addDays(date, 1), '00:00').getTime() - 1);
+    const found = await this.instances.findInRange(from, to, [scheduleId]);
+    return found.find((instance) => instance.date === date) ?? null;
+  }
+
+  /**
+   * The occurrence a schedule would have on a future Bogota date even if it was
+   * not generated yet (occurrences only exist a few days ahead). It is not
+   * stored and has no id; null when the schedule does not occur that day.
+   */
+  projectOnDate(
+    schedule: Schedule,
+    date: string,
+  ): Omit<ScheduleInstance, 'id'> | null {
+    if (!occursOn(schedule, date)) return null;
+    return {
+      scheduleId: schedule.id,
+      date,
+      startsAt: fromBogota(date, schedule.startTime),
+      endsAt: fromBogota(date, schedule.endTime),
+      status: 'scheduled',
+    };
+  }
+
   /** Occurrences by id with their schedule and entry window, keyed by instance id. */
   async getByIds(ids: string[]): Promise<Map<string, Occurrence>> {
     const result = new Map<string, Occurrence>();
