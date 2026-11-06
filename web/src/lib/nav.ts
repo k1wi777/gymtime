@@ -21,6 +21,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/ordenes', label: 'Alarma y mensajes', roles: ALL },
   { href: '/dispositivo', label: 'Dispositivo', roles: ALL },
   { href: '/horarios', label: 'Horarios', roles: ALL },
+  { href: '/admin/resumen', label: 'Resumen', roles: ADMIN },
+  { href: '/admin/reportes', label: 'Reportes', roles: ADMIN },
   { href: '/admin/periodos', label: 'Periodos', roles: ADMIN },
   { href: '/admin/horarios', label: 'Gestión de horarios', roles: ADMIN },
   { href: '/admin/estudiantes', label: 'Estudiantes', roles: ADMIN },
@@ -33,3 +35,7 @@ export const visibleItems = (
   role: PanelRole | null,
   items: readonly NavItem[] = NAV_ITEMS,
 ): NavItem[] => (role ? items.filter((item) => item.roles.includes(role)) : []);
+
+/** Where each role lands after signing in: the admin summary, or "Ahora". */
+export const landingFor = (role: PanelRole | null): string =>
+  role === 'admin' ? '/admin/resumen' : '/ahora';

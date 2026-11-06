@@ -89,6 +89,15 @@ export class InstancesService {
     return new Set(found.flatMap((ids) => [...ids]));
   }
 
+  /** Occurrences whose Bogota date is in [from, to], for the reports. */
+  findByDates(
+    from: string,
+    to: string,
+    scheduleIds?: string[],
+  ): Promise<ScheduleInstance[]> {
+    return this.instances.findByDates(from, to, scheduleIds);
+  }
+
   /** Ids of every occurrence of a schedule, past and future (history filters). */
   async idsOfSchedule(scheduleId: string): Promise<string[]> {
     const all = await this.instances.findFromDate([scheduleId], '0000-01-01');

@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import { useAuth } from '@/auth/auth-provider';
+import { landingFor } from '@/lib/nav';
 import { validateLogin, safeNext } from '@/lib/validators';
 import { SubmitButton, TextField, useForm } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
@@ -44,7 +45,7 @@ function LoginForm() {
         router.replace(
           account.mustChangePassword
             ? '/cambiar-contrasena'
-            : safeNext(params.get('next')),
+            : safeNext(params.get('next'), landingFor(account.role)),
         );
       } catch (error) {
         form.clearField('password', '');

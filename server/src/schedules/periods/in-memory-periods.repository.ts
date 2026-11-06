@@ -11,6 +11,14 @@ export class InMemoryPeriodsRepository implements PeriodsRepository {
   private readonly periods = new Map<string, Period>();
   private readonly exceptions = new Map<string, ServiceException>();
 
+  /** Loads a period with its exceptions as they are (data loaders and tests). */
+  load(period: Period, exceptions: ServiceException[] = []): void {
+    this.periods.set(period.id, { ...period });
+    for (const exception of exceptions) {
+      this.exceptions.set(exception.id, { ...exception });
+    }
+  }
+
   async create(data: NewPeriod) {
     const period: Period = { id: randomUUID(), active: false, ...data };
     this.periods.set(period.id, period);

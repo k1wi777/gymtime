@@ -28,6 +28,11 @@ export class InMemoryAttendanceRepository implements AttendanceRepository {
     return { ...session };
   }
 
+  /** Loads sessions as they are (data loaders and tests). */
+  load(sessions: AttendanceSession[]): void {
+    for (const session of sessions) this.rows.set(session.id, { ...session });
+  }
+
   async close(id: string, data: CloseAttendanceSession) {
     const current = this.rows.get(id);
     if (current?.status !== 'abierta') return null;

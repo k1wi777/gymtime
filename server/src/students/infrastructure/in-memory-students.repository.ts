@@ -15,6 +15,13 @@ const norm = (text: string) =>
 export class InMemoryStudentsRepository implements StudentsRepository {
   private readonly students = new Map<string, Student>();
 
+  /** Loads students as they are (data loaders and tests). */
+  load(students: Student[]): void {
+    for (const student of students) {
+      this.students.set(student.id, { ...student });
+    }
+  }
+
   async create(data: NewStudent) {
     const taken = [...this.students.values()].some(
       (s) => s.document === data.document,

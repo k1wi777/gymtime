@@ -60,6 +60,15 @@ export class PrismaAlarmRepository implements AlarmRepository {
     return rows.map((row) => row.instanceId);
   }
 
+  async findByInstanceIds(instanceIds: string[]) {
+    if (instanceIds.length === 0) return [];
+    const rows = await this.prisma.alarmEvent.findMany({
+      where: { instanceId: { in: instanceIds } },
+      orderBy: [{ startedAt: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toDomain);
+  }
+
   async list(filter: AlarmHistoryFilter) {
     const where = {
       ...((filter.from || filter.to) && {

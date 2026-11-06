@@ -10,8 +10,8 @@ export interface Column<T> {
   key: string;
   header: string;
   render: (row: T) => ReactNode;
-  /** Makes the column sortable by this value. */
-  sortValue?: (row: T) => string | number;
+  /** Makes the column sortable by this value; null always goes last. */
+  sortValue?: (row: T) => string | number | null;
 }
 
 export interface SelectFilter<T> {
@@ -34,6 +34,8 @@ interface Props<T> {
   searchText?: (row: T) => string;
   selects?: ReadonlyArray<SelectFilter<T>>;
   pageSize?: number;
+  /** Tells the owner the sort in force (null = none), e.g. to export in that order. */
+  onSortChange?: (sort: { key: string; dir: 'asc' | 'desc' } | null) => void;
 }
 
 const normalize = (text: string): string =>
@@ -55,6 +57,7 @@ export function DataTable<T>({
   searchText,
   selects = [],
   pageSize = 10,
+  onSortChange,
 }: Props<T>) {
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState<Record<string, string>>({});
@@ -79,6 +82,9 @@ export function DataTable<T>({
       result.sort((a, b) => {
         const x = value(a);
         const y = value(b);
+        if (x === null || y === null) {
+          return x === y ? 0 : x === null ? 1 : -1;
+        }
         const order =
           typeof x === 'number' && typeof y === 'number'
             ? x - y
@@ -175,12 +181,14 @@ export function DataTable<T>({
                       <button
                         type="button"
                         className={styles.sortButton}
-                        onClick={() =>
-                          setSort({
+                        onClick={() => {
+                          const dir = sorted === 1 ? -1 : 1;
+                          setSort({ key: column.key, dir });
+                          onSortChange?.({
                             key: column.key,
-                            dir: sorted === 1 ? -1 : 1,
-                          })
-                        }
+                            dir: dir === 1 ? 'asc' : 'desc',
+                          });
+                        }}
                       >
                         {column.header}
                         {sorted === 0 ? '' : sorted === 1 ? ' ▲' : ' ▼'}

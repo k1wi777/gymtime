@@ -105,6 +105,17 @@ const MATRIX: Row[] = [
   { route: 'GET /audit', access: 'admin' },
   { route: 'GET /history/orders', access: 'admin' },
   { route: 'GET /history/alarms', access: 'admin' },
+  // H10: reports hold personal data (absences, stay) and the CSV takes it out.
+  { route: 'GET /reports/options', access: 'admin' },
+  { route: 'GET /reports/summary', access: 'admin' },
+  { route: 'GET /reports/flow', access: 'admin' },
+  { route: 'GET /reports/attendance', access: 'admin' },
+  { route: 'GET /reports/stay', access: 'admin' },
+  { route: 'GET /reports/late', access: 'admin' },
+  { route: 'GET /reports/alarms', access: 'admin' },
+  { route: 'GET /reports/quality', access: 'admin' },
+  { route: 'GET /reports/students/:id', access: 'admin' },
+  { route: 'GET /reports/:kind/export', access: 'admin' },
 ];
 
 /** Routes registered in the Express router of the running application. */

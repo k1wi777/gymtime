@@ -6,6 +6,7 @@ import { InstancesService } from './instances.service.js';
 import { InMemoryPeriodsRepository } from './periods/in-memory-periods.repository.js';
 import { InMemoryInstancesRepository } from './infrastructure/in-memory-instances.repository.js';
 import { InMemorySchedulesRepository } from './infrastructure/in-memory-schedules.repository.js';
+import { InMemoryStudentsRepository } from '../students/infrastructure/in-memory-students.repository.js';
 import { PeriodsService } from './periods/periods.service.js';
 import { SchedulesService } from './schedules.service.js';
 import {
@@ -29,7 +30,8 @@ export function buildSchedulesFixture(start: Date = MONDAY_9AM_BOGOTA) {
   const schedulesRepo = new InMemorySchedulesRepository();
   const instancesRepo = new InMemoryInstancesRepository();
   const eventLogRepo = new InMemoryEventLogRepository();
-  const students = buildStudentsService(undefined, eventLogRepo).service;
+  const studentsRepo = new InMemoryStudentsRepository();
+  const students = buildStudentsService(studentsRepo, eventLogRepo).service;
   const periodsRepo = new InMemoryPeriodsRepository();
   const instances = new InstancesService(
     schedulesRepo,
@@ -37,12 +39,13 @@ export function buildSchedulesFixture(start: Date = MONDAY_9AM_BOGOTA) {
     testSchedulesConfig,
     periodsRepo,
   );
+  const eventLogService = new EventLogService(eventLogRepo);
   const schedules = new SchedulesService(
     schedulesRepo,
     students,
     instances,
     clock,
-    new EventLogService(eventLogRepo),
+    eventLogService,
     periodsRepo,
   );
   const periods = new PeriodsService(
@@ -55,6 +58,8 @@ export function buildSchedulesFixture(start: Date = MONDAY_9AM_BOGOTA) {
   return {
     clock,
     eventLogRepo,
+    eventLogService,
+    studentsRepo,
     schedulesRepo,
     instancesRepo,
     periodsRepo,

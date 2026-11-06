@@ -86,8 +86,11 @@ export function validateMessage(
 }
 
 /** A redirect target is only accepted when it stays inside the panel. */
-export function safeNext(next: string | null | undefined): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/ahora';
-  if (next.startsWith('/login') || next.startsWith('/\\')) return '/ahora';
+export function safeNext(
+  next: string | null | undefined,
+  fallback = '/ahora',
+): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return fallback;
+  if (next.startsWith('/login') || next.startsWith('/\\')) return fallback;
   return next;
 }

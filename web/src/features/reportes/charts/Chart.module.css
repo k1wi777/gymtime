@@ -1,0 +1,34 @@
+.chart {
+  width: 100%;
+}
+
+.bar {
+  transition: filter var(--transition);
+}
+
+/* Hover and keyboard focus brighten the bar a little. */
+.bar:hover {
+  filter: brightness(1.12) saturate(1.1);
+}
+
+.valueLabel {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.peakLabel {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--peak);
+}
+
+.tooltip {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}

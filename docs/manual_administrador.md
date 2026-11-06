@@ -35,6 +35,25 @@ Cree cuentas, cambie nombre o rol, desactive y restablezca contraseñas. La **co
 - **Alarma y mensajes** y **Alarmas**: qué orden se envió al lector, quién y con qué resultado; cómo y cuándo terminó cada alarma.
 - **Auditoría**: quién hizo qué y cuándo (filtre por tipo, que busca por prefijo como `student.`, por usuario y por fecha). Nunca contiene huellas, contraseñas ni datos de contacto.
 
+## Resumen y reportes
+
+Al iniciar sesión, el administrador entra al **Resumen**: hoy, la semana (de lunes a hoy), el periodo activo y lo que requiere atención (lector, alarma, sesiones abiertas en horarios ya terminados, salidas no registradas de los últimos 7 días). **Reportes** (solo administrador) tiene seis pestañas: Afluencia, Asistencia, Permanencia, Llegadas tarde, Alarmas y Calidad de los datos. Los filtros (fechas, horario, programa y estudiante) quedan en la dirección de la página, así que se puede copiar el enlace. El rango máximo es de 366 días y las horas son de Bogotá.
+
+Definiciones:
+
+- **Obligación**: un estudiante asignado, con vigencia en el inicio de un horario ya terminado y que no cae en un día sin servicio.
+- **Asistió**: tiene una sesión en esa ocurrencia; una salida no registrada también cuenta como asistencia. **Cumplimiento** = asistencias / obligaciones (sin obligaciones se muestra «—»).
+- **Llegada tarde**: un minuto completo o más después del inicio, solo en entradas con huella.
+- **Permanencia**: promedio solo de sesiones cerradas (nunca de las salidas no registradas).
+- **Picos**: las horas, días y fechas con más entradas; se marcan con trama y el rótulo «Pico», no solo con color.
+- Detalle por estudiante: en los reportes agrupados por estudiante, el nombre abre sus sesiones día por día. Ninguna pantalla ni archivo muestra la cédula.
+
+**Exportar CSV**: el botón avisa que el archivo contiene datos personales (Ley 1581) y registra la exportación en la auditoría antes de entregarlo. El archivo es UTF-8 con BOM, separado por `;` y con coma decimal, para que Excel en español lo abra directamente (si no, use Datos → Desde texto/CSV y elija UTF-8). El texto que empieza con `=`, `+`, `-` o `@` se marca con un apóstrofo para que no se ejecute como fórmula. El archivo lleva los filtros del servidor y el orden de la tabla que ve; el cuadro «Buscar» de la tabla solo filtra la pantalla y no se aplica al archivo. Se rechaza si supera 20 000 filas: acote el rango. Guarde el archivo solo donde sea necesario y elimínelo al terminar.
+
+Limitación conocida: dar de baja a un estudiante no cierra su vigencia en los horarios, así que sus ausencias siguen contando en los reportes hasta que se le quite de la asignación.
+
+Datos de prueba: `npm --prefix server run seed:reports` carga un semestre simulado (documentos `SIM-…`) solo en bases cuyo nombre contenga demo, seed o test (o con `SEED_ALLOW=<nombre>`); `-- --reset` borra únicamente esa simulación.
+
 ## Desde la línea de comandos
 
 - `gym schedule create … --period <id|nombre>` crea un horario semanal dentro de un periodo.

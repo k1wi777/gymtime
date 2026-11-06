@@ -20,6 +20,8 @@ export interface AlarmRepository {
   findOpenByInstance(instanceId: string): Promise<AlarmEvent | null>;
   /** Ids, among these occurrences, that have at least one alarm event. */
   instanceIdsWithEvents(instanceIds: string[]): Promise<string[]>;
+  /** Every event of these occurrences, oldest first. */
+  findByInstanceIds(instanceIds: string[]): Promise<AlarmEvent[]>;
   /** Alarm history, newest first, with the total for pagination. */
   list(
     filter: AlarmHistoryFilter,

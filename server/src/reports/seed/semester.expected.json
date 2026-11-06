@@ -1,0 +1,110 @@
+{
+  "seed": 20260202,
+  "scale": 1,
+  "now": "2026-05-30T17:00:00.000Z",
+  "period": "2026-02-02 .. 2026-05-29",
+  "students": 40,
+  "schedules": 6,
+  "instances": 89,
+  "sessions": 390,
+  "alarmEvents": 11,
+  "flow": {
+    "entries": 390,
+    "distinctStudents": 36,
+    "peakHours": [
+      {
+        "hour": 6,
+        "count": 176
+      },
+      {
+        "hour": 18,
+        "count": 114
+      },
+      {
+        "hour": 17,
+        "count": 84
+      }
+    ],
+    "byWeekday": [59, 70, 68, 56, 137, 0, 0]
+  },
+  "attendance": {
+    "obligations": 525,
+    "attended": 381,
+    "absences": 144,
+    "compliancePercent": 72.6,
+    "bySchedule": {
+      "Jueves 18:00": {
+        "obligations": 80,
+        "attended": 55
+      },
+      "Lunes 06:00": {
+        "obligations": 94,
+        "attended": 58
+      },
+      "Martes 18:00": {
+        "obligations": 90,
+        "attended": 69
+      },
+      "Miércoles 06:00": {
+        "obligations": 75,
+        "attended": 67
+      },
+      "Viernes 06:00": {
+        "obligations": 86,
+        "attended": 57
+      },
+      "Viernes 17:00": {
+        "obligations": 100,
+        "attended": 75
+      }
+    },
+    "byMonth": {
+      "2026-02": {
+        "obligations": 144,
+        "attended": 100
+      },
+      "2026-03": {
+        "obligations": 132,
+        "attended": 96
+      },
+      "2026-04": {
+        "obligations": 135,
+        "attended": 104
+      },
+      "2026-05": {
+        "obligations": 114,
+        "attended": 81
+      }
+    }
+  },
+  "stay": {
+    "closed": 379,
+    "unregistered": 10,
+    "open": 1
+  },
+  "late": {
+    "fingerprintEntries": 360,
+    "lateArrivals": 288,
+    "manualEntries": 30
+  },
+  "alarms": {
+    "total": 11,
+    "closed": 10,
+    "open": 1,
+    "closedSessions": 10,
+    "totalMinutes": 57.7,
+    "byClosure": {
+      "all_exited": 3,
+      "button": 3,
+      "cli": 2,
+      "timeout": 2
+    }
+  },
+  "quality": {
+    "total": 390,
+    "manualEntry": 30,
+    "manualExit": 6,
+    "unregistered": 10,
+    "staleOpen": 1
+  }
+}

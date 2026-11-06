@@ -15,6 +15,16 @@ export interface InstancesRepository {
     to: Date,
     scheduleIds?: string[],
   ): Promise<ScheduleInstance[]>;
+  /**
+   * Occurrences whose Bogota `date` is in [from, to] (both `YYYY-MM-DD`,
+   * inclusive), ordered by start then id, optionally limited to some
+   * schedules. Uses the `date` index, unlike `findInRange`.
+   */
+  findByDates(
+    from: string,
+    to: string,
+    scheduleIds?: string[],
+  ): Promise<ScheduleInstance[]>;
   /** Occurrences with those ids, in no particular order. */
   findByIds(ids: string[]): Promise<ScheduleInstance[]>;
   /** Occurrences of these schedules on or after a Bogota date, by date. */

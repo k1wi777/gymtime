@@ -35,13 +35,25 @@ export class EventLogService {
     }));
   }
 
+  /**
+   * Like `record`, but a failing write propagates: for the few operations
+   * that must not happen unless they are on the trail (exporting personal
+   * data, Ley 1581).
+   */
+  async recordOrThrow(
+    type: string,
+    detail?: Record<string, unknown>,
+  ): Promise<void> {
+    await this.repository.append({
+      type,
+      actor: currentActor(),
+      detail: detail ? sanitize(detail) : null,
+    });
+  }
+
   async record(type: string, detail?: Record<string, unknown>): Promise<void> {
     try {
-      await this.repository.append({
-        type,
-        actor: currentActor(),
-        detail: detail ? sanitize(detail) : null,
-      });
+      await this.recordOrThrow(type, detail);
     } catch (error) {
       this.logger.error({
         event: 'event_log_failed',

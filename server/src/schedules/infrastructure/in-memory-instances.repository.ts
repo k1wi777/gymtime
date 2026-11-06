@@ -60,6 +60,27 @@ export class InMemoryInstancesRepository implements InstancesRepository {
       .map((r) => ({ ...r }));
   }
 
+  async findByDates(from: string, to: string, scheduleIds?: string[]) {
+    return this.rows
+      .filter(
+        (r) =>
+          r.date >= from &&
+          r.date <= to &&
+          (!scheduleIds || scheduleIds.includes(r.scheduleId)),
+      )
+      .sort(
+        (a, b) =>
+          a.startsAt.getTime() - b.startsAt.getTime() ||
+          a.id.localeCompare(b.id),
+      )
+      .map((r) => ({ ...r }));
+  }
+
+  /** Loads rows as they are (data loaders and tests); the interface cannot set ids. */
+  load(rows: ScheduleInstance[]): void {
+    this.rows.push(...rows.map((r) => ({ ...r })));
+  }
+
   async findByIds(ids: string[]) {
     const wanted = new Set(ids);
     return this.rows.filter((r) => wanted.has(r.id)).map((r) => ({ ...r }));

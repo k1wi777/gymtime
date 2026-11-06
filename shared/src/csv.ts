@@ -110,3 +110,65 @@ export function buildCsv(rows: readonly (readonly string[])[]): string {
       .join('\r\n') + '\r\n'
   );
 }
+
+export type CsvColumnType =
+  'text' | 'int' | 'decimal' | 'percent' | 'datetime' | 'date';
+
+export interface CsvColumn {
+  label: string;
+  type: CsvColumnType;
+}
+
+/** Number cells are numbers; text, date and datetime cells arrive formatted. */
+export type CsvCell = string | number | null;
+
+/** Cells that Excel would evaluate as a formula when they open a text cell. */
+const FORMULA_START = /^\s*[=+\-@\t\r]/;
+
+/**
+ * Text typed by people (names, programs, reasons) must not start a formula
+ * (OWASP "CSV injection"): a `'` in front makes Excel show it as text. Numbers
+ * are written by the server and are never neutralized.
+ */
+export function neutralizeFormula(text: string): string {
+  return FORMULA_START.test(text) ? `'${text}` : text;
+}
+
+function formatCell(type: CsvColumnType, value: CsvCell): string {
+  if (value === null || value === '') return '';
+  switch (type) {
+    case 'text':
+      return neutralizeFormula(String(value));
+    case 'int':
+      return String(value);
+    case 'decimal':
+    case 'percent':
+      return typeof value === 'number'
+        ? value.toFixed(1).replace('.', ',')
+        : String(value);
+    default:
+      return String(value);
+  }
+}
+
+/**
+ * Report CSV for Excel in Spanish: `;` separator, CRLF, decimal comma,
+ * RFC 4180 quoting, formulas neutralized in text columns. The UTF-8 BOM is
+ * added where the file is delivered, not here.
+ */
+export function writeCsv(
+  columns: readonly CsvColumn[],
+  rows: readonly (readonly CsvCell[])[],
+): string {
+  const quote = (cell: string) =>
+    /[";\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+  const lines = [
+    columns.map((c) => quote(neutralizeFormula(c.label))).join(';'),
+    ...rows.map((row) =>
+      columns
+        .map((c, i) => quote(formatCell(c.type, row[i] ?? null)))
+        .join(';'),
+    ),
+  ];
+  return lines.join('\r\n') + '\r\n';
+}

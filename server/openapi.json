@@ -102,6 +102,29 @@
         ],
         "type": "object"
       },
+      "AlarmByClosureDto": {
+        "properties": {
+          "all_exited": {
+            "type": "number"
+          },
+          "button": {
+            "type": "number"
+          },
+          "cli": {
+            "type": "number"
+          },
+          "timeout": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "all_exited",
+          "button",
+          "cli",
+          "timeout"
+        ],
+        "type": "object"
+      },
       "AlarmDataDto": {
         "properties": {
           "closedBy": {
@@ -311,6 +334,81 @@
           "durationSec",
           "startedAt",
           "openSessions"
+        ],
+        "type": "object"
+      },
+      "AlarmSummaryDto": {
+        "properties": {
+          "averageMinutes": {
+            "nullable": true,
+            "type": "number"
+          },
+          "byClosure": {
+            "$ref": "#/components/schemas/AlarmByClosureDto"
+          },
+          "closed": {
+            "type": "number"
+          },
+          "closedSessions": {
+            "type": "number"
+          },
+          "open": {
+            "description": "Still without an end",
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalMinutes": {
+            "description": "Minutes, closed alarms only",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "closed",
+          "open",
+          "totalMinutes",
+          "averageMinutes",
+          "closedSessions",
+          "byClosure"
+        ],
+        "type": "object"
+      },
+      "AlarmsReportDto": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ReportColumnDto"
+            },
+            "type": "array"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/ReportFiltersDto"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "description": "Totals and the definitions the report applied",
+            "type": "object"
+          },
+          "rows": {
+            "description": "One object per row keyed by column key; `id` (when present) is the row student, for the detail",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AlarmSummaryDto"
+          }
+        },
+        "required": [
+          "filters",
+          "columns",
+          "rows",
+          "meta",
+          "summary"
         ],
         "type": "object"
       },
@@ -954,6 +1052,37 @@
         ],
         "type": "object"
       },
+      "DateBucketDto": {
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "date": {
+            "example": "2026-03-02",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "count"
+        ],
+        "type": "object"
+      },
+      "DefaultRangeDto": {
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
       "DeviceConnectedDataDto": {
         "properties": {
           "deviceId": {
@@ -1196,6 +1325,68 @@
         ],
         "type": "object"
       },
+      "FlowReportDto": {
+        "properties": {
+          "byHour": {
+            "description": "All 24 Bogota hours",
+            "items": {
+              "$ref": "#/components/schemas/HourBucketDto"
+            },
+            "type": "array"
+          },
+          "byWeekday": {
+            "description": "1 = Monday ... 7",
+            "items": {
+              "$ref": "#/components/schemas/WeekdayBucketDto"
+            },
+            "type": "array"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ReportColumnDto"
+            },
+            "type": "array"
+          },
+          "distinctStudents": {
+            "type": "number"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/ReportFiltersDto"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "description": "Totals and the definitions the report applied",
+            "type": "object"
+          },
+          "peaks": {
+            "$ref": "#/components/schemas/PeaksDto"
+          },
+          "rows": {
+            "description": "One object per row keyed by column key; `id` (when present) is the row student, for the detail",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total": {
+            "description": "Entries of the range",
+            "type": "number"
+          }
+        },
+        "required": [
+          "filters",
+          "columns",
+          "rows",
+          "meta",
+          "total",
+          "distinctStudents",
+          "byHour",
+          "byWeekday",
+          "peaks"
+        ],
+        "type": "object"
+      },
       "HealthDto": {
         "properties": {
           "database": {
@@ -1284,6 +1475,23 @@
           "id",
           "document",
           "name"
+        ],
+        "type": "object"
+      },
+      "HourBucketDto": {
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "hour": {
+            "maximum": 23,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "hour",
+          "count"
         ],
         "type": "object"
       },
@@ -1505,6 +1713,63 @@
           "student",
           "enteredAt",
           "instance"
+        ],
+        "type": "object"
+      },
+      "OptionsPeriodDto": {
+        "properties": {
+          "endDate": {
+            "example": "2026-05-29",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startDate": {
+            "example": "2026-02-02",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "startDate",
+          "endDate"
+        ],
+        "type": "object"
+      },
+      "OptionsScheduleDto": {
+        "properties": {
+          "endTime": {
+            "example": "19:00:00",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startTime": {
+            "example": "18:00:00",
+            "type": "string"
+          },
+          "weekday": {
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "weekday",
+          "startTime",
+          "endTime"
         ],
         "type": "object"
       },
@@ -1857,6 +2122,34 @@
         ],
         "type": "object"
       },
+      "PeaksDto": {
+        "properties": {
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/DateBucketDto"
+            },
+            "type": "array"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/HourBucketDto"
+            },
+            "type": "array"
+          },
+          "weekdays": {
+            "items": {
+              "$ref": "#/components/schemas/WeekdayBucketDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hours",
+          "weekdays",
+          "dates"
+        ],
+        "type": "object"
+      },
       "PeriodResponseDto": {
         "properties": {
           "active": {
@@ -2010,6 +2303,160 @@
           "deleted",
           "updated",
           "kept"
+        ],
+        "type": "object"
+      },
+      "ReportColumnDto": {
+        "properties": {
+          "key": {
+            "example": "obligations",
+            "type": "string"
+          },
+          "label": {
+            "example": "Obligaciones",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "int",
+              "decimal",
+              "percent",
+              "datetime",
+              "date"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type"
+        ],
+        "type": "object"
+      },
+      "ReportFiltersDto": {
+        "properties": {
+          "from": {
+            "description": "Bogota date, inclusive",
+            "example": "2026-02-02",
+            "type": "string"
+          },
+          "program": {
+            "type": "string"
+          },
+          "scheduleId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "to": {
+            "description": "Bogota date, inclusive",
+            "example": "2026-05-29",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "ReportOptionsDto": {
+        "properties": {
+          "defaultRange": {
+            "$ref": "#/components/schemas/DefaultRangeDto"
+          },
+          "maxRangeDays": {
+            "example": 366,
+            "type": "number"
+          },
+          "period": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OptionsPeriodDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "programs": {
+            "description": "Distinct degrees, sorted",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/OptionsScheduleDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "programs",
+          "schedules",
+          "period",
+          "defaultRange",
+          "maxRangeDays"
+        ],
+        "type": "object"
+      },
+      "ReportStudentDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "program": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "program"
+        ],
+        "type": "object"
+      },
+      "ReportTableDto": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ReportColumnDto"
+            },
+            "type": "array"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/ReportFiltersDto"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "description": "Totals and the definitions the report applied",
+            "type": "object"
+          },
+          "rows": {
+            "description": "One object per row keyed by column key; `id` (when present) is the row student, for the detail",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "filters",
+          "columns",
+          "rows",
+          "meta"
         ],
         "type": "object"
       },
@@ -2623,6 +3070,43 @@
         },
         "type": "object"
       },
+      "StudentDetailDto": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ReportColumnDto"
+            },
+            "type": "array"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/ReportFiltersDto"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "description": "Totals and the definitions the report applied",
+            "type": "object"
+          },
+          "rows": {
+            "description": "One object per row keyed by column key; `id` (when present) is the row student, for the detail",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "student": {
+            "$ref": "#/components/schemas/ReportStudentDto"
+          }
+        },
+        "required": [
+          "filters",
+          "columns",
+          "rows",
+          "meta",
+          "student"
+        ],
+        "type": "object"
+      },
       "StudentResponseDto": {
         "properties": {
           "active": {
@@ -2681,6 +3165,191 @@
           "consented",
           "consentVersion",
           "consentAt"
+        ],
+        "type": "object"
+      },
+      "SummaryAlertsDto": {
+        "properties": {
+          "alarmOn": {
+            "type": "boolean"
+          },
+          "device": {
+            "$ref": "#/components/schemas/SummaryDeviceDto"
+          },
+          "staleOpen": {
+            "description": "Sessions still open in occurrences that ended",
+            "type": "number"
+          },
+          "unregistered7d": {
+            "description": "`no_registrada` sessions of the last 7 days",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alarmOn",
+          "device",
+          "staleOpen",
+          "unregistered7d"
+        ],
+        "type": "object"
+      },
+      "SummaryDayDto": {
+        "properties": {
+          "attended": {
+            "type": "number"
+          },
+          "compliance": {
+            "description": "0-100, null without obligations",
+            "nullable": true,
+            "type": "number"
+          },
+          "entries": {
+            "description": "Entries of the occurrences in the range",
+            "type": "number"
+          },
+          "obligations": {
+            "description": "Students owed at occurrences already ended",
+            "type": "number"
+          }
+        },
+        "required": [
+          "entries",
+          "obligations",
+          "attended",
+          "compliance"
+        ],
+        "type": "object"
+      },
+      "SummaryDeviceDto": {
+        "properties": {
+          "known": {
+            "description": "A device has connected at least once",
+            "type": "boolean"
+          },
+          "online": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "known",
+          "online"
+        ],
+        "type": "object"
+      },
+      "SummaryDto": {
+        "properties": {
+          "alerts": {
+            "$ref": "#/components/schemas/SummaryAlertsDto"
+          },
+          "date": {
+            "description": "Today in Bogota",
+            "example": "2026-03-04",
+            "type": "string"
+          },
+          "period": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SummaryPeriodDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "today": {
+            "$ref": "#/components/schemas/SummaryTodayDto"
+          },
+          "week": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SummaryDayDto"
+              }
+            ],
+            "description": "Monday up to today"
+          },
+          "weekStart": {
+            "description": "Monday of this week",
+            "example": "2026-03-02",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "weekStart",
+          "today",
+          "week",
+          "period",
+          "alerts"
+        ],
+        "type": "object"
+      },
+      "SummaryPeriodDto": {
+        "properties": {
+          "attended": {
+            "type": "number"
+          },
+          "compliance": {
+            "description": "0-100, null without obligations",
+            "nullable": true,
+            "type": "number"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "entries": {
+            "description": "Entries of the occurrences in the range",
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "obligations": {
+            "description": "Students owed at occurrences already ended",
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entries",
+          "obligations",
+          "attended",
+          "compliance",
+          "name",
+          "startDate",
+          "endDate"
+        ],
+        "type": "object"
+      },
+      "SummaryTodayDto": {
+        "properties": {
+          "attended": {
+            "type": "number"
+          },
+          "compliance": {
+            "description": "0-100, null without obligations",
+            "nullable": true,
+            "type": "number"
+          },
+          "entries": {
+            "description": "Entries of the occurrences in the range",
+            "type": "number"
+          },
+          "inside": {
+            "description": "People inside right now",
+            "type": "number"
+          },
+          "obligations": {
+            "description": "Students owed at occurrences already ended",
+            "type": "number"
+          }
+        },
+        "required": [
+          "entries",
+          "obligations",
+          "attended",
+          "compliance",
+          "inside"
         ],
         "type": "object"
       },
@@ -3011,6 +3680,23 @@
           "startTime",
           "endTime",
           "assignedCount"
+        ],
+        "type": "object"
+      },
+      "WeekdayBucketDto": {
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "weekday": {
+            "maximum": 7,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "weekday",
+          "count"
         ],
         "type": "object"
       }
@@ -5852,6 +6538,1155 @@
         "summary": "Edit days without service and regenerate",
         "tags": [
           "periods"
+        ]
+      }
+    },
+    "/reports/alarms": {
+      "get": {
+        "description": "One row per alarm and a summary by way of closure; the student and degree filters do not apply (400).",
+        "operationId": "ReportsController_alarms",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmsReportDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters or range"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Alarms of the range",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/attendance": {
+      "get": {
+        "description": "Obligations (students owed at occurrences that ended, outside days without service, with a validity open at the start), attended and the percentage; null without obligations.",
+        "operationId": "ReportsController_attendance",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "student",
+                "schedule",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportTableDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Absences and compliance",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/flow": {
+      "get": {
+        "description": "Entries (not simultaneous occupancy), by the Bogota hour and weekday of the entry. The range is by the date of the occurrence.",
+        "operationId": "ReportsController_flow",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "top",
+            "required": false,
+            "schema": {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowReportDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Entries per hour and weekday, with the peaks",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/late": {
+      "get": {
+        "description": "Fingerprint entries at least one full minute after the start; manual entries are counted apart.",
+        "operationId": "ReportsController_late",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "student",
+                "schedule"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportTableDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Late arrivals",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/options": {
+      "get": {
+        "operationId": "ReportsController_options",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOptionsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Filter options: degrees, schedules, active period, default range",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/quality": {
+      "get": {
+        "description": "Sessions with a manual entry or exit, unregistered, and open ones in finished occurrences. `meta.estados` lists the states counted.",
+        "operationId": "ReportsController_quality",
+        "parameters": [
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportTableDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Data quality",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/stay": {
+      "get": {
+        "description": "Average of exit minus entry of the closed sessions; unregistered and open ones are counted apart.",
+        "operationId": "ReportsController_stay",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "student",
+                "schedule",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportTableDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Average stay",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/students/{id}": {
+      "get": {
+        "description": "Every occurrence the student owed in the range, with the result, entry, exit, delay and stay.",
+        "operationId": "ReportsController_studentDetail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentDetailDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters or range"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "The student does not exist"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Detail of one student",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/summary": {
+      "get": {
+        "description": "Attendance counts only occurrences that already ended; the alerts are the alarm, the reader, open sessions of finished occurrences and unregistered exits of the last 7 days.",
+        "operationId": "ReportsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Administrator summary: today, week, period and alerts",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/{kind}/export": {
+      "get": {
+        "description": "UTF-8 with BOM, `;` separator, decimal comma, Bogota dates, same columns, filters and order as the JSON. Contains personal data: it is written to the audit trail (`report.exported`) before the file is delivered.",
+        "operationId": "ReportsController_export",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "flow",
+                "attendance",
+                "stay",
+                "late",
+                "alarms",
+                "quality"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "student",
+                "schedule",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "top",
+            "required": false,
+            "schema": {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "example": "2026-02-02"
+            }
+          },
+          {
+            "description": "Bogota date, inclusive",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "example": "2026-05-29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheduleId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Exact degree, ignoring case and accents",
+            "in": "query",
+            "name": "program",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "required": false,
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "description": "Column key to sort by",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "in": "query",
+            "name": "dir",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The CSV file"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "REPORT_TOO_LARGE: narrow the range"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Export a report as CSV (audited)",
+        "tags": [
+          "reports"
         ]
       }
     },

@@ -211,6 +211,11 @@ export class SchedulesService {
     return (await this.repository.findAll()).filter((s) => wanted.has(s.id));
   }
 
+  /** Every schedule, for the report filters. */
+  listAll(): Promise<Schedule[]> {
+    return this.repository.findAll();
+  }
+
   /** Recurring schedules of a period, for the weekly view. */
   listByPeriod(periodId: string): Promise<Schedule[]> {
     return this.repository.findByPeriod(periodId);
@@ -398,6 +403,14 @@ export class SchedulesService {
   /** Every interval of a schedule, including the closed ones (history). */
   listAssignments(scheduleId: string): Promise<ScheduleAssignment[]> {
     return this.repository.listAssignments(scheduleId);
+  }
+
+  /** Every interval of these schedules (optionally of some students), for the reports. */
+  listAssignmentsFor(
+    scheduleIds: string[],
+    studentIds?: string[],
+  ): Promise<ScheduleAssignment[]> {
+    return this.repository.listAssignmentsFor(scheduleIds, studentIds);
   }
 
   /** Today's schedule starting now and ending `minutes` later (for quick tests). */

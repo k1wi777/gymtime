@@ -28,7 +28,9 @@
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
     "openapi:export": "nest build && node dist/openapi/export-openapi.js",
-    "test:panel-server": "vitest run --config ./vitest.config.panel.ts"
+    "test:panel-server": "vitest run --config ./vitest.config.panel.ts",
+    "seed:reports": "nest build && node dist/reports/seed/run-seed.js",
+    "test:reports-db": "bash scripts/verify-reports-db.sh"
   },
   "dependencies": {
     "@gymtime/shared": "*",

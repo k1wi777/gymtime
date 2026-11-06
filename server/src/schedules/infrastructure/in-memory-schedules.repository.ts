@@ -17,6 +17,14 @@ export class InMemorySchedulesRepository implements SchedulesRepository {
   private readonly schedules = new Map<string, Schedule>();
   private readonly assignments: ScheduleAssignment[] = [];
 
+  /** Loads schedules and their intervals as they are (data loaders and tests). */
+  load(schedules: Schedule[], assignments: ScheduleAssignment[]): void {
+    for (const schedule of schedules) {
+      this.schedules.set(schedule.id, { ...schedule });
+    }
+    this.assignments.push(...assignments.map((a) => ({ ...a })));
+  }
+
   async create(data: NewSchedule) {
     const schedule: Schedule = { id: randomUUID(), ...data };
     this.schedules.set(schedule.id, schedule);
@@ -104,6 +112,21 @@ export class InMemorySchedulesRepository implements SchedulesRepository {
   async listAssignments(scheduleId: string) {
     return this.assignments
       .filter((a) => a.scheduleId === scheduleId)
+      .map((a) => ({ ...a }));
+  }
+
+  async listAssignmentsFor(scheduleIds: string[], studentIds?: string[]) {
+    return this.assignments
+      .filter(
+        (a) =>
+          scheduleIds.includes(a.scheduleId) &&
+          (!studentIds || studentIds.includes(a.studentId)),
+      )
+      .sort(
+        (a, b) =>
+          a.validFrom.getTime() - b.validFrom.getTime() ||
+          a.id.localeCompare(b.id),
+      )
       .map((a) => ({ ...a }));
   }
 

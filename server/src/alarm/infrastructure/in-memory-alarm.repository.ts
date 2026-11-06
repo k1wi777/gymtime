@@ -54,6 +54,23 @@ export class InMemoryAlarmRepository implements AlarmRepository {
     ];
   }
 
+  async findByInstanceIds(instanceIds: string[]) {
+    const wanted = new Set(instanceIds);
+    return [...this.rows.values()]
+      .filter((row) => wanted.has(row.instanceId))
+      .sort(
+        (a, b) =>
+          a.startedAt.getTime() - b.startedAt.getTime() ||
+          a.id.localeCompare(b.id),
+      )
+      .map((row) => ({ ...row }));
+  }
+
+  /** Loads events as they are (data loaders and tests). */
+  load(events: AlarmEvent[]): void {
+    for (const event of events) this.rows.set(event.id, { ...event });
+  }
+
   async list(filter: AlarmHistoryFilter) {
     const matching = [...this.rows.values()]
       .filter(

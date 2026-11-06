@@ -92,6 +92,11 @@ export class AlarmService implements AlarmPort {
     return this.events.instanceIdsWithEvents(instanceIds);
   }
 
+  /** Every alarm event of these occurrences, for the reports. */
+  findByInstanceIds(instanceIds: string[]) {
+    return this.events.findByInstanceIds(instanceIds);
+  }
+
   /** Alarm history, newest first (E22-3). */
   history(filter: AlarmHistoryFilter) {
     return this.events.list(filter);

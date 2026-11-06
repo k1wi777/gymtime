@@ -1,21 +1,35 @@
 :root {
-  --bg: #f4f6f8;
+  /*
+   * Palette PROVISIONAL (green and white of the Universidad de Cordoba).
+   * It is NOT the official brand color: no color code exists in the project
+   * yet. Every color of the panel goes through these tokens, so the day the
+   * university delivers its brand manual this block is the only place to edit.
+   */
+  --bg: #f4f7f5;
   --surface: #ffffff;
-  --text: #17212b;
-  --muted: #5b6875;
-  --border: #d5dce3;
-  --primary: #0b5cad;
+  --text: #17231c;
+  --muted: #56655b;
+  --border: #d3ddd6;
+  --primary: #1b7a3d;
+  --primary-dark: #0f5a2b;
+  --primary-light: #e6f4ea;
+  --primary-mid: #3f9d5f;
   --primary-text: #ffffff;
+  /* Highlight of the peaks in the charts: amber, with pattern and label too. */
+  --peak: #b45309;
   --danger: #b3261e;
   --danger-bg: #fdecea;
   --success: #1b6e3c;
   --success-bg: #e6f4ea;
   --warning: #8a5a00;
   --warning-bg: #fff4d6;
-  --info: #0b5cad;
-  --info-bg: #e5f0fb;
+  /* Informational notices stay slate blue so they differ from success (green). */
+  --info: #1d4e6e;
+  --info-bg: #e6eff5;
+  --shadow-card: 0 1px 3px rgba(15, 90, 43, 0.12);
+  --transition: 150ms ease;
   --radius: 8px;
-  --focus: 0 0 0 3px rgba(11, 92, 173, 0.35);
+  --focus: 0 0 0 3px rgba(27, 122, 61, 0.35);
   font-family:
     system-ui,
     -apple-system,
@@ -90,6 +104,18 @@ textarea {
   cursor: pointer;
 }
 
+.btn {
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary-mid);
+}
+
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -99,6 +125,11 @@ textarea {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-text);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .btn-danger {
@@ -112,6 +143,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
+  box-shadow: var(--shadow-card);
 }
 
 .stack {
@@ -136,4 +168,14 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   align-items: start;
+}
+
+/* The subtle effects (hover, transitions) are switched off for those who ask. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

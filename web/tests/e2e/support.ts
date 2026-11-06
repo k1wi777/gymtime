@@ -42,8 +42,13 @@ export async function login(page: Page, username = 'ana', password = PASSWORD) {
 
 export async function loginAndWait(page: Page, username = 'ana') {
   await login(page, username);
-  await expect(page).toHaveURL(/\/ahora$/);
-  await expect(page.getByRole('heading', { name: 'Ahora' })).toBeVisible();
+  // The administrator lands on the summary (H10, R21); the assistant on "Ahora".
+  const [url, heading] =
+    username === 'boss'
+      ? [/\/admin\/resumen$/, 'Resumen']
+      : [/\/ahora$/, 'Ahora'];
+  await expect(page).toHaveURL(url);
+  await expect(page.getByRole('heading', { name: heading })).toBeVisible();
   // The live link is part of every screen: wait for it before driving the reader.
   await expect(page.getByText('Conectado', { exact: true })).toBeVisible();
 }

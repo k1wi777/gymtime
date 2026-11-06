@@ -12,6 +12,10 @@ import { Spinner } from '@/ui/Spinner';
 import { DateRange, Detail, dayRange } from './filters';
 import styles from './Admin.module.css';
 
+/** Friendly names for events whose code is not self-explanatory. */
+const EVENT_LABELS: Record<string, string> = {
+  'report.exported': 'Exportación de reporte (CSV)',
+};
 const PAGE = 50;
 
 export const actorLabel = (actor: AuditItem['actor']): string => {
@@ -132,7 +136,7 @@ export function Auditoria() {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td>{formatDateTime(item.createdAt)}</td>
-                    <td>{item.type}</td>
+                    <td>{EVENT_LABELS[item.type] ?? item.type}</td>
                     <td>{actorLabel(item.actor)}</td>
                     <td>
                       <Detail detail={item.detail} />

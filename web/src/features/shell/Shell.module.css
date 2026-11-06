@@ -9,11 +9,12 @@
   gap: 1rem;
   padding: 0.6rem 1rem;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid var(--primary);
 }
 
 .brand {
   font-size: 1.1rem;
+  color: var(--primary-dark);
 }
 
 .nav {
@@ -28,11 +29,16 @@
   border-radius: var(--radius);
   text-decoration: none;
   color: var(--text);
+  transition: background-color var(--transition);
+}
+
+.link:hover {
+  background: var(--primary-light);
 }
 
 .link[aria-current='page'] {
-  background: var(--info-bg);
-  color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
   font-weight: 600;
 }
 

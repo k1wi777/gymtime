@@ -602,6 +602,203 @@ export interface paths {
         patch: operations["PeriodsController_updateException"];
         trace?: never;
     };
+    "/reports/alarms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alarms of the range
+         * @description One row per alarm and a summary by way of closure; the student and degree filters do not apply (400).
+         */
+        get: operations["ReportsController_alarms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Absences and compliance
+         * @description Obligations (students owed at occurrences that ended, outside days without service, with a validity open at the start), attended and the percentage; null without obligations.
+         */
+        get: operations["ReportsController_attendance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entries per hour and weekday, with the peaks
+         * @description Entries (not simultaneous occupancy), by the Bogota hour and weekday of the entry. The range is by the date of the occurrence.
+         */
+        get: operations["ReportsController_flow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/late": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Late arrivals
+         * @description Fingerprint entries at least one full minute after the start; manual entries are counted apart.
+         */
+        get: operations["ReportsController_late"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filter options: degrees, schedules, active period, default range */
+        get: operations["ReportsController_options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Data quality
+         * @description Sessions with a manual entry or exit, unregistered, and open ones in finished occurrences. `meta.estados` lists the states counted.
+         */
+        get: operations["ReportsController_quality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/stay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Average stay
+         * @description Average of exit minus entry of the closed sessions; unregistered and open ones are counted apart.
+         */
+        get: operations["ReportsController_stay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/students/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail of one student
+         * @description Every occurrence the student owed in the range, with the result, entry, exit, delay and stay.
+         */
+        get: operations["ReportsController_studentDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Administrator summary: today, week, period and alerts
+         * @description Attendance counts only occurrences that already ended; the alerts are the alarm, the reader, open sessions of finished occurrences and unregistered exits of the last 7 days.
+         */
+        get: operations["ReportsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{kind}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a report as CSV (audited)
+         * @description UTF-8 with BOM, `;` separator, decimal comma, Bogota dates, same columns, filters and order as the JSON. Contains personal data: it is written to the audit trail (`report.exported`) before the file is delivered.
+         */
+        get: operations["ReportsController_export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schedules": {
         parameters: {
             query?: never;
@@ -998,6 +1195,12 @@ export interface components {
             temporaryPassword: string;
             username: string;
         };
+        AlarmByClosureDto: {
+            all_exited: number;
+            button: number;
+            cli: number;
+            timeout: number;
+        };
         AlarmDataDto: {
             /** @enum {string|null} */
             closedBy: "all_exited" | "button" | "cli" | "timeout" | null;
@@ -1052,6 +1255,30 @@ export interface components {
             reason: "END_BEEP" | "PENDING_EXIT" | "MANUAL" | "TEST" | "CLEARED" | null;
             /** Format: date-time */
             startedAt: string | null;
+        };
+        AlarmSummaryDto: {
+            averageMinutes: number | null;
+            byClosure: components["schemas"]["AlarmByClosureDto"];
+            closed: number;
+            closedSessions: number;
+            /** @description Still without an end */
+            open: number;
+            total: number;
+            /** @description Minutes, closed alarms only */
+            totalMinutes: number;
+        };
+        AlarmsReportDto: {
+            columns: components["schemas"]["ReportColumnDto"][];
+            filters: components["schemas"]["ReportFiltersDto"];
+            /** @description Totals and the definitions the report applied */
+            meta: {
+                [key: string]: unknown;
+            };
+            /** @description One object per row keyed by column key; `id` (when present) is the row student, for the detail */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            summary: components["schemas"]["AlarmSummaryDto"];
         };
         ApiErrorDto: {
             /** @description Stable error code, when there is one */
@@ -1287,6 +1514,15 @@ export interface components {
             /** @description Case-insensitive, 3-50 chars: a-z, 0-9, dot, dash, underscore */
             username: string;
         };
+        DateBucketDto: {
+            count: number;
+            /** @example 2026-03-02 */
+            date: string;
+        };
+        DefaultRangeDto: {
+            from: string;
+            to: string;
+        };
         DeviceConnectedDataDto: {
             deviceId: string;
             firmwareVersion: string;
@@ -1363,6 +1599,26 @@ export interface components {
             exception: components["schemas"]["ServiceExceptionDto"];
             regeneration: components["schemas"]["RegenerationDto"];
         };
+        FlowReportDto: {
+            /** @description All 24 Bogota hours */
+            byHour: components["schemas"]["HourBucketDto"][];
+            /** @description 1 = Monday ... 7 */
+            byWeekday: components["schemas"]["WeekdayBucketDto"][];
+            columns: components["schemas"]["ReportColumnDto"][];
+            distinctStudents: number;
+            filters: components["schemas"]["ReportFiltersDto"];
+            /** @description Totals and the definitions the report applied */
+            meta: {
+                [key: string]: unknown;
+            };
+            peaks: components["schemas"]["PeaksDto"];
+            /** @description One object per row keyed by column key; `id` (when present) is the row student, for the detail */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** @description Entries of the range */
+            total: number;
+        };
         HealthDto: {
             /** @enum {string} */
             database: "up" | "down";
@@ -1388,6 +1644,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+        };
+        HourBucketDto: {
+            count: number;
+            hour: number;
         };
         ImportDto: {
             /** @description CSV text (at most 1 MB, 5000 rows) */
@@ -1463,6 +1723,25 @@ export interface components {
             id: string;
             instance: components["schemas"]["SessionInstanceDto"];
             student: components["schemas"]["SessionStudentDto"];
+        };
+        OptionsPeriodDto: {
+            /** @example 2026-05-29 */
+            endDate: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @example 2026-02-02 */
+            startDate: string;
+        };
+        OptionsScheduleDto: {
+            /** @example 19:00:00 */
+            endTime: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @example 18:00:00 */
+            startTime: string;
+            weekday: number | null;
         };
         OrderItemDto: {
             actor: components["schemas"]["HistoryActorDto"];
@@ -1567,6 +1846,11 @@ export interface components {
             /** @description Matches before pagination */
             total: number;
         };
+        PeaksDto: {
+            dates: components["schemas"]["DateBucketDto"][];
+            hours: components["schemas"]["HourBucketDto"][];
+            weekdays: components["schemas"]["WeekdayBucketDto"][];
+        };
         PeriodResponseDto: {
             /** @description At most one period is active */
             active: boolean;
@@ -1619,6 +1903,58 @@ export interface components {
             kept: number;
             /** @description Future occurrences moved to the new hours */
             updated: number;
+        };
+        ReportColumnDto: {
+            /** @example obligations */
+            key: string;
+            /** @example Obligaciones */
+            label: string;
+            /** @enum {string} */
+            type: "text" | "int" | "decimal" | "percent" | "datetime" | "date";
+        };
+        ReportFiltersDto: {
+            /**
+             * @description Bogota date, inclusive
+             * @example 2026-02-02
+             */
+            from: string;
+            program?: string;
+            /** Format: uuid */
+            scheduleId?: string;
+            /** Format: uuid */
+            studentId?: string;
+            /**
+             * @description Bogota date, inclusive
+             * @example 2026-05-29
+             */
+            to: string;
+        };
+        ReportOptionsDto: {
+            defaultRange: components["schemas"]["DefaultRangeDto"];
+            /** @example 366 */
+            maxRangeDays: number;
+            period: components["schemas"]["OptionsPeriodDto"] | null;
+            /** @description Distinct degrees, sorted */
+            programs: string[];
+            schedules: components["schemas"]["OptionsScheduleDto"][];
+        };
+        ReportStudentDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            program: string | null;
+        };
+        ReportTableDto: {
+            columns: components["schemas"]["ReportColumnDto"][];
+            filters: components["schemas"]["ReportFiltersDto"];
+            /** @description Totals and the definitions the report applied */
+            meta: {
+                [key: string]: unknown;
+            };
+            /** @description One object per row keyed by column key; `id` (when present) is the row student, for the detail */
+            rows: {
+                [key: string]: unknown;
+            }[];
         };
         ResolveResponseDto: {
             occurrence: components["schemas"]["ResolvedOccurrenceDto"] | null;
@@ -1804,6 +2140,19 @@ export interface components {
             /** @description Target device; defaults to the only online device */
             deviceId?: string;
         };
+        StudentDetailDto: {
+            columns: components["schemas"]["ReportColumnDto"][];
+            filters: components["schemas"]["ReportFiltersDto"];
+            /** @description Totals and the definitions the report applied */
+            meta: {
+                [key: string]: unknown;
+            };
+            /** @description One object per row keyed by column key; `id` (when present) is the row student, for the detail */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            student: components["schemas"]["ReportStudentDto"];
+        };
         StudentResponseDto: {
             active: boolean;
             /** Format: date-time */
@@ -1821,6 +2170,68 @@ export interface components {
             phone: string | null;
             /** @description Degree (carrera) */
             program: string | null;
+        };
+        SummaryAlertsDto: {
+            alarmOn: boolean;
+            device: components["schemas"]["SummaryDeviceDto"];
+            /** @description Sessions still open in occurrences that ended */
+            staleOpen: number;
+            /** @description `no_registrada` sessions of the last 7 days */
+            unregistered7d: number;
+        };
+        SummaryDayDto: {
+            attended: number;
+            /** @description 0-100, null without obligations */
+            compliance: number | null;
+            /** @description Entries of the occurrences in the range */
+            entries: number;
+            /** @description Students owed at occurrences already ended */
+            obligations: number;
+        };
+        SummaryDeviceDto: {
+            /** @description A device has connected at least once */
+            known: boolean;
+            online: boolean;
+        };
+        SummaryDto: {
+            alerts: components["schemas"]["SummaryAlertsDto"];
+            /**
+             * @description Today in Bogota
+             * @example 2026-03-04
+             */
+            date: string;
+            period: components["schemas"]["SummaryPeriodDto"] | null;
+            today: components["schemas"]["SummaryTodayDto"];
+            /** @description Monday up to today */
+            week: components["schemas"]["SummaryDayDto"];
+            /**
+             * @description Monday of this week
+             * @example 2026-03-02
+             */
+            weekStart: string;
+        };
+        SummaryPeriodDto: {
+            attended: number;
+            /** @description 0-100, null without obligations */
+            compliance: number | null;
+            endDate: string;
+            /** @description Entries of the occurrences in the range */
+            entries: number;
+            name: string;
+            /** @description Students owed at occurrences already ended */
+            obligations: number;
+            startDate: string;
+        };
+        SummaryTodayDto: {
+            attended: number;
+            /** @description 0-100, null without obligations */
+            compliance: number | null;
+            /** @description Entries of the occurrences in the range */
+            entries: number;
+            /** @description People inside right now */
+            inside: number;
+            /** @description Students owed at occurrences already ended */
+            obligations: number;
         };
         SyncResultDto: {
             /** @description Chunks acknowledged by the reader */
@@ -1932,6 +2343,10 @@ export interface components {
             name: string;
             /** @example 18:00:00 */
             startTime: string;
+            weekday: number;
+        };
+        WeekdayBucketDto: {
+            count: number;
             weekday: number;
         };
     };
@@ -3787,6 +4202,561 @@ export interface operations {
             };
             /** @description PERIOD_NOT_FOUND or EXCEPTION_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_alarms: {
+        parameters: {
+            query?: {
+                dir?: "asc" | "desc";
+                sort?: unknown;
+                scheduleId?: unknown;
+                to?: unknown;
+                from?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlarmsReportDto"];
+                };
+            };
+            /** @description Invalid filters or range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_attendance: {
+        parameters: {
+            query?: {
+                groupBy?: "student" | "schedule" | "month";
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTableDto"];
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_flow: {
+        parameters: {
+            query?: {
+                top?: number;
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowReportDto"];
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_late: {
+        parameters: {
+            query?: {
+                groupBy?: "student" | "schedule";
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTableDto"];
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOptionsDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_quality: {
+        parameters: {
+            query?: {
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTableDto"];
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_stay: {
+        parameters: {
+            query?: {
+                groupBy?: "student" | "schedule" | "month";
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportTableDto"];
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_studentDetail: {
+        parameters: {
+            query?: {
+                dir?: "asc" | "desc";
+                sort?: unknown;
+                scheduleId?: unknown;
+                to?: unknown;
+                from?: unknown;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentDetailDto"];
+                };
+            };
+            /** @description Invalid filters or range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description The student does not exist */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReportsController_export: {
+        parameters: {
+            query?: {
+                groupBy?: "student" | "schedule" | "month";
+                top?: number;
+                /** @description Bogota date, inclusive */
+                from?: unknown;
+                /** @description Bogota date, inclusive */
+                to?: unknown;
+                scheduleId?: unknown;
+                /** @description Exact degree, ignoring case and accents */
+                program?: unknown;
+                studentId?: unknown;
+                /** @description Column key to sort by */
+                sort?: unknown;
+                dir?: "asc" | "desc";
+            };
+            header?: never;
+            path: {
+                kind: "flow" | "attendance" | "stay" | "late" | "alarms" | "quality";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The CSV file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Invalid filters (INVALID_RANGE, RANGE_TOO_WIDE) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description REPORT_TOO_LARGE: narrow the range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

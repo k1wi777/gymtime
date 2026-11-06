@@ -231,6 +231,25 @@ export class AttendanceService {
     return this.sessions.list(filter).then((rows) => this.compose(rows));
   }
 
+  /**
+   * Raw sessions of these occurrences (optionally of some students) for the
+   * reports: no student or occurrence is composed, only the rows.
+   */
+  listForReport(
+    instanceIds: string[],
+    studentIds?: string[],
+  ): Promise<AttendanceSession[]> {
+    if (instanceIds.length === 0 || studentIds?.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.sessions.list({ instanceIds, studentIds });
+  }
+
+  /** How many sessions match the filter, ignoring pagination. */
+  countSessions(filter: AttendanceFilter): Promise<number> {
+    return this.sessions.count(filter);
+  }
+
   /** Occurrences, among these, that have sessions (history that must be kept). */
   async instanceIdsWithSessions(instanceIds: string[]): Promise<string[]> {
     if (instanceIds.length === 0) return [];

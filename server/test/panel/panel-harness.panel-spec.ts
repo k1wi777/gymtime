@@ -37,6 +37,10 @@ type InMemoryApp = Awaited<ReturnType<typeof buildInMemoryApp>>;
 const { DeviceClient } = await import('@gymtime/simulator');
 const { fastHasher } = await import('../../src/auth/testing.js');
 const { SyncService } = await import('../../src/sync/sync.service.js');
+const { buildSemester, SEMESTER_NOW } =
+  await import('../../src/reports/seed/semester.js');
+const { loadSemesterInMemory } =
+  await import('../../src/reports/seed/load-memory.js');
 
 type Device = InstanceType<typeof DeviceClient>;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -127,11 +131,11 @@ async function seed(app: InMemoryApp): Promise<Omit<World, 'app' | 'device'>> {
   return { students: {}, scheduleId: '', laterScheduleId: '' };
 }
 
-async function build(previous?: World): Promise<World> {
+async function build(previous?: World, startAt?: Date): Promise<World> {
   const app = await buildInMemoryApp({
     port: API_PORT,
     host: '::',
-    now: previous ? previous.app.clock.now() : bogotaAt('10:00'),
+    now: previous ? previous.app.clock.now() : (startAt ?? bogotaAt('10:00')),
     repositories: previous?.app.repositories,
     enrollTimeoutSec: 60,
     alarm: { tickMs: 50 },
@@ -217,6 +221,23 @@ async function freshWorld(): Promise<World> {
   return w;
 }
 
+/**
+ * The simulated semester (reports, H10): a world whose clock is the end of the
+ * semester and whose repositories hold the deterministic dataset. The browser
+ * tests compare the panel against `semester.expected.json`.
+ */
+async function semesterWorld(): Promise<World> {
+  if (world) {
+    await world.device?.stop();
+    await shutdown(world.app);
+    world = null;
+  }
+  const w = await build(undefined, SEMESTER_NOW);
+  loadSemesterInMemory(buildSemester(), w.app.repositories);
+  world = w;
+  return w;
+}
+
 async function slotOf(w: World, studentId: string): Promise<number> {
   const sync = w.app.app.get(SyncService);
   for (const slot of w.device?.reader.slots ?? []) {
@@ -251,6 +272,10 @@ async function control(path: string, body: any): Promise<unknown> {
         laterScheduleId: w.laterScheduleId,
         password: PASSWORD,
       };
+    }
+    case '/control/semester': {
+      await semesterWorld();
+      return { now: SEMESTER_NOW.toISOString(), password: PASSWORD };
     }
     case '/control/scan': {
       const w = world!;

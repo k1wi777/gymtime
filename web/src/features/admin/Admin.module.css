@@ -50,7 +50,7 @@
 .slot {
   display: flex;
   flex-direction: column;
-  background: var(--info-bg);
+  background: var(--primary-light);
   border-radius: 6px;
   padding: 0.25rem 0.4rem;
 }
@@ -98,7 +98,7 @@
 .password {
   font-family: ui-monospace, monospace;
   font-size: 1.2rem;
-  background: var(--info-bg);
+  background: var(--primary-light);
   padding: 0.4rem 0.6rem;
   border-radius: var(--radius);
   user-select: all;

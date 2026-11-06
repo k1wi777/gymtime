@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { landingFor } from '@/lib/nav';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import { useAuth } from '@/auth/auth-provider';
@@ -35,7 +36,7 @@ export default function ChangePasswordPage() {
           }),
         );
         setAccount(updated);
-        router.replace('/ahora');
+        router.replace(landingFor(updated.role));
       } catch (error) {
         setFailure(describeError(error));
       }

@@ -81,6 +81,21 @@ export class PrismaInstancesRepository implements InstancesRepository {
     return rows.map(toDomain);
   }
 
+  async findByDates(from: string, to: string, scheduleIds?: string[]) {
+    if (scheduleIds && scheduleIds.length === 0) return [];
+    const rows = await this.prisma.scheduleInstance.findMany({
+      where: {
+        date: {
+          gte: new Date(`${from}T00:00:00Z`),
+          lte: new Date(`${to}T00:00:00Z`),
+        },
+        ...(scheduleIds && { scheduleId: { in: scheduleIds } }),
+      },
+      orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toDomain);
+  }
+
   async findByIds(ids: string[]) {
     if (ids.length === 0) return [];
     const rows = await this.prisma.scheduleInstance.findMany({

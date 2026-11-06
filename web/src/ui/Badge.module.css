@@ -8,7 +8,7 @@
 }
 
 .neutral {
-  background: #e8ecf0;
+  background: var(--border);
   color: var(--text);
 }
 

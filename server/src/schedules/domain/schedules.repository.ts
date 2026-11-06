@@ -50,6 +50,14 @@ export interface SchedulesRepository {
   ): Promise<Map<string, string[]>>;
   /** Every interval of a schedule, closed ones included, oldest first. */
   listAssignments(scheduleId: string): Promise<ScheduleAssignment[]>;
+  /**
+   * Every interval (closed ones included) of these schedules in one query,
+   * optionally only of some students; oldest first.
+   */
+  listAssignmentsFor(
+    scheduleIds: string[],
+    studentIds?: string[],
+  ): Promise<ScheduleAssignment[]>;
 }
 
 export const SCHEDULES_REPOSITORY = Symbol('SCHEDULES_REPOSITORY');

@@ -1,0 +1,180 @@
+.page {
+  display: grid;
+  gap: 1rem;
+}
+
+.filters {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: end;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.tab:hover {
+  background: var(--primary-light);
+  color: var(--text);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--primary-dark);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.cardHeader h3 {
+  margin: 0;
+}
+
+.cardHeader p {
+  margin: 0.15rem 0 0;
+}
+
+/* The table equivalent of a chart: closed on wide screens until asked for. */
+.equivalent {
+  display: none;
+  margin-top: 0.75rem;
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.equivalent[data-open='true'] {
+  display: block;
+}
+
+@media (max-width: 40rem) {
+  .equivalent {
+    display: block;
+  }
+}
+
+.plainTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.plainTable th,
+.plainTable td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition);
+}
+
+.stat:hover {
+  box-shadow: 0 2px 8px rgb(15 90 43 / 18%);
+}
+
+.stat h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.big {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.alerts {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.matches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.dl dt {
+  color: var(--muted);
+}
+
+.dl dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .stat {
+    transition: none;
+  }
+}

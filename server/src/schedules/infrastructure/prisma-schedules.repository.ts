@@ -154,6 +154,19 @@ export class PrismaSchedulesRepository implements SchedulesRepository {
       orderBy: [{ validFrom: 'asc' }, { id: 'asc' }],
     });
   }
+
+  listAssignmentsFor(scheduleIds: string[], studentIds?: string[]) {
+    if (scheduleIds.length === 0 || studentIds?.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.scheduleStudent.findMany({
+      where: {
+        scheduleId: { in: scheduleIds },
+        ...(studentIds && { studentId: { in: studentIds } }),
+      },
+      orderBy: [{ validFrom: 'asc' }, { id: 'asc' }],
+    });
+  }
 }
 
 /** Interval active at `at`: started and not yet closed. */

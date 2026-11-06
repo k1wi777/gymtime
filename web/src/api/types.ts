@@ -48,3 +48,11 @@ export type AttendanceHistoryItem = Schemas['AttendanceHistoryItemDto'];
 export type AuditItem = Schemas['AuditItemDto'];
 export type OrderItem = Schemas['OrderItemDto'];
 export type AlarmHistoryItem = Schemas['AlarmHistoryItemDto'];
+
+export type ReportTable = Schemas['ReportTableDto'];
+export type ReportColumn = Schemas['ReportColumnDto'];
+export type FlowReport = Schemas['FlowReportDto'];
+export type AlarmsReport = Schemas['AlarmsReportDto'];
+export type ReportOptions = Schemas['ReportOptionsDto'];
+export type StudentDetail = Schemas['StudentDetailDto'];
+export type ReportsSummary = Schemas['SummaryDto'];
