@@ -66,9 +66,9 @@ describe('validateEnv', () => {
     });
     expect(env.ALARM_BEEP_SECONDS).toBe(3);
     expect(env.ALARM_TIMEOUT_MINUTES).toBe(10);
-    expect(() =>
-      validateEnv({ ...valid(), ALARM_BEEP_SECONDS: '0' }),
-    ).toThrow(/ALARM_BEEP_SECONDS/);
+    expect(() => validateEnv({ ...valid(), ALARM_BEEP_SECONDS: '0' })).toThrow(
+      /ALARM_BEEP_SECONDS/,
+    );
     expect(() =>
       validateEnv({ ...valid(), ALARM_TIMEOUT_MINUTES: '0' }),
     ).toThrow(/ALARM_TIMEOUT_MINUTES/);
@@ -97,5 +97,117 @@ describe('validateEnv', () => {
     expect(() => validateEnv(raw)).toThrow(
       /ADMIN_API_KEY: must be at least 16/,
     );
+  });
+
+  describe('panel accounts (R24)', () => {
+    it('defaults to strict cookies, no cross origin and the documented limits', () => {
+      const env = validateEnv(valid());
+      expect(env.COOKIE_DOMAIN).toBeUndefined();
+      expect(env.FIRST_ADMIN_USERNAME).toBeUndefined();
+      expect(env).toMatchObject({
+        COOKIE_SAMESITE: 'Strict',
+        CORS_ORIGINS: [],
+        SESSION_IDLE_MINUTES: 30,
+        SESSION_MAX_HOURS: 8,
+        LOGIN_MAX_ATTEMPTS: 5,
+        LOGIN_LOCK_MINUTES: 15,
+        LOGIN_RATE_LIMIT: 10,
+        TRUST_PROXY: 0,
+      });
+    });
+
+    it('treats empty assignments as unset', () => {
+      const env = validateEnv({
+        ...valid(),
+        COOKIE_DOMAIN: '',
+        COOKIE_SAMESITE: '',
+        CORS_ORIGINS: '',
+        FIRST_ADMIN_USERNAME: '',
+        FIRST_ADMIN_PASSWORD: '',
+      });
+      expect(env.COOKIE_SAMESITE).toBe('Strict');
+      expect(env.CORS_ORIGINS).toEqual([]);
+    });
+
+    it('parses a list of exact origins', () => {
+      const env = validateEnv({
+        ...valid(),
+        CORS_ORIGINS: 'http://localhost:3000, https://panel.example.org',
+      });
+      expect(env.CORS_ORIGINS).toEqual([
+        'http://localhost:3000',
+        'https://panel.example.org',
+      ]);
+    });
+
+    it.each([
+      '*',
+      'http://localhost:3000/',
+      'http://localhost:3000/panel',
+      'localhost:3000',
+      'ftp://x.org',
+    ])('rejects %s as an origin', (value) => {
+      expect(() => validateEnv({ ...valid(), CORS_ORIGINS: value })).toThrow(
+        /CORS_ORIGINS: .*exact origin/,
+      );
+    });
+
+    it('requires production for SameSite=None', () => {
+      const raw = { ...valid(), COOKIE_SAMESITE: 'None' };
+      expect(() => validateEnv(raw)).toThrow(/COOKIE_SAMESITE: None requires/);
+      expect(
+        validateEnv({ ...raw, NODE_ENV: 'production' }).COOKIE_SAMESITE,
+      ).toBe('None');
+    });
+
+    it('rejects an unknown SameSite value', () => {
+      expect(() =>
+        validateEnv({ ...valid(), COOKIE_SAMESITE: 'Maybe' }),
+      ).toThrow(/COOKIE_SAMESITE/);
+    });
+
+    it('accepts the first administrator only as a valid pair', () => {
+      const pair = {
+        FIRST_ADMIN_USERNAME: 'Admin',
+        FIRST_ADMIN_PASSWORD: 'a-long-enough-password',
+      };
+      expect(validateEnv({ ...valid(), ...pair })).toMatchObject(pair);
+      expect(() =>
+        validateEnv({ ...valid(), FIRST_ADMIN_USERNAME: 'admin' }),
+      ).toThrow(/FIRST_ADMIN_PASSWORD.*go together/s);
+      expect(() =>
+        validateEnv({
+          ...valid(),
+          FIRST_ADMIN_PASSWORD: 'a-long-enough-password',
+        }),
+      ).toThrow(/go together/);
+    });
+
+    it('applies the password policy without echoing the password', () => {
+      const raw = {
+        ...valid(),
+        FIRST_ADMIN_USERNAME: 'admin',
+        FIRST_ADMIN_PASSWORD: 'short',
+      };
+      expect(() => validateEnv(raw)).toThrow(
+        /FIRST_ADMIN_PASSWORD: .*too_short/,
+      );
+      try {
+        validateEnv(raw);
+      } catch (error) {
+        expect(String(error)).not.toContain('short\n');
+        expect(String(error)).not.toMatch(/FIRST_ADMIN_PASSWORD: short/);
+      }
+    });
+
+    it('rejects a first administrator password equal to the username', () => {
+      expect(() =>
+        validateEnv({
+          ...valid(),
+          FIRST_ADMIN_USERNAME: 'administrador',
+          FIRST_ADMIN_PASSWORD: 'Administrador',
+        }),
+      ).toThrow(/same_as_username/);
+    });
   });
 });

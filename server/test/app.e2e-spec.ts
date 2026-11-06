@@ -116,6 +116,15 @@ describe('App (e2e)', () => {
       version: '0.0.1',
     });
     expect(res.body.paths).toHaveProperty('/health');
+    expect(res.body.components.securitySchemes.session).toMatchObject({
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'gt_session',
+    });
+    expect(res.body.paths['/students'].get.security).toEqual([
+      { 'admin-key': [] },
+      { session: [] },
+    ]);
     expect(res.body.components.securitySchemes['admin-key']).toMatchObject({
       type: 'apiKey',
       in: 'header',

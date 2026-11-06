@@ -8,22 +8,18 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { z } from 'zod';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
 import {
   EnrollmentResponseDto,
@@ -33,11 +29,10 @@ import {
 } from './dto/enrollment.dto.js';
 import { EnrollmentError } from './enrollment.errors.js';
 import { EnrollmentService } from './enrollment.service.js';
+import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 @ApiTags('enrollments')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller()
 export class EnrollmentsController {
   constructor(private readonly enrollments: EnrollmentService) {}

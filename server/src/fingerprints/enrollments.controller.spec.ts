@@ -1,8 +1,7 @@
-import { ConfigService } from '@nestjs/config';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { authTestProviders } from '../auth/testing.js';
 import { EnrollmentService } from './enrollment.service.js';
 import { EnrollmentsController } from './enrollments.controller.js';
 import { buildEnrollmentFixture } from './testing.js';
@@ -21,8 +20,7 @@ describe('EnrollmentsController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [EnrollmentsController],
       providers: [
-        ApiKeyGuard,
-        { provide: ConfigService, useValue: { get: () => KEY } },
+        ...authTestProviders(),
         {
           provide: EnrollmentService,
           useValue: fx.service,

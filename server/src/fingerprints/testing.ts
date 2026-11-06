@@ -1,3 +1,4 @@
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { randomBytes } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import { DevicesService } from '../devices/devices.service.js';
@@ -21,7 +22,7 @@ export function buildEnrollmentFixture(
   const clock: Clock = { now: () => new Date(current) };
   const fingerprints = new InMemoryFingerprintsRepository();
   const enrollments = new InMemoryEnrollmentsRepository(fingerprints);
-  const students = buildStudentsService().service;
+  const { service: students, eventLog } = buildStudentsService();
   const devices = new DevicesService(
     new InMemoryDevicesRepository(),
     new InMemoryDeviceCommandsRepository(),
@@ -40,10 +41,12 @@ export function buildEnrollmentFixture(
     fingerprints,
     defaultFingerprintsConfig,
     clock,
+    new EventLogService(eventLog),
   );
   return {
     service,
     students,
+    eventLog,
     devices,
     send,
     cipher,

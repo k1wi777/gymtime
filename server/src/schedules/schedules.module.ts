@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
 import type { Env } from '../config/env.schema.js';
 import { StudentsModule } from '../students/students.module.js';
@@ -33,7 +32,6 @@ import { SchedulesService } from './schedules.service.js';
     { provide: CLOCK, useValue: systemClock },
     { provide: SCHEDULES_REPOSITORY, useClass: PrismaSchedulesRepository },
     { provide: INSTANCES_REPOSITORY, useClass: PrismaInstancesRepository },
-    ApiKeyGuard,
     InstancesService,
     SchedulesService,
   ],

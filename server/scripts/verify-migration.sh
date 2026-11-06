@@ -136,6 +136,13 @@ expect "every assignment got an id" "3" "SELECT count(DISTINCT id) FROM schedule
 expect "old event_log rows are attributed to system" "system|" \
   "SELECT actor_type || '|' || coalesce(actor_id, '') FROM event_log"
 
+expect "panel accounts and sessions start empty (H7)" "0|0" \
+  "SELECT (SELECT count(*) FROM panel_users) || '|' || (SELECT count(*) FROM auth_sessions)"
+sql -c "INSERT INTO panel_users (id, name, username, password_hash, role) VALUES ('00000000-0000-4000-8000-0000000000c1', 'T', 'tester', 'x', 'admin')" >/dev/null
+sql -c "INSERT INTO auth_sessions (user_id, token_hash, expires_at) VALUES ('00000000-0000-4000-8000-0000000000c1', 'h', now())" >/dev/null
+sql -c "DELETE FROM panel_users WHERE username = 'tester'" >/dev/null
+expect "deleting an account deletes its sessions (H7)" "0" "SELECT count(*) FROM auth_sessions"
+
 echo "== Constraints =="
 if sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null 2>&1; then
   fail "a second active assignment of the same pair was accepted"

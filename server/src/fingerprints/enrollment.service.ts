@@ -21,6 +21,7 @@ import {
   FINGERPRINTS_CONFIG,
   type FingerprintsConfig,
 } from './fingerprints.config.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { validateTemplate } from './template-validator.js';
 
@@ -60,6 +61,7 @@ export class EnrollmentService {
     private readonly fingerprints: FingerprintsRepository,
     @Inject(FINGERPRINTS_CONFIG) private readonly config: FingerprintsConfig,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly eventLog: EventLogService,
   ) {}
 
   /**
@@ -86,7 +88,15 @@ export class EnrollmentService {
         'No device available; connect one or pass deviceId',
       );
     }
-    return this.deviceLock.run(target, () => this.startOn(student, target));
+    const enrollment = await this.deviceLock.run(target, () =>
+      this.startOn(student, target),
+    );
+    await this.eventLog.record('enrollment.started', {
+      enrollmentId: enrollment.id,
+      studentId: student.id,
+      deviceId: target,
+    });
+    return enrollment;
   }
 
   async cancel(id: string): Promise<Enrollment> {
@@ -104,6 +114,11 @@ export class EnrollmentService {
     }
     this.logger.log({ event: 'enrollment_cancelled', enrollmentId: id });
     void this.sendCancel(cancelled);
+    await this.eventLog.record('enrollment.cancelled', {
+      enrollmentId: cancelled.id,
+      studentId: cancelled.studentId,
+      deviceId: cancelled.deviceId,
+    });
     return cancelled;
   }
 

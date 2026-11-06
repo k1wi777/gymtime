@@ -1,9 +1,14 @@
 import type { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { auditTestProviders } from '../common/audit/testing.js';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import {
+  TEST_ORIGIN,
+  authTestProviders,
+  panelHeaders,
+  signInAs,
+} from '../auth/testing.js';
+import type { TestingModule } from '@nestjs/testing';
 import { CLOCK } from '../common/time/clock.js';
 import { STUDENTS_REPOSITORY } from '../students/domain/students.repository.js';
 import { InMemoryStudentsRepository } from '../students/infrastructure/in-memory-students.repository.js';
@@ -23,18 +28,19 @@ const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000';
 
 describe('SchedulesController (HTTP)', () => {
   let app: INestApplication;
+  let moduleRef: TestingModule;
   const http = () => request(app.getHttpServer());
   const auth = { 'x-api-key': KEY };
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       controllers: [SchedulesController],
       providers: [
+        ...authTestProviders({ corsOrigins: [TEST_ORIGIN] }),
         ...auditTestProviders,
         SchedulesService,
         InstancesService,
         StudentsService,
-        ApiKeyGuard,
         { provide: CLOCK, useValue: { now: () => MONDAY_9AM_BOGOTA } },
         { provide: SCHEDULES_CONFIG, useValue: testSchedulesConfig },
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
@@ -46,7 +52,6 @@ describe('SchedulesController (HTTP)', () => {
           provide: INSTANCES_REPOSITORY,
           useClass: InMemoryInstancesRepository,
         },
-        { provide: ConfigService, useValue: { get: () => KEY } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -64,6 +69,36 @@ describe('SchedulesController (HTTP)', () => {
     await http()
       .put(`/schedules/${UNKNOWN_ID}/students/${UNKNOWN_ID}`)
       .expect(401);
+  });
+
+  it('lets an assistant read but only an admin create and assign (R16)', async () => {
+    const assistant = await signInAs(moduleRef, 'ana', 'asistente');
+    const admin = await signInAs(moduleRef, 'boss', 'admin');
+    const write = (cookie: string) => ({ cookie, headers: panelHeaders() });
+    const as = write(assistant);
+    await http().get('/schedules').set('Cookie', assistant).expect(200);
+    await http()
+      .post('/schedules')
+      .set('Cookie', as.cookie)
+      .set(as.headers)
+      .send(weekly)
+      .expect(403);
+    await http()
+      .put(`/schedules/${UNKNOWN_ID}/students/${UNKNOWN_ID}`)
+      .set('Cookie', as.cookie)
+      .set(as.headers)
+      .expect(403);
+    await http()
+      .delete(`/schedules/${UNKNOWN_ID}/students/${UNKNOWN_ID}`)
+      .set('Cookie', as.cookie)
+      .set(as.headers)
+      .expect(403);
+    await http()
+      .post('/schedules')
+      .set('Cookie', admin)
+      .set(panelHeaders())
+      .send(weekly)
+      .expect(201);
   });
 
   it('creates, lists and shows a schedule', async () => {

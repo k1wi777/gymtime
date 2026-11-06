@@ -16,7 +16,7 @@ Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQ
 
 ## Puesta en marcha
 
-Requisitos: Node 24 (`.nvmrc`), npm y Docker con Compose.
+Requisitos: Node 24.7 o superior (`.nvmrc`; el hash de contraseñas usa `crypto.argon2` de Node), npm y Docker con Compose.
 
 ```bash
 nvm use                      # Node 24
@@ -37,9 +37,10 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Pantalla del lector: `DISPLAY_COLS` (16) y `DISPLAY_ROWS` (2) fijan el tamaño del LCD y `DISPLAY_RESULT_SECONDS` (3) el tiempo por defecto de un mensaje. Los textos van sin tildes y de 16 caracteres como máximo; ver [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md).
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
-- `GET /events` (SSE con `x-api-key`): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
+- `GET /events` (SSE con `x-api-key` o con la cookie de sesión): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
 - Las órdenes de enrolamiento y de alarma se guardan en `device_commands` antes de enviarse: si el lector está desconectado se entregan al reconectar, con el mismo `id` y en orden.
 - Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
+- Cuentas del panel (roles `asistente` y `admin`, sesión por cookie, bloqueo, CORS y CSRF): variables `COOKIE_*`, `CORS_ORIGINS`, `SESSION_*`, `LOGIN_*`, `TRUST_PROXY` y `FIRST_ADMIN_*` del `.env.example`, descritas en [`docs/autenticacion.md`](docs/autenticacion.md). La CLI y los scripts con `x-api-key` siguen funcionando igual. Para crear el primer administrador define `FIRST_ADMIN_USERNAME` y `FIRST_ADMIN_PASSWORD` antes de arrancar con la tabla de cuentas vacía.
 
 ## Simulador y firmware
 
@@ -137,6 +138,7 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 
 ## Documentación
 
+- [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar los problemas comunes (sección 8).
 - [`docs/protocolo_v0.md`](docs/protocolo_v0.md): protocolo.
@@ -148,5 +150,6 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 
 ## Notas
 
+- El puerto por defecto es 3000; para el desarrollo con el panel en `localhost:3000` y la API en `localhost:3001` define `PORT=3001` (y `GYM_URL` para la CLI).
 - Prisma 7: configuración en `server/prisma.config.ts`, cliente generado en `server/src/generated/` (no versionado) y adaptador `@prisma/adapter-pg`.
 - El índice único parcial de huella activa y el CHECK de `schedules` se escriben a mano en la migración `init`; consérvalos si se regenera.

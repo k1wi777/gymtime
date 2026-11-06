@@ -4,7 +4,7 @@
   "private": true,
   "description": "GymTime attendance and alarm system",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24.7 <25"
   },
   "workspaces": [
     "shared",

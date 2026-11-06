@@ -4,17 +4,13 @@ import {
   Get,
   HttpCode,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiConflictResponse,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { AlarmError } from './domain/alarm.errors.js';
 import { AlarmService } from './alarm.service.js';
 import {
@@ -23,11 +19,10 @@ import {
   toAlarmOffResultDto,
   toAlarmStatusDto,
 } from './dto/alarm.dto.js';
+import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 @ApiTags('alarm')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('alarm')
 export class AlarmController {
   constructor(private readonly alarm: AlarmService) {}

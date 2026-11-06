@@ -5,6 +5,15 @@ import type { AddressInfo } from 'node:net';
 import type { ServerMessage } from '@gymtime/shared';
 import { DeviceClient } from '@gymtime/simulator';
 import { AppModule } from '../../src/app.module.js';
+import { SESSIONS_REPOSITORY } from '../../src/auth/domain/sessions.repository.js';
+import { USERS_REPOSITORY } from '../../src/auth/domain/users.repository.js';
+import { InMemorySessionsRepository } from '../../src/auth/infrastructure/in-memory-sessions.repository.js';
+import { InMemoryUsersRepository } from '../../src/auth/infrastructure/in-memory-users.repository.js';
+import { PasswordHasher } from '../../src/auth/password-hasher.js';
+import { fastHasher } from '../../src/auth/testing.js';
+import { ConfigService } from '@nestjs/config';
+import { configureHttp, httpOptionsFromEnv } from '../../src/http-setup.js';
+import type { Env } from '../../src/config/env.schema.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import {
   ALARM_CONFIG,
@@ -89,6 +98,8 @@ export interface InMemoryRepositories {
   attendance: InMemoryAttendanceRepository;
   alarm: InMemoryAlarmRepository;
   eventLog: InMemoryEventLogRepository;
+  users: InMemoryUsersRepository;
+  sessions: InMemorySessionsRepository;
 }
 
 export interface InMemoryAppOptions {
@@ -119,6 +130,7 @@ export interface InMemoryApp {
 
 function createRepositories(): InMemoryRepositories {
   const fingerprints = new InMemoryFingerprintsRepository();
+  const users = new InMemoryUsersRepository();
   return {
     devices: new InMemoryDevicesRepository(),
     processed: new InMemoryProcessedMessagesRepository(),
@@ -132,6 +144,8 @@ function createRepositories(): InMemoryRepositories {
     attendance: new InMemoryAttendanceRepository(),
     alarm: new InMemoryAlarmRepository(),
     eventLog: new InMemoryEventLogRepository(),
+    users,
+    sessions: new InMemorySessionsRepository(users),
   };
 }
 
@@ -175,6 +189,13 @@ export async function buildInMemoryApp(
     .useValue(repositories.alarm)
     .overrideProvider(EVENT_LOG_REPOSITORY)
     .useValue(repositories.eventLog)
+    .overrideProvider(USERS_REPOSITORY)
+    .useValue(repositories.users)
+    .overrideProvider(SESSIONS_REPOSITORY)
+    .useValue(repositories.sessions)
+    // Same argon2id code with a negligible cost, so the suites stay fast.
+    .overrideProvider(PasswordHasher)
+    .useValue(fastHasher)
     .overrideProvider(ALARM_CONFIG)
     .useValue({ ...defaultAlarmConfig, tickMs: 10, ...options.alarm })
     .overrideProvider(DEVICES_CONFIG)
@@ -204,6 +225,10 @@ export async function buildInMemoryApp(
     });
 
   const app = moduleRef.createNestApplication();
+  configureHttp(
+    app,
+    httpOptionsFromEnv(app.get<ConfigService<Env, true>>(ConfigService)),
+  );
   await app.listen(0, '127.0.0.1');
   await Promise.race([firstPass, delay(1000)]);
   recoverSpy.mockRestore();

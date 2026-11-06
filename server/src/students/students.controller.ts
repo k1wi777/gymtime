@@ -11,22 +11,18 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
 import { DisplayValidationError } from '../common/display/display.errors.js';
 import { DuplicateDocumentError, type Student } from './domain/student.js';
@@ -40,11 +36,10 @@ import {
 } from './dto/student.dto.js';
 import { StudentsService } from './students.service.js';
 import type { z } from 'zod';
+import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 
 @ApiTags('students')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('students')
 export class StudentsController {
   constructor(private readonly students: StudentsService) {}
@@ -104,6 +99,7 @@ export class StudentsController {
   }
 
   @Delete(':id')
+  @Roles('admin')
   @ApiOperation({
     summary: 'Deactivate a student (logical); removes its fingerprint',
   })

@@ -63,4 +63,19 @@ describe('EventLogService (R19, R20)', () => {
     });
     await expect(service.record('x')).resolves.toBeUndefined();
   });
+
+  it('never keeps passwords, hashes or cookies, but keeps session counters', async () => {
+    const repo = new InMemoryEventLogRepository();
+    await new EventLogService(repo).record('auth.test', {
+      userId: 'u1',
+      temporaryPassword: 'x',
+      passwordHash: 'x',
+      tokenHash: 'x',
+      cookie: 'x',
+      session: 'x',
+      authorization: 'x',
+      sessionsClosed: 3,
+    });
+    expect(repo.entries[0].detail).toEqual({ userId: 'u1', sessionsClosed: 3 });
+  });
 });

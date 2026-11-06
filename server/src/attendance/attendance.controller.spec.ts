@@ -1,8 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { authTestProviders } from '../auth/testing.js';
 import { AttendanceController } from './attendance.controller.js';
 import { AttendanceService } from './attendance.service.js';
 import { buildAttendanceFixture } from './testing.js';
@@ -22,8 +21,7 @@ describe('AttendanceController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AttendanceController],
       providers: [
-        ApiKeyGuard,
-        { provide: ConfigService, useValue: { get: () => KEY } },
+        ...authTestProviders(),
         { provide: AttendanceService, useValue: fx.service },
       ],
     }).compile();
@@ -82,7 +80,10 @@ describe('AttendanceController (HTTP)', () => {
       .set(auth)
       .send({ studentId: ana.id, reason: 'entrada manual' })
       .expect(201);
-    expect(entry.body).toMatchObject({ entrySource: 'manual', status: 'abierta' });
+    expect(entry.body).toMatchObject({
+      entrySource: 'manual',
+      status: 'abierta',
+    });
 
     fx.setNow(bogota('10:40'));
     const exit = await http()

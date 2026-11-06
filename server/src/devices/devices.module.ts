@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ConnectionRegistry } from './connection-registry.js';
 import { DeviceGateway } from './device-gateway.js';
 import { DEVICES_CONFIG, defaultDevicesConfig } from './devices.config.js';
@@ -28,7 +27,6 @@ import { OutboundSender } from './outbound-sender.service.js';
       provide: PROCESSED_MESSAGES_REPOSITORY,
       useClass: PrismaProcessedMessagesRepository,
     },
-    ApiKeyGuard,
     ConnectionRegistry,
     DevicesService,
     DisplayService,

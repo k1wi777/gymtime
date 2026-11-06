@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PROTOCOL_VERSION, type ServerMessage } from '@gymtime/shared';
+import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { DevicesService } from '../devices/devices.service.js';
@@ -72,6 +73,7 @@ export class SyncService {
     private readonly students: StudentsService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(SYNC_CONFIG) private readonly config: SyncConfig,
+    private readonly eventLog: EventLogService,
   ) {}
 
   /**
@@ -111,7 +113,17 @@ export class SyncService {
   async syncOnline(reason: SyncReason = 'manual'): Promise<SyncResult> {
     const deviceId = await this.devices.getOnlineDeviceId();
     if (!deviceId) throw new NoDeviceOnlineError();
-    return this.run(deviceId, reason);
+    const result = await this.run(deviceId, reason);
+    // Only the operator's request is audited here; the scheduled and
+    // connection triggers are system activity.
+    if (reason === 'manual') {
+      await this.eventLog.record('sync.triggered', {
+        deviceId,
+        status: result.status,
+        loaded: result.templates,
+      });
+    }
+    return result;
   }
 
   private run(deviceId: string, reason: SyncReason): Promise<SyncResult> {

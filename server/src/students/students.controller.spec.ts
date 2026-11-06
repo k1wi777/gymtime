@@ -1,35 +1,36 @@
-import type { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { ConfigService as Config } from '@nestjs/config';
 import { STUDENTS_REPOSITORY } from './domain/students.repository.js';
 import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
 import { StudentsController } from './students.controller.js';
 import { StudentsService } from './students.service.js';
 import { auditTestProviders } from '../common/audit/testing.js';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import {
+  TEST_ORIGIN,
+  authTestProviders,
+  panelHeaders,
+  signInAs,
+} from '../auth/testing.js';
+import type { TestingModule } from '@nestjs/testing';
 
 const KEY = 'admin-key-1234567890';
 const body = { document: '100', name: 'Ana', consented: true };
 
 describe('StudentsController (HTTP)', () => {
   let app: INestApplication;
+  let moduleRef: TestingModule;
   const http = () => request(app.getHttpServer());
   const auth = { 'x-api-key': KEY };
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       controllers: [StudentsController],
       providers: [
+        ...authTestProviders({ corsOrigins: [TEST_ORIGIN] }),
         ...auditTestProviders,
         StudentsService,
-        ApiKeyGuard,
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
-        {
-          provide: Config,
-          useValue: { get: () => KEY } as unknown as ConfigService,
-        },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -41,6 +42,35 @@ describe('StudentsController (HTTP)', () => {
   it('requires the API key', async () => {
     await http().get('/students').expect(401);
     await http().post('/students').send(body).expect(401);
+  });
+
+  it('lets an assistant operate but only an admin deactivate (R16)', async () => {
+    const assistant = await signInAs(moduleRef, 'ana', 'asistente');
+    const admin = await signInAs(moduleRef, 'boss', 'admin');
+    const created = await http()
+      .post('/students')
+      .set('Cookie', assistant)
+      .set(panelHeaders())
+      .send(body)
+      .expect(201);
+    await http().get('/students').set('Cookie', assistant).expect(200);
+    await http()
+      .patch(`/students/${created.body.id}`)
+      .set('Cookie', assistant)
+      .set(panelHeaders())
+      .send({ name: 'Bea' })
+      .expect(200);
+    const denied = await http()
+      .delete(`/students/${created.body.id}`)
+      .set('Cookie', assistant)
+      .set(panelHeaders())
+      .expect(403);
+    expect(denied.body.code).toBe('FORBIDDEN_ROLE');
+    await http()
+      .delete(`/students/${created.body.id}`)
+      .set('Cookie', admin)
+      .set(panelHeaders())
+      .expect(200);
   });
 
   it('creates, rejects duplicates and validates the body', async () => {

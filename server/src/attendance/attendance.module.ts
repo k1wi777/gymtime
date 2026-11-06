@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { SchedulesModule } from '../schedules/schedules.module.js';
@@ -22,7 +21,6 @@ import { PrismaAttendanceRepository } from './infrastructure/prisma-attendance.r
       provide: ATTENDANCE_REPOSITORY,
       useClass: PrismaAttendanceRepository,
     },
-    ApiKeyGuard,
     AttendanceService,
     AttendanceEventsRegistrar,
   ],

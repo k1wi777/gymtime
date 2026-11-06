@@ -283,3 +283,23 @@ describe('EnrollmentService student deactivation', () => {
     expect((await fx.service.get(open.id)).status).toBe('cancelled');
   });
 });
+
+describe('EnrollmentService audit (R22)', () => {
+  it('traces start and cancel with ids only', async () => {
+    const fx = await started();
+    await fx.service.cancel(fx.enrollment.id);
+    const traces = fx.eventLog.entries.filter((e) =>
+      e.type.startsWith('enrollment.'),
+    );
+    expect(traces.map((e) => e.type)).toEqual([
+      'enrollment.started',
+      'enrollment.cancelled',
+    ]);
+    expect(traces[0].detail).toEqual({
+      enrollmentId: fx.enrollment.id,
+      studentId: fx.student.id,
+      deviceId: 'd1',
+    });
+    expect(JSON.stringify(traces)).not.toMatch(/template|plantilla/i);
+  });
+});

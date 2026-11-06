@@ -7,28 +7,21 @@ import {
   NotFoundException,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { z } from 'zod';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
-import {
-  AttendanceService,
-  type SessionView,
-} from './attendance.service.js';
+import { AttendanceService, type SessionView } from './attendance.service.js';
 import { AttendanceError } from './domain/attendance.errors.js';
 import type { AttendanceSession } from './domain/attendance-session.js';
 import {
@@ -41,11 +34,10 @@ import {
   toOpenSessionDto,
   toSessionDto,
 } from './dto/attendance.dto.js';
+import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 @ApiTags('attendance')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendance: AttendanceService) {}
@@ -133,7 +125,8 @@ export class AttendanceController {
       studentId: session.studentId,
     });
     const view = sessions.find((s) => s.id === session.id);
-    if (!view) throw new Error('registered session not found in the read model');
+    if (!view)
+      throw new Error('registered session not found in the read model');
     return view;
   }
 }

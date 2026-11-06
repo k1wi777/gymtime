@@ -5,9 +5,12 @@ import {
   type EventLogRepository,
 } from './event-log.repository.js';
 
-/** Keys that must never reach the audit trail (biometrics, secrets). */
+/**
+ * Keys that must never reach the audit trail (biometrics, secrets, account
+ * credentials). `session` alone is dropped, but not `sessionsClosed`.
+ */
 const FORBIDDEN_KEYS =
-  /^iv$|template|plantilla|token|secret|password|api.?key|encryption/i;
+  /^iv$|^session$|template|plantilla|token|secret|password|hash|cookie|authorization|api.?key|encryption/i;
 
 /**
  * Writes the audit trail (`event_log`). The actor comes from the request or

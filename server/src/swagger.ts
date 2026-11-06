@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SESSION_COOKIE } from './auth/cookie.js';
 
 export const ADMIN_KEY_HEADER = 'x-api-key';
 
@@ -12,6 +13,11 @@ export function setupSwagger(app: INestApplication): void {
     .addApiKey(
       { type: 'apiKey', in: 'header', name: ADMIN_KEY_HEADER },
       'admin-key',
+    )
+    .addCookieAuth(
+      SESSION_COOKIE,
+      { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE },
+      'session',
     )
     .addTag('health')
     .build();

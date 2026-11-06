@@ -48,6 +48,23 @@ describe('logger redaction', () => {
     expect(lines[0]).not.toMatch(/secret-|AAAA|BBBB/);
   });
 
+  it('hides cookies and account passwords (R23)', () => {
+    const { logger, lines } = capture();
+    logger.info({
+      req: { headers: { cookie: 'gt_session=secret-1' } },
+      res: { headers: { 'set-cookie': ['gt_session=secret-2'] } },
+      body: {
+        password: 'secret-3',
+        newPassword: 'secret-4',
+        currentPassword: 'secret-5',
+        temporaryPassword: 'secret-6',
+        passwordHash: 'secret-7',
+      },
+      password: 'secret-8',
+    });
+    expect(lines[0]).not.toMatch(/secret-/);
+  });
+
   it('keeps non sensitive fields', () => {
     const { logger, lines } = capture();
     logger.info({ deviceId: 'esp-1', messageId: 'm-1' }, 'hello');

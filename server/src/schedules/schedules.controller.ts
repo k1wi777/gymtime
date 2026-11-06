@@ -12,23 +12,19 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
-  ApiHeader,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { z } from 'zod';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
 import { ScheduleValidationError } from './domain/schedule.js';
@@ -43,11 +39,10 @@ import {
 } from './dto/schedule.dto.js';
 import { InstancesService } from './instances.service.js';
 import { ScheduleLookupFailed, SchedulesService } from './schedules.service.js';
+import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 
 @ApiTags('schedules')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('schedules')
 export class SchedulesController {
   constructor(
@@ -57,6 +52,7 @@ export class SchedulesController {
   ) {}
 
   @Post()
+  @Roles('admin')
   @ApiOperation({
     summary: 'Create a recurring or one-off schedule (Bogota times)',
     description:
@@ -119,6 +115,7 @@ export class SchedulesController {
   }
 
   @Put(':id/students/:studentId')
+  @Roles('admin')
   @HttpCode(204)
   @ApiOperation({ summary: 'Assign a student (idempotent)' })
   @ApiNoContentResponse()
@@ -132,6 +129,7 @@ export class SchedulesController {
   }
 
   @Delete(':id/students/:studentId')
+  @Roles('admin')
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove a student from a schedule (idempotent)' })
   @ApiNoContentResponse()

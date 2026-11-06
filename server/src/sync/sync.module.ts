@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
 import type { Env } from '../config/env.schema.js';
 import { DevicesModule } from '../devices/devices.module.js';
@@ -38,7 +37,6 @@ import { SyncService } from './sync.service.js';
     },
     { provide: CLOCK, useValue: systemClock },
     { provide: SLOTS_REPOSITORY, useClass: PrismaSlotsRepository },
-    ApiKeyGuard,
     SyncPlanner,
     SyncService,
     SyncScheduler,

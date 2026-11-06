@@ -1,20 +1,11 @@
-import {
-  ConflictException,
-  Controller,
-  HttpCode,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { ConflictException, Controller, HttpCode, Post } from '@nestjs/common';
 import {
   ApiConflictResponse,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiProperty,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import {
   NoDeviceOnlineError,
   SyncService,
@@ -22,6 +13,7 @@ import {
   type SyncReason,
   type SyncResult,
 } from './sync.service.js';
+import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 export class SyncResultDto implements SyncResult {
   @ApiProperty({ enum: ['ok', 'failed'] })
@@ -49,9 +41,7 @@ export class SyncResultDto implements SyncResult {
 }
 
 @ApiTags('sync')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('sync')
 export class SyncController {
   constructor(private readonly sync: SyncService) {}

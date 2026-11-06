@@ -3,9 +3,8 @@ import type { NextFunction, Request, Response } from 'express';
 import { SYSTEM_ACTOR, runAsActor } from './actor.js';
 
 /**
- * Opens the actor context of every HTTP request. Until the accounts of the
- * panel exist, the only credential is the admin key, so the actor is `system`;
- * this is the single place to replace with the logged-in user.
+ * Opens the actor context of every HTTP request as `system` (the admin key).
+ * The auth guard replaces it with the signed-in user (`setCurrentActor`).
  */
 @Injectable()
 export class ActorMiddleware implements NestMiddleware {

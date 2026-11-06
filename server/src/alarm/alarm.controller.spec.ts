@@ -1,8 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { authTestProviders } from '../auth/testing.js';
 import { AlarmController } from './alarm.controller.js';
 import { AlarmService } from './alarm.service.js';
 import { AlarmError } from './domain/alarm.errors.js';
@@ -41,8 +40,7 @@ describe('AlarmController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AlarmController],
       providers: [
-        ApiKeyGuard,
-        { provide: ConfigService, useValue: { get: () => KEY } },
+        ...authTestProviders(),
         { provide: AlarmService, useValue: alarm },
       ],
     }).compile();

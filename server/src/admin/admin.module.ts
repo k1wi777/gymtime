@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { AuthModule } from '../auth/auth.module.js';
 import { EventsController } from './events.controller.js';
 
 @Module({
+  imports: [AuthModule],
   controllers: [EventsController],
-  providers: [ApiKeyGuard],
 })
 export class AdminModule {}

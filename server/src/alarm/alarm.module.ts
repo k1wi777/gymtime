@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AttendanceModule } from '../attendance/attendance.module.js';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
 import type { Env } from '../config/env.schema.js';
 import { DevicesModule } from '../devices/devices.module.js';
@@ -33,7 +32,6 @@ import { PrismaAlarmRepository } from './infrastructure/prisma-alarm.repository.
     },
     { provide: CLOCK, useValue: systemClock },
     { provide: ALARM_REPOSITORY, useClass: PrismaAlarmRepository },
-    ApiKeyGuard,
     AlarmService,
     AlarmScheduler,
     AlarmRegistrar,

@@ -4,6 +4,8 @@ import type {
   OutboundSender,
   SendResult,
 } from '../devices/outbound-sender.service.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
+import { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
 import { validTemplate } from '../fingerprints/testing.js';
 import { NoDeviceOnlineError, SyncService } from './sync.service.js';
 import { buildSyncFixture } from './testing.js';
@@ -34,6 +36,7 @@ function fakeSender(
 
 async function build(behaviour?: Parameters<typeof fakeSender>[0]) {
   const f = buildSyncFixture();
+  const eventLog = new InMemoryEventLogRepository();
   const link = fakeSender(behaviour);
   await f.devices.markOnline('d1', 'fw');
   const service = new SyncService(
@@ -44,6 +47,7 @@ async function build(behaviour?: Parameters<typeof fakeSender>[0]) {
     f.students,
     f.clock,
     f.config,
+    new EventLogService(eventLog),
   );
   /** A schedule in progress with `n` enrolled students. */
   const withStudents = async (n: number) => {
@@ -54,7 +58,7 @@ async function build(behaviour?: Parameters<typeof fakeSender>[0]) {
     }
     return { schedule: s.schedule, students };
   };
-  return { f, link, service, withStudents };
+  return { f, link, service, withStudents, eventLog };
 }
 
 const chunksOf = (sent: ServerMessage[]) =>
@@ -303,5 +307,20 @@ describe('SyncService logs (R13)', () => {
       expect(output).not.toContain(bytes.toString('hex'));
     }
     vi.restoreAllMocks();
+  });
+});
+
+describe('SyncService audit (R22)', () => {
+  it('traces the manual sync without templates and ignores system triggers', async () => {
+    const { service, withStudents, eventLog } = await build();
+    await withStudents(2);
+    await service.requestSync('connected', 'd1');
+    expect(eventLog.entries).toHaveLength(0);
+    await service.syncOnline();
+    expect(eventLog.entries).toHaveLength(1);
+    expect(eventLog.entries[0]).toMatchObject({
+      type: 'sync.triggered',
+      detail: { deviceId: 'd1', status: 'ok', loaded: 2 },
+    });
   });
 });

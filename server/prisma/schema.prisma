@@ -64,6 +64,13 @@ enum ActorType {
   @@map("actor_type")
 }
 
+enum PanelRole {
+  asistente
+  admin
+
+  @@map("panel_role")
+}
+
 enum AlarmClosedBy {
   all_exited
   button
@@ -297,4 +304,40 @@ model EventLog {
 
   @@index([createdAt])
   @@map("event_log")
+}
+
+// Accounts of the web panel (H7). Passwords are only stored as argon2id hashes.
+model PanelUser {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  username           String    @unique
+  passwordHash       String    @map("password_hash")
+  role               PanelRole
+  active             Boolean   @default(true)
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  failedAttempts     Int       @default(0) @map("failed_attempts")
+  lockedUntil        DateTime? @map("locked_until") @db.Timestamptz()
+  lastLoginAt        DateTime? @map("last_login_at") @db.Timestamptz()
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  sessions AuthSession[]
+
+  @@map("panel_users")
+}
+
+// Revocable sessions of the panel; only the SHA-256 of the cookie token is stored.
+model AuthSession {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz()
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz()
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz()
+
+  user PanelUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
 }

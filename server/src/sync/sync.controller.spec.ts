@@ -1,8 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { authTestProviders } from '../auth/testing.js';
 import { NoDeviceOnlineError, SyncService } from './sync.service.js';
 import { SyncController } from './sync.controller.js';
 
@@ -17,9 +16,8 @@ describe('SyncController (HTTP, R19, R21)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [SyncController],
       providers: [
-        ApiKeyGuard,
+        ...authTestProviders(),
         { provide: SyncService, useValue: { syncOnline } },
-        { provide: ConfigService, useValue: { get: () => KEY } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();

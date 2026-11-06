@@ -6,19 +6,15 @@ import {
   HttpCode,
   NotFoundException,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
-  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { API_KEY_HEADER, ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
 import type { z } from 'zod';
 import type { DeviceStatus } from './domain/device.js';
@@ -31,10 +27,10 @@ import {
   SendMessageResultDto,
   sendMessageSchema,
 } from './dto/display.dto.js';
+import { ApiAuth } from '../common/auth/roles.decorator.js';
 
 @ApiTags('devices')
-@ApiHeader({ name: API_KEY_HEADER, required: true })
-@UseGuards(ApiKeyGuard)
+@ApiAuth()
 @Controller('devices')
 export class DevicesController {
   constructor(
@@ -48,7 +44,6 @@ export class DevicesController {
     description:
       'deviceId, online, lastConnectedAt, firmwareVersion and pendingCommands',
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
   status(): Promise<DeviceStatus[]> {
     return this.devices.listStatus();
   }
@@ -66,7 +61,6 @@ export class DevicesController {
     description: 'Invalid body or lines that do not fit the screen',
   })
   @ApiNotFoundResponse({ description: 'No device known (NO_DEVICE)' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
   async sendMessage(
     @Body(new ZodValidationPipe(sendMessageSchema))
     body: z.infer<typeof sendMessageSchema>,

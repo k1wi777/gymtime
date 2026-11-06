@@ -1,8 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
+import { authTestProviders } from '../auth/testing.js';
 import { auditTestProviders } from '../common/audit/testing.js';
 import { DevicesController } from './devices.controller.js';
 import { DevicesService } from './devices.service.js';
@@ -27,17 +26,16 @@ describe('DevicesController (HTTP)', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [DevicesController],
       providers: [
+        ...authTestProviders(),
         ...auditTestProviders,
         DevicesService,
         DisplayService,
-        ApiKeyGuard,
         { provide: DEVICES_REPOSITORY, useClass: InMemoryDevicesRepository },
         {
           provide: DEVICE_COMMANDS_REPOSITORY,
           useClass: InMemoryDeviceCommandsRepository,
         },
         { provide: OutboundSender, useValue: { sendCommand } },
-        { provide: ConfigService, useValue: { get: () => KEY } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();

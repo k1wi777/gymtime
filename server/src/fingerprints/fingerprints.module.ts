@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ApiKeyGuard } from '../common/auth/api-key.guard.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { StudentsModule } from '../students/students.module.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
@@ -32,7 +31,6 @@ import { PrismaFingerprintsRepository } from './infrastructure/prisma-fingerprin
       provide: FINGERPRINTS_REPOSITORY,
       useClass: PrismaFingerprintsRepository,
     },
-    ApiKeyGuard,
     TemplateCipher,
     EnrollmentService,
     FingerprintsService,
