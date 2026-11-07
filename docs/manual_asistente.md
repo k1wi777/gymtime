@@ -52,8 +52,11 @@ La huella se carga en el lector antes del próximo horario del estudiante.
 2. Si sigue desconectado, revise que tenga internet o red local y recargue la página (F5).
 3. Si el panel le lleva al inicio de sesión, su sesión expiró: entre de nuevo.
 4. Si nada funciona, avise al administrador: puede que el servidor esté apagado. Mientras tanto, anote a mano las entradas y salidas y regístrelas después con **Registro manual**.
-5. Si el problema es el **lector** (Dispositivo dice «sin conexión»), revise su alimentación y el Wi‑Fi; la guía de firmware está en [`integracion_firmware.md`](integracion_firmware.md), sección 8.
+5. Si aparece el aviso rojo **«Lector sin conexión»**, el lector lleva más de unos minutos (5 por defecto) sin conectarse y el administrador ya fue alertado. Revise su alimentación y el Wi‑Fi; mientras tanto registre a mano con **Registro manual**. El aviso desaparece solo cuando el lector vuelve.
+6. Si el problema es el **lector** (Dispositivo dice «sin conexión»), revise su alimentación y el Wi‑Fi; la guía de firmware está en [`integracion_firmware.md`](integracion_firmware.md), sección 8.
 
 ## Sobre los datos de huella
+
+Si un estudiante pide que se borren sus datos, avise al administrador: solo él puede suprimirlos (ver su manual).
 
 Solo se guarda la plantilla cifrada, nunca la imagen. Sin consentimiento no se puede enrolar: lo exige el servidor (no solo el panel). Los estudiantes que ya existían antes de esta versión quedan con el consentimiento provisional `v1-provisional`, fechado el día de su registro.

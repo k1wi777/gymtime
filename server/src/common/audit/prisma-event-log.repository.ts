@@ -24,6 +24,15 @@ export class PrismaEventLogRepository implements EventLogRepository {
     });
   }
 
+  async redactStudent(studentId: string, keys: readonly string[]) {
+    const list = [...keys];
+    return this.prisma.$executeRaw`
+      UPDATE "event_log"
+         SET "detalle" = "detalle" - ${list}::text[]
+       WHERE "detalle" ->> 'studentId' = ${studentId}
+         AND "detalle" ?| ${list}::text[]`;
+  }
+
   async search(query: EventLogQuery): Promise<StoredEvent[]> {
     const rows = await this.prisma.eventLog.findMany({
       where: {

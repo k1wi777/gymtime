@@ -35,6 +35,7 @@ export const WATCHDOG_MS = 45_000;
 const EVENT_TYPES: readonly SystemEventType[] = [
   'device.connected',
   'device.disconnected',
+  'device.offline_alert',
   'scan',
   'command',
   'alarm',

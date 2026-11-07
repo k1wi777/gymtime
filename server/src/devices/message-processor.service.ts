@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   PROTOCOL_VERSION,
   parseDeviceMessage,
@@ -11,9 +10,8 @@ import {
   type ServerMessage,
 } from '@gymtime/shared';
 import { deviceActor, runAsActor } from '../common/audit/actor.js';
-import { safeEqual } from '../common/auth/safe-equal.js';
-import type { Env } from '../config/env.schema.js';
 import { DEVICES_CONFIG, type DevicesConfig } from './devices.config.js';
+import { DeviceTokensService } from './device-tokens.service.js';
 import { DevicesService } from './devices.service.js';
 import { OutboundSender } from './outbound-sender.service.js';
 import {
@@ -51,7 +49,7 @@ export class MessageProcessor {
   constructor(
     private readonly devices: DevicesService,
     private readonly sender: OutboundSender,
-    private readonly config: ConfigService<Env, true>,
+    private readonly tokens: DeviceTokensService,
     @Inject(DEVICES_CONFIG) private readonly devicesConfig: DevicesConfig,
     @Inject(PROCESSED_MESSAGES_REPOSITORY)
     private readonly processed: ProcessedMessagesRepository,
@@ -108,8 +106,7 @@ export class MessageProcessor {
     hello: Extract<DeviceMessage, { type: 'hello' }>,
   ): Promise<Action[]> {
     const { deviceId, token, fw } = hello.payload;
-    const expected = this.config.get('DEVICE_TOKEN', { infer: true });
-    if (!safeEqual(token, expected)) {
+    if (!(await this.tokens.verify(deviceId, token))) {
       this.logger.warn({ event: 'auth_failed', deviceId, id: hello.id });
       return [
         this.sendAck(hello.id, false, 'UNAUTHORIZED'),

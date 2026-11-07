@@ -25,6 +25,9 @@ Un periodo (por ejemplo «2026-2») agrupa los horarios semanales de un semestre
 - **Consentimiento**: el botón abre el texto vigente del servidor; se registra su versión, la fecha y quién lo hizo.
 - **Importar CSV** (cuatro pasos): archivo, columnas (se sugieren por el encabezado), vista previa con fila y motivo de cada error, y resultado. Solo se importan las filas válidas; los datos de las filas no se guardan, solo cuántas se importaron. Descargue la plantilla desde el primer paso. Los importados quedan sin consentimiento ni huella.
 
+- **Suprimir datos** (Ley 1581): el botón abre una confirmación en la que debe teclear el documento del estudiante. Elimina su huella y la de los lectores en la siguiente sincronización, y anonimiza su nombre, documento y carrera; sus asistencias se conservan sin identificarlo, para que los reportes sigan sumando. Queda marcado como «Datos suprimidos»; no se puede deshacer. Los respaldos anteriores conservan los datos hasta que vencen (ver `runbook.md`).
+- **Dar de baja** a un estudiante cierra su vigencia en los horarios: desde ese día deja de contar como inasistencia en los reportes.
+
 ## Usuarios del panel
 
 Cree cuentas, cambie nombre o rol, desactive y restablezca contraseñas. La **contraseña temporal** se muestra una sola vez en una ventana: anótela y ciérrela; no se puede volver a ver. Nadie puede desactivarse ni cambiar su propio rol, y el sistema nunca queda sin un administrador activo.
@@ -57,4 +60,7 @@ Datos de prueba: `npm --prefix server run seed:reports` carga un semestre simula
 ## Desde la línea de comandos
 
 - `gym schedule create … --period <id|nombre>` crea un horario semanal dentro de un periodo.
+- `gym device register|rotate|revoke <id>` gestiona el token propio de cada lector (se muestra una sola vez; rotar o revocar cierra su conexión). `gym device status` muestra el estado del token.
+- `gym student erase <documento> --yes` suprime los datos personales; `gym student erase --id <uuid> --reapply --yes` los vuelve a suprimir tras restaurar un respaldo antiguo.
+- Alertas: si un lector lleva más de `DEVICE_OFFLINE_ALERT_MINUTES` sin conexión, el panel del asistente muestra un aviso rojo y queda `device.offline_alert` en la auditoría. Respaldos, restauración y rotación de claves: [`runbook.md`](runbook.md).
 - `gym student edit <documento> --consented` registra el consentimiento del texto vigente; `gym enroll start` lo exige.

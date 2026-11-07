@@ -5,6 +5,7 @@ import { DISPLAY_DEFAULTS } from '@gymtime/shared';
 import type { DisplayConfig } from '../config/display.config.js';
 import type { StudentsRepository } from './domain/students.repository.js';
 import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
+import type { ConsentText } from './consent.loader.js';
 import { StudentsService } from './students.service.js';
 
 export const testDisplayConfig: DisplayConfig = {
@@ -18,12 +19,14 @@ export function buildStudentsService(
   repository: StudentsRepository = new InMemoryStudentsRepository(),
   eventLog: InMemoryEventLogRepository = new InMemoryEventLogRepository(),
   clock: Clock = systemClock,
+  consent?: ConsentText,
 ) {
   const service = new StudentsService(
     repository,
     new EventLogService(eventLog),
     testDisplayConfig,
     clock,
+    consent,
   );
   return { service, eventLog };
 }

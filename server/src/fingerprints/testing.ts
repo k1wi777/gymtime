@@ -9,6 +9,7 @@ import type { OutboundSender } from '../devices/outbound-sender.service.js';
 import type { Env } from '../config/env.schema.js';
 import { buildStudentsService } from '../students/testing.js';
 import type { Clock } from '../common/time/clock.js';
+import { Keyring } from './crypto/keyring.js';
 import { TemplateCipher } from './crypto/template-cipher.service.js';
 import { EnrollmentService } from './enrollment.service.js';
 import { defaultFingerprintsConfig } from './fingerprints.config.js';
@@ -30,9 +31,7 @@ export function buildEnrollmentFixture(
   );
   const send = vi.fn().mockResolvedValue(sendResult);
   const sender = { send, sendCommand: send } as unknown as OutboundSender;
-  const cipher = new TemplateCipher({
-    get: () => randomBytes(32).toString('base64'),
-  } as unknown as ConfigService<Env, true>);
+  const cipher = new TemplateCipher(Keyring.single(randomBytes(32)));
   const events = new SystemEventsService();
   const service = new EnrollmentService(
     students,

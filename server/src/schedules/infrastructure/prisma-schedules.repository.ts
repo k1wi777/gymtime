@@ -138,6 +138,14 @@ export class PrismaSchedulesRepository implements SchedulesRepository {
     return count > 0;
   }
 
+  async closeAllForStudent(studentId: string, at: Date) {
+    const { count } = await this.prisma.scheduleStudent.updateMany({
+      where: { studentId, validTo: null },
+      data: { validTo: at },
+    });
+    return count;
+  }
+
   async listStudentIds(scheduleIds: string[], at: Date) {
     const result = new Map<string, string[]>(scheduleIds.map((id) => [id, []]));
     const rows = await this.prisma.scheduleStudent.findMany({

@@ -1,0 +1,80 @@
+# Server, shared, simulator and CLI: the quick checks of
+# .rei/docs/project/verification.md (V1-V3, V6-V8) plus the scenarios (A1-A12).
+# The slow ones against PostgreSQL (V14-V16) run in the `database` job.
+name: server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - 'simulator/**'
+      - 'cli/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/server.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - 'simulator/**'
+      - 'cli/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/server.yml'
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w shared -w simulator
+      - run: npm --prefix server run lint
+      - run: npm --prefix server test
+      - run: node_modules/.bin/tsc --noEmit -p server/tsconfig.json
+      - run: npm run lint -w cli -w simulator
+      - run: npm run test -w cli -w simulator
+      - run: npm run typecheck -w cli -w simulator
+      - run: npm --prefix server run test:e2e
+      - run: npm run test:scenarios
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gymtime
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: gymtime
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U gymtime" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gymtime:ci_password@localhost:5432/gymtime
+    steps:
+      - uses: actions/checkout@v4
+      # pg_dump must not be older than the PostgreSQL 17 service (V16 backs up and restores).
+      - name: Install postgresql-client-17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w shared -w simulator
+      - run: npm --prefix server run test:migration
+      - run: npm --prefix server run test:reports-db
+      - run: npm --prefix server run test:ops-db

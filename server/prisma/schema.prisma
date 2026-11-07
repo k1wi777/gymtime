@@ -13,6 +13,8 @@
 //   - partial unique index: at most one active period
 //       CREATE UNIQUE INDEX "periods_one_active" ON "periods" ((true)) WHERE "activo";
 //   - CHECKs on periods (inicio <= fin) and service_exceptions (desde <= hasta).
+//   - H11: `h11_schedule_validity_backfill` is data only (closes the open intervals
+//     of inactive students using their first `student.deactivated` event; idempotent).
 
 generator client {
   provider            = "prisma-client"
@@ -97,6 +99,9 @@ model Student {
   consentAt      DateTime? @map("consent_at") @db.Timestamptz()
   consentBy      String?   @map("consent_by") @db.Uuid
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  // Set when the personal data was erased (H11, Ley 1581); the row stays
+  // anonymised so sessions and reports keep adding up.
+  anonymizedAt   DateTime? @map("anonymized_at") @db.Timestamptz()
   importBatchId  String?   @map("import_batch_id") @db.Uuid
   // Short name for the reader LCD (ASCII, up to DISPLAY_COLS). NULL = generated
   // from `name` when read.
@@ -174,12 +179,15 @@ model Fingerprint {
   iv        Bytes
   // At most one active per student: partial unique index in the migration.
   active    Boolean  @default(true) @map("activa")
+  // Version of the encryption key that sealed `template` (H11); existing rows are 1.
+  keyVersion Int     @default(1) @map("key_version")
   createdAt DateTime @default(now()) @map("creada") @db.Timestamptz()
 
   student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   slots   DeviceSlot[]
 
   @@index([studentId])
+  @@index([keyVersion])
   @@map("fingerprints")
 }
 
@@ -190,6 +198,16 @@ model Device {
   firmwareVersion String?   @map("version_firmware")
   // Reset to false on server start: no connection survives a restart.
   online          Boolean   @default(false) @map("en_linea")
+  // Own token (H11): only the SHA-256 hex hash is stored. NULL with
+  // `tokenRevokedAt` NULL = still on the shared DEVICE_TOKEN (transition);
+  // NULL with `tokenRevokedAt` set = revoked, nothing is accepted.
+  tokenHash       String?   @map("token_hash")
+  tokenCreatedAt  DateTime? @map("token_created_at") @db.Timestamptz()
+  tokenRevokedAt  DateTime? @map("token_revoked_at") @db.Timestamptz()
+  // Offline alert (H11): since when it is offline and when it was alerted
+  // (one alert per drop). Both cleared when it reconnects.
+  offlineSince      DateTime? @map("offline_since") @db.Timestamptz()
+  offlineAlertedAt  DateTime? @map("offline_alerted_at") @db.Timestamptz()
 
   enrollments Enrollment[]
   slots       DeviceSlot[]

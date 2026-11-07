@@ -35,5 +35,8 @@ export class EnrollmentEventsRegistrar implements OnModuleInit {
     this.students.onDeactivated((student) =>
       this.enrollments.onStudentDeactivated(student),
     );
+    this.students.onErased((student) =>
+      this.enrollments.onStudentErased(student),
+    );
   }
 }

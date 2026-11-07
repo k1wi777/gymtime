@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/auth/auth-provider';
 import { AlarmBanner } from '@/features/alarma/AlarmBanner';
 import { useDevices } from '@/features/dispositivo/use-devices';
+import { formatTime } from '@/lib/time';
 import { useLive } from '@/live/live-provider';
 import { visibleItems } from '@/lib/nav';
 import { Notice } from '@/ui/Notice';
@@ -21,6 +22,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const { state } = useLive();
   const { devices } = useDevices();
   const offline = devices.filter((device) => !device.online);
+  const alerted = offline.filter((device) => device.offlineAlert);
+  const waiting = offline.filter((device) => !device.offlineAlert);
 
   useEffect(() => {
     document.title =
@@ -68,7 +71,23 @@ export function Shell({ children }: { children: ReactNode }) {
               {forbidden}
             </Notice>
           )}
-          {offline.map((device) => (
+          {alerted.map((device) => (
+            <Notice
+              key={device.deviceId}
+              kind="error"
+              title="Lector sin conexión"
+            >
+              El lector «{device.deviceId}» lleva más de{' '}
+              {device.alertThresholdMinutes} min fuera de línea
+              {device.offlineSince
+                ? ` (desde las ${formatTime(device.offlineSince)})`
+                : ''}
+              . Nadie puede registrar su huella: use el registro manual y revise
+              la red y la alimentación del lector. El aviso desaparece cuando
+              vuelva a conectarse.
+            </Notice>
+          ))}
+          {waiting.map((device) => (
             <Notice
               key={device.deviceId}
               kind="warning"

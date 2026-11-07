@@ -43,6 +43,34 @@ export const consentBodySchema = z.strictObject({
   version: z.string().trim().min(1).max(50),
 });
 
+/**
+ * Erasure needs the current document typed back, or `reapply: true` to
+ * repeat an erasure recorded before a restore (the operator then only has ids).
+ */
+export const eraseBodySchema = z.union([
+  z.strictObject({ confirmDocument: z.string().trim().min(1).max(100) }),
+  z.strictObject({ reapply: z.literal(true) }),
+]);
+
+export class EraseStudentDto {
+  @ApiPropertyOptional({
+    description: 'The current document of the student, to confirm',
+  })
+  confirmDocument?: string;
+  @ApiPropertyOptional({
+    description:
+      'Re-apply an erasure after restoring a backup (no document needed)',
+  })
+  reapply?: true;
+}
+
+export class EraseResultDto {
+  @ApiProperty({ format: 'uuid' })
+  studentId: string;
+  @ApiProperty({ description: 'Templates deleted by this call' })
+  templatesDeleted: number;
+}
+
 export class CreateStudentDto {
   @ApiProperty({ description: 'Unique identity document' })
   document: string;
@@ -141,6 +169,13 @@ export class StudentResponseDto {
   consentVersion: string | null;
   @ApiProperty({ nullable: true, type: String, format: 'date-time' })
   consentAt: string | null;
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    format: 'date-time',
+    description: 'Set when the personal data was erased (Ley 1581)',
+  })
+  anonymizedAt: string | null;
 }
 
 export class ConsentTextDto {

@@ -12,6 +12,7 @@ interface StudentRow {
   active: boolean;
   consentVersion: string | null;
   consentAt: Date | null;
+  anonymizedAt: Date | null;
 }
 
 /**
@@ -32,5 +33,6 @@ export function toStudent(row: StudentRow): Student {
     consented: row.consentVersion !== null,
     consentVersion: row.consentVersion,
     consentAt: row.consentAt,
+    anonymizedAt: row.anonymizedAt,
   };
 }

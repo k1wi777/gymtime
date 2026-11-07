@@ -4,6 +4,8 @@ export interface Fingerprint {
   studentId: string;
   template: Buffer;
   iv: Buffer;
+  /** Version of the key that sealed `template` (H11). */
+  keyVersion: number;
   active: boolean;
   createdAt: Date;
 }

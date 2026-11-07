@@ -8,6 +8,11 @@ import {
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { InstancesService } from '../schedules/instances.service.js';
 import { ALARM_CONFIG, type AlarmConfig } from './alarm.config.js';
+import {
+  ALWAYS_LEADER,
+  LEADER_LOCK,
+  type LeaderLock,
+} from '../common/concurrency/leader-lock.js';
 import { AlarmService } from './alarm.service.js';
 
 /**
@@ -28,6 +33,7 @@ export class AlarmScheduler implements OnModuleInit, OnModuleDestroy {
     private readonly alarm: AlarmService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(ALARM_CONFIG) private readonly config: AlarmConfig,
+    @Inject(LEADER_LOCK) private readonly lock: LeaderLock = ALWAYS_LEADER,
   ) {}
 
   onModuleInit(): void {
@@ -44,6 +50,12 @@ export class AlarmScheduler implements OnModuleInit, OnModuleDestroy {
 
   /** One pass; the first one recovers and only the following ones evaluate time. */
   async tick(): Promise<void> {
+    // Only the instance holding the lock drives the alarm (R15).
+    if (!this.lock.isLeader()) {
+      // Whoever leads next re-reads the state: ours may be stale by then.
+      this.recovered = false;
+      return;
+    }
     if (this.ticking) return;
     this.ticking = true;
     try {

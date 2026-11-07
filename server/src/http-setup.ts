@@ -3,12 +3,15 @@ import { json, type NextFunction, type Request, type Response } from 'express';
 import type { ConfigService } from '@nestjs/config';
 import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface.js';
 import type { Env } from './config/env.schema.js';
+import { securityHeaders } from './security-headers.js';
 
 export interface HttpOptions {
   /** Exact origins allowed to call the API from a browser. */
   corsOrigins: readonly string[];
   /** Reverse-proxy hops to trust when reading `req.ip` (0 = none). */
   trustProxy: number;
+  /** Production adds HSTS on HTTPS requests. */
+  production?: boolean;
 }
 
 export const CORS_METHODS = [
@@ -36,6 +39,7 @@ export function httpOptionsFromEnv(env: ConfigService<Env, true>): HttpOptions {
   return {
     corsOrigins: env.get('CORS_ORIGINS', { infer: true }),
     trustProxy: env.get('TRUST_PROXY', { infer: true }),
+    production: env.get('NODE_ENV', { infer: true }) === 'production',
   };
 }
 
@@ -49,12 +53,13 @@ export function configureHttp(
   app: INestApplication,
   options: HttpOptions,
 ): void {
-  if (options.trustProxy > 0) {
-    const express = app.getHttpAdapter().getInstance() as {
-      set: (name: string, value: unknown) => void;
-    };
-    express.set('trust proxy', options.trustProxy);
-  }
+  const express = app.getHttpAdapter().getInstance() as {
+    set: (name: string, value: unknown) => void;
+  };
+  express.set('x-powered-by', false);
+  if (options.trustProxy > 0) express.set('trust proxy', options.trustProxy);
+  // Before CORS so that even preflight answers carry the headers.
+  app.use(securityHeaders({ production: options.production === true }));
 
   // Registered before Nest adds its own parser: the first one to read the
   // body wins, and the rest skip an already parsed request.

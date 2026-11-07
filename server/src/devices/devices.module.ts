@@ -1,7 +1,16 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../config/env.schema.js';
+import { CLOCK, systemClock } from '../common/time/clock.js';
 import { ConnectionRegistry } from './connection-registry.js';
+import { DeviceTokensService } from './device-tokens.service.js';
 import { DeviceGateway } from './device-gateway.js';
-import { DEVICES_CONFIG, defaultDevicesConfig } from './devices.config.js';
+import {
+  DEVICES_CONFIG,
+  defaultDevicesConfig,
+  type DevicesConfig,
+} from './devices.config.js';
+import { DeviceOfflineMonitor } from './device-offline-monitor.js';
 import { DevicesController } from './devices.controller.js';
 import { DevicesService } from './devices.service.js';
 import { DisplayService } from './display.service.js';
@@ -17,7 +26,16 @@ import { OutboundSender } from './outbound-sender.service.js';
 @Module({
   controllers: [DevicesController],
   providers: [
-    { provide: DEVICES_CONFIG, useValue: defaultDevicesConfig },
+    {
+      provide: DEVICES_CONFIG,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>): DevicesConfig => ({
+        ...defaultDevicesConfig,
+        offlineAlertMinutes: config.get('DEVICE_OFFLINE_ALERT_MINUTES', {
+          infer: true,
+        }),
+      }),
+    },
     { provide: DEVICES_REPOSITORY, useClass: PrismaDevicesRepository },
     {
       provide: DEVICE_COMMANDS_REPOSITORY,
@@ -27,13 +45,22 @@ import { OutboundSender } from './outbound-sender.service.js';
       provide: PROCESSED_MESSAGES_REPOSITORY,
       useClass: PrismaProcessedMessagesRepository,
     },
+    { provide: CLOCK, useValue: systemClock },
     ConnectionRegistry,
+    DeviceTokensService,
     DevicesService,
     DisplayService,
     MessageProcessor,
     OutboundSender,
     DeviceGateway,
+    DeviceOfflineMonitor,
   ],
-  exports: [DevicesService, DisplayService, OutboundSender, MessageProcessor],
+  exports: [
+    DevicesService,
+    DeviceTokensService,
+    DisplayService,
+    OutboundSender,
+    MessageProcessor,
+  ],
 })
 export class DevicesModule {}

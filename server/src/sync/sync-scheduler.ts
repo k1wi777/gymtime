@@ -6,6 +6,11 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { CLOCK, type Clock } from '../common/time/clock.js';
+import {
+  ALWAYS_LEADER,
+  LEADER_LOCK,
+  type LeaderLock,
+} from '../common/concurrency/leader-lock.js';
 import { InstancesService } from '../schedules/instances.service.js';
 import { SyncService, type SyncReason } from './sync.service.js';
 import { SYNC_CONFIG, type SyncConfig } from './sync.config.js';
@@ -31,6 +36,7 @@ export class SyncScheduler implements OnModuleInit, OnModuleDestroy {
     private readonly sync: SyncService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(SYNC_CONFIG) private readonly config: SyncConfig,
+    @Inject(LEADER_LOCK) private readonly lock: LeaderLock = ALWAYS_LEADER,
   ) {
     this.lastTick = this.clock.now();
   }
@@ -53,6 +59,12 @@ export class SyncScheduler implements OnModuleInit, OnModuleDestroy {
    * is logged and its interval is examined again by the next one.
    */
   async tick(): Promise<void> {
+    // Without the lock the interval is not consumed: a new leader examines it
+    // from its own last tick, which the first pass as leader resets.
+    if (!this.lock.isLeader()) {
+      this.lastTick = this.clock.now();
+      return;
+    }
     if (this.ticking) return;
     this.ticking = true;
     try {
@@ -83,6 +95,7 @@ export class SyncScheduler implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ensureHorizon(): Promise<void> {
+    if (!this.lock.isLeader()) return;
     try {
       await this.instances.ensureHorizon(this.clock.now());
     } catch (error) {

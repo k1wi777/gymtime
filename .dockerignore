@@ -1,0 +1,18 @@
+# Context of server/Dockerfile (the repository root).
+.git
+.github
+.rei
+.claude
+.opencode
+.env
+.env.*
+!.env.example
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/coverage
+web
+backups
+*.pdf
+*.md
+!server/README.md

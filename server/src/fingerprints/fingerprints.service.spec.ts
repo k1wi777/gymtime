@@ -15,7 +15,12 @@ function build() {
     const encrypted = fx.cipher.encrypt(
       Buffer.from(validTemplate(fill), 'base64'),
     );
-    fx.fingerprints.replaceActive(student.id, encrypted.data, encrypted.iv);
+    fx.fingerprints.replaceActive(
+      student.id,
+      encrypted.data,
+      encrypted.iv,
+      encrypted.keyVersion,
+    );
     return student;
   };
   return { fx, service, enroll };

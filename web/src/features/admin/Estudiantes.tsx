@@ -145,6 +145,8 @@ export function Estudiantes() {
   >('none');
   const [consentFor, setConsentFor] = useState<Student | null>(null);
   const [toDeactivate, setToDeactivate] = useState<Student | null>(null);
+  const [toErase, setToErase] = useState<PanelStudent | null>(null);
+  const [typedDocument, setTypedDocument] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -194,6 +196,27 @@ export function Estudiantes() {
     } finally {
       setBusy(false);
       setToDeactivate(null);
+    }
+  };
+
+  const erase = async () => {
+    if (!toErase) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      await call(
+        getApi().client.POST('/students/{id}/erase', {
+          params: { path: { id: toErase.id } },
+          body: { confirmDocument: typedDocument.trim() },
+        }),
+      );
+      students.reload();
+    } catch (error) {
+      setFailure(describeError(error));
+    } finally {
+      setBusy(false);
+      setToErase(null);
+      setTypedDocument('');
     }
   };
 
@@ -329,7 +352,11 @@ export function Estudiantes() {
                   <tr key={s.id}>
                     <td>
                       {s.name}{' '}
-                      {!s.active && <Badge tone="warning">De baja</Badge>}
+                      {s.anonymizedAt ? (
+                        <Badge tone="warning">Datos suprimidos</Badge>
+                      ) : (
+                        !s.active && <Badge tone="warning">De baja</Badge>
+                      )}
                     </td>
                     <td>{s.document}</td>
                     <td>{s.program ?? '—'}</td>
@@ -362,14 +389,16 @@ export function Estudiantes() {
                             Consentimiento
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="btn"
-                          aria-label={`Editar a ${s.name}`}
-                          onClick={() => setMode({ edit: s })}
-                        >
-                          Editar
-                        </button>
+                        {!s.anonymizedAt && (
+                          <button
+                            type="button"
+                            className="btn"
+                            aria-label={`Editar a ${s.name}`}
+                            onClick={() => setMode({ edit: s })}
+                          >
+                            Editar
+                          </button>
+                        )}
                         {s.active && (
                           <button
                             type="button"
@@ -378,6 +407,16 @@ export function Estudiantes() {
                             onClick={() => setToDeactivate(s)}
                           >
                             Dar de baja
+                          </button>
+                        )}
+                        {!s.anonymizedAt && (
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            aria-label={`Suprimir datos de ${s.name}`}
+                            onClick={() => setToErase(s)}
+                          >
+                            Suprimir datos
                           </button>
                         )}
                       </div>
@@ -437,6 +476,34 @@ export function Estudiantes() {
           «{toDeactivate?.name}» dejará de poder entrar al gimnasio. Su
           historial se conserva.
         </p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={toErase !== null}
+        title="Suprimir datos personales"
+        tone="danger"
+        confirmLabel="Suprimir datos"
+        busy={busy}
+        confirmDisabled={typedDocument.trim() !== (toErase?.document ?? '')}
+        onCancel={() => {
+          setToErase(null);
+          setTypedDocument('');
+        }}
+        onConfirm={() => void erase()}
+      >
+        <div className="stack">
+          <p>
+            Se borrarán de forma <strong>irreversible</strong> el nombre, el
+            documento, los datos de contacto y la huella de «{toErase?.name}».
+            La huella saldrá del lector en la siguiente sincronización. Las
+            asistencias y los reportes se conservan sin identificar a la
+            persona.
+          </p>
+          <TextField
+            label="Escriba el documento para confirmar"
+            value={typedDocument}
+            onChange={setTypedDocument}
+          />
+        </div>
       </ConfirmDialog>
     </div>
   );

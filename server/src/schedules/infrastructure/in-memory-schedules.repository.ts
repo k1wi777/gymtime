@@ -99,6 +99,17 @@ export class InMemorySchedulesRepository implements SchedulesRepository {
     return true;
   }
 
+  async closeAllForStudent(studentId: string, at: Date) {
+    let closed = 0;
+    for (const assignment of this.assignments) {
+      if (assignment.studentId === studentId && assignment.validTo === null) {
+        assignment.validTo = at;
+        closed++;
+      }
+    }
+    return closed;
+  }
+
   async listStudentIds(scheduleIds: string[], at: Date) {
     const result = new Map<string, string[]>(scheduleIds.map((id) => [id, []]));
     for (const assignment of this.assignments) {

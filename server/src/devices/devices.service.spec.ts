@@ -26,6 +26,10 @@ describe('DevicesService', () => {
         lastConnectedAt: '2026-01-01T00:00:00.000Z',
         firmwareVersion: '1.2.3',
         pendingCommands: 0,
+        tokenStatus: 'legacy',
+        offlineSince: null,
+        offlineAlert: false,
+        alertThresholdMinutes: 5,
       },
     ]);
   });

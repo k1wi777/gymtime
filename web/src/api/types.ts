@@ -20,6 +20,7 @@ export type Session = Schemas['SessionDto'];
 export type SystemEvent =
   | Schemas['DeviceConnectedEventDto']
   | Schemas['DeviceDisconnectedEventDto']
+  | Schemas['DeviceOfflineAlertEventDto']
   | Schemas['ScanEventDto']
   | Schemas['CommandEventDto']
   | Schemas['AlarmEventDto']

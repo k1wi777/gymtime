@@ -3,6 +3,10 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { authTestProviders } from '../auth/testing.js';
 import { auditTestProviders } from '../common/audit/testing.js';
+import { ConfigService } from '@nestjs/config';
+import { CLOCK, systemClock } from '../common/time/clock.js';
+import { ConnectionRegistry } from './connection-registry.js';
+import { DeviceTokensService } from './device-tokens.service.js';
 import { DevicesController } from './devices.controller.js';
 import { DevicesService } from './devices.service.js';
 import { DisplayService } from './display.service.js';
@@ -13,6 +17,7 @@ import { InMemoryDevicesRepository } from './infrastructure/in-memory-devices.re
 import { OutboundSender } from './outbound-sender.service.js';
 
 const KEY = 'admin-key-1234567890';
+const SHARED = 'shared-device-token-123';
 
 describe('DevicesController (HTTP)', () => {
   let app: INestApplication;
@@ -30,6 +35,10 @@ describe('DevicesController (HTTP)', () => {
         ...auditTestProviders,
         DevicesService,
         DisplayService,
+        DeviceTokensService,
+        ConnectionRegistry,
+        { provide: CLOCK, useValue: systemClock },
+        { provide: ConfigService, useValue: { get: () => SHARED } },
         { provide: DEVICES_REPOSITORY, useClass: InMemoryDevicesRepository },
         {
           provide: DEVICE_COMMANDS_REPOSITORY,
@@ -60,8 +69,64 @@ describe('DevicesController (HTTP)', () => {
         lastConnectedAt: '2026-01-01T00:00:00.000Z',
         firmwareVersion: '2.0.0',
         pendingCommands: 0,
+        tokenStatus: 'legacy',
+        offlineSince: null,
+        offlineAlert: false,
+        alertThresholdMinutes: 5,
       },
     ]);
+  });
+
+  describe('own token (H11)', () => {
+    it('registers once, shows the token once and never caches it', async () => {
+      const res = await http()
+        .post('/devices')
+        .set(auth)
+        .send({ deviceId: 'esp32-01' })
+        .expect(201);
+      expect(res.body.token).toMatch(/^gt_dev_/);
+      expect(res.headers['cache-control']).toBe('no-store');
+      await http()
+        .post('/devices')
+        .set(auth)
+        .send({ deviceId: 'esp32-01' })
+        .expect(409);
+      const status = await http().get('/devices/status').set(auth).expect(200);
+      expect(status.body[0]).toMatchObject({
+        deviceId: 'esp32-01',
+        tokenStatus: 'own',
+      });
+      expect(JSON.stringify(status.body)).not.toContain(res.body.token);
+    });
+
+    it('rotates and revokes; unknown devices and bad ids are refused', async () => {
+      await http()
+        .post('/devices')
+        .set(auth)
+        .send({ deviceId: 'd1' })
+        .expect(201);
+      const rotated = await http()
+        .post('/devices/d1/token/rotate')
+        .set(auth)
+        .expect(200);
+      expect(rotated.body.token).toMatch(/^gt_dev_/);
+      expect(rotated.headers['cache-control']).toBe('no-store');
+      const revoked = await http()
+        .post('/devices/d1/token/revoke')
+        .set(auth)
+        .expect(200);
+      expect(revoked.body).toEqual({ deviceId: 'd1', tokenStatus: 'revoked' });
+      const status = await http().get('/devices/status').set(auth).expect(200);
+      expect(status.body[0].tokenStatus).toBe('revoked');
+      await http().post('/devices/nope/token/rotate').set(auth).expect(404);
+      await http().post('/devices/nope/token/revoke').set(auth).expect(404);
+      await http().post('/devices/bad id!/token/rotate').set(auth).expect(400);
+      await http()
+        .post('/devices')
+        .set(auth)
+        .send({ deviceId: '' })
+        .expect(400);
+    });
   });
 
   describe('POST /devices/messages (R1, R3, R4)', () => {

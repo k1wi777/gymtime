@@ -20,6 +20,8 @@ Object.assign(process.env, {
   ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 });
 const { AppModule } = await import('./../src/app.module.js');
+const { LEADER_LOCK, startedLeaderLock } =
+  await import('./../src/common/concurrency/leader-lock.js');
 const { PrismaService } = await import('./../src/database/prisma.service.js');
 const { DEVICES_REPOSITORY } =
   await import('./../src/devices/domain/devices.repository.js');
@@ -95,6 +97,8 @@ describe('Schedules and template sync against the simulator (e2e)', () => {
     output.length = 0;
     const fingerprints = new InMemoryFingerprintsRepository();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(LEADER_LOCK)
+      .useValue(startedLeaderLock())
       .overrideProvider(PrismaService)
       .useValue({})
       .overrideProvider(DEVICES_REPOSITORY)

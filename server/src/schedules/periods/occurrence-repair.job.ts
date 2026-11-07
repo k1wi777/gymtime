@@ -9,6 +9,11 @@ import { EventLogService } from '../../common/audit/event-log.service.js';
 import { runAsActor, SYSTEM_ACTOR } from '../../common/audit/actor.js';
 import { toBogotaParts } from '../../common/time/bogota.js';
 import { CLOCK, type Clock } from '../../common/time/clock.js';
+import {
+  ALWAYS_LEADER,
+  LEADER_LOCK,
+  type LeaderLock,
+} from '../../common/concurrency/leader-lock.js';
 import { InstancesService } from '../instances.service.js';
 
 const CHECK_MS = 5 * 60_000;
@@ -28,6 +33,7 @@ export class OccurrenceRepairJob implements OnModuleInit, OnModuleDestroy {
     private readonly instances: InstancesService,
     private readonly eventLog: EventLogService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(LEADER_LOCK) private readonly lock: LeaderLock = ALWAYS_LEADER,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -42,6 +48,7 @@ export class OccurrenceRepairJob implements OnModuleInit, OnModuleDestroy {
 
   /** Runs the repair when the day has not been checked yet; returns the repaired count. */
   async check(): Promise<number> {
+    if (!this.lock.isLeader()) return 0;
     const now = this.clock.now();
     const day = toBogotaParts(now).date;
     if (day === this.lastDay) return 0;

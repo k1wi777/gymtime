@@ -27,6 +27,10 @@ import { ATTENDANCE_REPOSITORY } from '../../src/attendance/domain/attendance.re
 import { InMemoryAttendanceRepository } from '../../src/attendance/infrastructure/in-memory-attendance.repository.js';
 import { EVENT_LOG_REPOSITORY } from '../../src/common/audit/event-log.repository.js';
 import { InMemoryEventLogRepository } from '../../src/common/audit/in-memory-event-log.repository.js';
+import {
+  LEADER_LOCK,
+  startedLeaderLock,
+} from '../../src/common/concurrency/leader-lock.js';
 import { CLOCK, type Clock } from '../../src/common/time/clock.js';
 import {
   DEVICES_CONFIG,
@@ -173,6 +177,8 @@ export async function buildInMemoryApp(
   const repositories = options.repositories ?? createRepositories();
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(LEADER_LOCK)
+    .useValue(startedLeaderLock())
     .overrideProvider(PrismaService)
     .useValue({})
     .overrideProvider(CLOCK)

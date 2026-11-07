@@ -17,6 +17,7 @@ const DISCONNECT_REASONS = [
   'replaced',
   'heartbeat_timeout',
   'server_shutdown',
+  'token_revoked',
 ] as const;
 const COMMAND_STATUSES = ['pending', 'sent', 'acked', 'failed'] as const;
 
@@ -32,6 +33,17 @@ export class DeviceDisconnectedDataDto implements Data<'device.disconnected'> {
   deviceId: string;
   @ApiProperty({ enum: DISCONNECT_REASONS })
   reason: (typeof DISCONNECT_REASONS)[number];
+}
+
+export class DeviceOfflineAlertDataDto implements Data<'device.offline_alert'> {
+  @ApiProperty()
+  deviceId: string;
+  @ApiProperty({ description: 'Minutes offline when the alert fired' })
+  offlineMinutes: number;
+  @ApiProperty({
+    description: 'Configured threshold (DEVICE_OFFLINE_ALERT_MINUTES)',
+  })
+  thresholdMinutes: number;
 }
 
 export class ScanDataDto implements Data<'scan'> {
@@ -124,6 +136,13 @@ export class DeviceDisconnectedEventDto extends EventEnvelope {
   data: DeviceDisconnectedDataDto;
 }
 
+export class DeviceOfflineAlertEventDto extends EventEnvelope {
+  @ApiProperty({ enum: ['device.offline_alert'] })
+  type: 'device.offline_alert';
+  @ApiProperty({ type: DeviceOfflineAlertDataDto })
+  data: DeviceOfflineAlertDataDto;
+}
+
 export class ScanEventDto extends EventEnvelope {
   @ApiProperty({ enum: ['scan'] })
   type: 'scan';
@@ -170,6 +189,7 @@ export class KeepaliveEventDto extends EventEnvelope {
 export const SSE_EVENT_DTOS = {
   'device.connected': DeviceConnectedEventDto,
   'device.disconnected': DeviceDisconnectedEventDto,
+  'device.offline_alert': DeviceOfflineAlertEventDto,
   scan: ScanEventDto,
   command: CommandEventDto,
   alarm: AlarmEventDto,

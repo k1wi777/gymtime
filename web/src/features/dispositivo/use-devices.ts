@@ -28,7 +28,8 @@ export function useDevices() {
   useLiveEvents((event) => {
     if (
       event.type === 'device.connected' ||
-      event.type === 'device.disconnected'
+      event.type === 'device.disconnected' ||
+      event.type === 'device.offline_alert'
     ) {
       setDevices((current) => applyDeviceEvent(current, event));
       refresh();

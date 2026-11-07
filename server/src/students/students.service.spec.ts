@@ -3,7 +3,7 @@ import { DisplayValidationError } from '../common/display/display.errors.js';
 import type { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
 import type { StudentsService } from './students.service.js';
 import { runAsActor } from '../common/audit/actor.js';
-import { CONSENT_VERSION } from './consent.js';
+import { PROVISIONAL_VERSION as CONSENT_VERSION } from './consent.loader.js';
 import { ConsentVersionStaleError } from './students.service.js';
 import { buildStudentsService } from './testing.js';
 

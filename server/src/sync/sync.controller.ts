@@ -30,6 +30,7 @@ export class SyncResultDto implements SyncResult {
       'after_end',
       'manual',
       'attendance',
+      'erasure',
     ] satisfies SyncReason[],
   })
   reason: SyncReason;

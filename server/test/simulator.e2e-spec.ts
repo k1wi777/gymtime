@@ -18,6 +18,8 @@ Object.assign(process.env, {
   ENCRYPTION_KEY: randomBytes(32).toString('base64'),
 });
 const { AppModule } = await import('./../src/app.module.js');
+const { LEADER_LOCK, startedLeaderLock } =
+  await import('./../src/common/concurrency/leader-lock.js');
 const { PrismaService } = await import('./../src/database/prisma.service.js');
 const { DEVICES_REPOSITORY } =
   await import('./../src/devices/domain/devices.repository.js');
@@ -79,6 +81,8 @@ describe('Simulator against the real gateway (e2e)', () => {
     lines.length = 0;
     fingerprints = new InMemoryFingerprintsRepository();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(LEADER_LOCK)
+      .useValue(startedLeaderLock())
       .overrideProvider(PrismaService)
       .useValue({})
       .overrideProvider(DEVICES_REPOSITORY)

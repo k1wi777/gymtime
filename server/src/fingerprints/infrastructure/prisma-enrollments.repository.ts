@@ -37,6 +37,13 @@ export class PrismaEnrollmentsRepository implements EnrollmentsRepository {
     });
   }
 
+  async deleteByStudent(studentId: string) {
+    const { count } = await this.prisma.enrollment.deleteMany({
+      where: { studentId },
+    });
+    return count;
+  }
+
   findOverdue(now: Date) {
     return this.prisma.enrollment.findMany({
       where: { status: open, expiresAt: { lte: now } },
@@ -76,6 +83,7 @@ export class PrismaEnrollmentsRepository implements EnrollmentsRepository {
           studentId: enrollment.studentId,
           template: new Uint8Array(fingerprint.template),
           iv: new Uint8Array(fingerprint.iv),
+          keyVersion: fingerprint.keyVersion,
         },
       });
       return enrollment;

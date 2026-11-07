@@ -9,6 +9,7 @@ Este documento es la referencia completa para implementar el cliente del lector 
 
 1. Abrir `ws://<ip-del-backend>:3000/device`.
 2. El **primer** mensaje debe ser `hello` (con `deviceId`, `token`, `fw`). Si no llega un `hello` válido en 5 s, el servidor cierra la conexión; con un token incorrecto lo rechaza con `ack` de error `UNAUTHORIZED`.
+   En producción la URL es `wss://api.<dominio>/device` y el token es el propio del dispositivo (`docs/guia_wss_firmware.md`); el esquema de `hello` no cambia. Si el administrador rota o revoca el token con la conexión abierta, el servidor la cierra con el código WebSocket `4410` (`token_revoked`); un token inválido en `hello` se cierra con `4401`.
 3. El servidor responde `hello.ok` (con `serverTime` y `heartbeatSec`). A partir de ahí el dispositivo envía `status` cada `heartbeatSec` segundos.
 4. El servidor puede enviar `templates.sync` y `schedule.set` para dejar el lector listo, y reenvía las órdenes que no hubieran sido confirmadas antes de la desconexión.
 5. Si la conexión se pierde, reconectar y volver a empezar por `hello`. Sin conexión el lector conserva el horario en curso y reconcilia al reconectar.
@@ -527,7 +528,7 @@ Ejemplo de `ack` negativo:
 | `INVALID_MESSAGE` | El mensaje no es JSON válido o no cumple el esquema. |
 | `UNSUPPORTED_VERSION` | La versión del protocolo (`v`) no es soportada. |
 | `UNKNOWN_TYPE` | El tipo de mensaje (`type`) no existe. |
-| `UNAUTHORIZED` | El token del dispositivo en `hello` es inválido. |
+| `UNAUTHORIZED` | El token del dispositivo en `hello` es inválido: no es el de ese dispositivo, fue rotado o revocado, o (sin token propio) no coincide con el compartido. |
 | `NOT_AUTHENTICATED` | Se recibió un mensaje antes de un `hello` válido. |
 | `INTERNAL_ERROR` | Error interno del receptor al procesar el mensaje. |
 

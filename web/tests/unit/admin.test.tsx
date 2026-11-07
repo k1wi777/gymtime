@@ -397,6 +397,68 @@ describe('students (R12, R13, R16, R17)', () => {
     expect(fake.calls('POST /students')).toHaveLength(0);
   });
 
+  it('erases personal data only after typing the document (H11)', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('GET /panel/students', {
+      items: [row({ document: '1001' })],
+      total: 1,
+    });
+    fake.route('POST /students/st1/erase', () =>
+      json({ studentId: 'st1', templatesDeleted: 1 }),
+    );
+    app(<Estudiantes />);
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Suprimir datos de Ana Gómez',
+      }),
+    );
+    const dialog = screen.getByRole('dialog');
+    const confirm = within(dialog).getByRole('button', {
+      name: 'Suprimir datos',
+    }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    await user.type(
+      within(dialog).getByLabelText('Escriba el documento para confirmar'),
+      '9999',
+    );
+    expect(confirm.disabled).toBe(true);
+    await user.clear(
+      within(dialog).getByLabelText('Escriba el documento para confirmar'),
+    );
+    await user.type(
+      within(dialog).getByLabelText('Escriba el documento para confirmar'),
+      '1001',
+    );
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(fake.calls('POST /students/st1/erase')).toHaveLength(1),
+    );
+    expect(await fake.calls('POST /students/st1/erase')[0]?.json()).toEqual({
+      confirmDocument: '1001',
+    });
+  });
+
+  it('shows erased students as such, without edit or erase actions (H11)', async () => {
+    const fake = setup();
+    fake.route('GET /panel/students', {
+      items: [
+        row({
+          name: 'Estudiante anonimizado',
+          active: false,
+          anonymizedAt: '2026-11-06T20:00:00.000Z',
+        }),
+      ],
+      total: 1,
+    });
+    app(<Estudiantes />);
+    expect(await screen.findByText('Datos suprimidos')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /Suprimir datos de/ }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: /Editar a/ })).toBeNull();
+  });
+
   it('records the consent with the version the server showed', async () => {
     const user = userEvent.setup();
     const fake = setup();

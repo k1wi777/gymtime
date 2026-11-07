@@ -4,6 +4,7 @@ import type { Env } from '../config/env.schema.js';
 import { DevicesService } from '../devices/devices.service.js';
 import { InMemoryDeviceCommandsRepository } from '../devices/infrastructure/in-memory-device-commands.repository.js';
 import { InMemoryDevicesRepository } from '../devices/infrastructure/in-memory-devices.repository.js';
+import { Keyring } from '../fingerprints/crypto/keyring.js';
 import { TemplateCipher } from '../fingerprints/crypto/template-cipher.service.js';
 import { defaultFingerprintsConfig } from '../fingerprints/fingerprints.config.js';
 import { FingerprintsService } from '../fingerprints/fingerprints.service.js';
@@ -22,9 +23,7 @@ export const testSyncConfig: SyncConfig = {
 /** Test fixture: schedules + fingerprints + sync planning on in-memory repositories. */
 export function buildSyncFixture(config: SyncConfig = testSyncConfig) {
   const sf = buildSchedulesFixture();
-  const cipher = new TemplateCipher({
-    get: () => randomBytes(32).toString('base64'),
-  } as unknown as ConfigService<Env, true>);
+  const cipher = new TemplateCipher(Keyring.single(randomBytes(32)));
   const fingerprintsRepo = new InMemoryFingerprintsRepository();
   const fingerprints = new FingerprintsService(
     sf.students,
@@ -49,7 +48,12 @@ export function buildSyncFixture(config: SyncConfig = testSyncConfig) {
     const encrypted = cipher.encrypt(
       Buffer.from(validTemplate(fill), 'base64'),
     );
-    fingerprintsRepo.replaceActive(student.id, encrypted.data, encrypted.iv);
+    fingerprintsRepo.replaceActive(
+      student.id,
+      encrypted.data,
+      encrypted.iv,
+      encrypted.keyVersion,
+    );
     for (const id of scheduleIds)
       await sf.schedules.assignStudent(id, student.id);
     return student;

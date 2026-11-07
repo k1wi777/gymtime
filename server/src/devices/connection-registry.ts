@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { ServerMessage } from '@gymtime/shared';
 
+/** Close code when the device token was rotated or revoked (4410). */
+export const CLOSE_TOKEN_CHANGED = 4410;
+
 /** Transport-agnostic handle to one live device connection. */
 export interface DeviceConnection {
   send(message: ServerMessage): void;

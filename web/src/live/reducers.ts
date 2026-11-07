@@ -46,10 +46,14 @@ export function applyDeviceEvent(
     const known = devices.find((d) => d.deviceId === deviceId);
     const updated: DeviceStatus = {
       pendingCommands: known?.pendingCommands ?? 0,
+      tokenStatus: known?.tokenStatus ?? 'legacy',
       deviceId,
       online: true,
       lastConnectedAt: event.at,
       firmwareVersion,
+      offlineSince: null,
+      offlineAlert: false,
+      alertThresholdMinutes: known?.alertThresholdMinutes ?? 0,
     };
     return known
       ? devices.map((d) => (d.deviceId === deviceId ? updated : d))
@@ -57,7 +61,21 @@ export function applyDeviceEvent(
   }
   if (event.type === 'device.disconnected') {
     return devices.map((d) =>
-      d.deviceId === event.data.deviceId ? { ...d, online: false } : d,
+      d.deviceId === event.data.deviceId
+        ? { ...d, online: false, offlineSince: d.offlineSince ?? event.at }
+        : d,
+    );
+  }
+  if (event.type === 'device.offline_alert') {
+    return devices.map((d) =>
+      d.deviceId === event.data.deviceId
+        ? {
+            ...d,
+            online: false,
+            offlineAlert: true,
+            alertThresholdMinutes: event.data.thresholdMinutes,
+          }
+        : d,
     );
   }
   return [...devices];

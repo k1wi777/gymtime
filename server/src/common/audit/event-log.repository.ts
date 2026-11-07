@@ -32,6 +32,11 @@ export interface EventLogRepository {
   append(entry: EventLogEntry): Promise<void>;
   /** Newest first (by id). */
   search(query: EventLogQuery): Promise<StoredEvent[]>;
+  /**
+   * Removes `keys` from the detail of every event whose `studentId` is the
+   * given one (erasure, Ley 1581). Returns how many rows changed.
+   */
+  redactStudent(studentId: string, keys: readonly string[]): Promise<number>;
 }
 
 export const EVENT_LOG_REPOSITORY = Symbol('EVENT_LOG_REPOSITORY');

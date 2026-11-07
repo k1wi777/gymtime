@@ -80,6 +80,10 @@ describe('live reducers', () => {
         lastConnectedAt: null,
         firmwareVersion: null,
         pendingCommands: 2,
+        tokenStatus: 'legacy',
+        offlineSince: null,
+        offlineAlert: false,
+        alertThresholdMinutes: 5,
       },
     ];
     const connected: SystemEvent = {
@@ -101,6 +105,21 @@ describe('live reducers', () => {
       data: { deviceId: 'd', reason: 'heartbeat_timeout' },
     });
     expect(down[0]?.online).toBe(false);
+
+    expect(down[0]?.offlineSince).toBe('2026-11-02T15:05:00.000Z');
+
+    const alerted = applyDeviceEvent(down, {
+      type: 'device.offline_alert',
+      at: '2026-11-02T15:10:00.000Z',
+      data: { deviceId: 'd', offlineMinutes: 5, thresholdMinutes: 5 },
+    });
+    expect(alerted[0]).toMatchObject({ online: false, offlineAlert: true });
+    const back = applyDeviceEvent(alerted, connected);
+    expect(back[0]).toMatchObject({
+      online: true,
+      offlineAlert: false,
+      offlineSince: null,
+    });
 
     expect(applyDeviceEvent([], connected)).toHaveLength(1);
   });

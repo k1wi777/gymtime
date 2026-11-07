@@ -206,4 +206,69 @@ const remove: Command = {
   },
 };
 
-export const studentCommands: readonly Command[] = [add, edit, list, remove];
+interface EraseResult {
+  studentId: string;
+  templatesDeleted: number;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const erase: Command = {
+  group: 'student',
+  action: 'erase',
+  summary:
+    'Erase the personal data of a student (Ley 1581): irreversible; admin only',
+  usage:
+    'student erase <document> --yes | student erase --id <uuid> --reapply --yes',
+  options: {
+    yes: { type: 'boolean' },
+    id: { type: 'string' },
+    reapply: { type: 'boolean' },
+  },
+  async run({ http, io, values, positionals }: CommandContext) {
+    if (values['yes'] !== true) {
+      throw new UsageError(
+        'erasing is irreversible (name, document, contact data and fingerprint are lost); repeat with --yes to confirm',
+      );
+    }
+    let id: string;
+    let body: Record<string, unknown>;
+    if (values['reapply'] === true) {
+      // After restoring a backup the operator only keeps ids (no documents).
+      const given = values['id'];
+      if (typeof given !== 'string' || !UUID.test(given)) {
+        throw new UsageError('--reapply needs --id <uuid>');
+      }
+      noPositionals(positionals);
+      id = given;
+      body = { reapply: true };
+    } else {
+      const [document, ...extra] = positionals;
+      if (document === undefined || extra.length > 0) {
+        throw new UsageError('expected exactly one <document>');
+      }
+      const student = await findStudentByDocument(http, document);
+      if (!student) throw new CliError(`No student with document ${document}`);
+      id = student.id;
+      body = { confirmDocument: document };
+    }
+    const result = await http.request<EraseResult>(
+      'POST',
+      `/students/${id}/erase`,
+      body,
+    );
+    io.out(
+      `Personal data erased (${result.templatesDeleted} fingerprint(s) deleted). The reader drops the fingerprint at its next sync.`,
+    );
+    io.out(`Student id kept for the audit trail: ${result.studentId}`);
+    return 0;
+  },
+};
+
+export const studentCommands: readonly Command[] = [
+  add,
+  edit,
+  list,
+  remove,
+  erase,
+];

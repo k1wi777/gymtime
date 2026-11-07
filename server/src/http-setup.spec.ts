@@ -178,3 +178,47 @@ describe('configureHttp trust proxy', () => {
     expect(res.body.ip).toBe('203.0.113.9');
   });
 });
+
+describe('configureHttp security headers', () => {
+  let app: INestApplication;
+  afterEach(() => app.close());
+
+  it('sets the API headers, hides x-powered-by and answers preflights with them', async () => {
+    app = await build();
+    const res = await request(app.getHttpServer()).get('/probe').expect(200);
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['cross-origin-resource-policy']).toBe('same-site');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['content-security-policy']).toBe(
+      "default-src 'none'; frame-ancestors 'none'",
+    );
+    expect(res.headers['x-powered-by']).toBeUndefined();
+    expect(res.headers['strict-transport-security']).toBeUndefined();
+    const preflight = await request(app.getHttpServer())
+      .options('/probe')
+      .set('Origin', LISTED)
+      .set('Access-Control-Request-Method', 'POST');
+    expect(preflight.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('sends HSTS only in production and only over HTTPS behind the proxy', async () => {
+    app = await build({ production: true, trustProxy: 1 });
+    const https = await request(app.getHttpServer())
+      .get('/probe')
+      .set('X-Forwarded-Proto', 'https');
+    expect(https.headers['strict-transport-security']).toMatch(
+      /max-age=31536000/,
+    );
+    const http = await request(app.getHttpServer()).get('/probe');
+    expect(http.headers['strict-transport-security']).toBeUndefined();
+  });
+
+  it('never sends HSTS outside production', async () => {
+    app = await build({ production: false, trustProxy: 1 });
+    const res = await request(app.getHttpServer())
+      .get('/probe')
+      .set('X-Forwarded-Proto', 'https');
+    expect(res.headers['strict-transport-security']).toBeUndefined();
+  });
+});

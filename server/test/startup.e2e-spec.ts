@@ -10,9 +10,9 @@ describe('Startup (e2e)', () => {
       validate: () =>
         validateEnv({
           DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
-          ADMIN_API_KEY: 'admin-key-1234567890',
+          DEVICE_TOKEN: 'device-token-123456',
         }),
     });
-    await expect(forRoot).rejects.toThrow(/DEVICE_TOKEN: is missing/);
+    await expect(forRoot).rejects.toThrow(/ADMIN_API_KEY: is missing/);
   });
 });

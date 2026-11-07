@@ -101,6 +101,32 @@ rol se lee de la base en cada petición.
 - Un administrador no puede desactivarse ni cambiarse el rol a sí mismo (409
   `SELF_CHANGE_FORBIDDEN`).
 
+**Evaluación del limitador de tasa (H11).** Se mantiene en memoria. Con una
+sola instancia (decisión de despliegue: un servidor, no un clúster) es exacto;
+si hubiera varias instancias, cada una contaría por separado y el límite real
+sería `LOGIN_RATE_LIMIT × instancias`. Eso no abre una brecha: el bloqueo de
+cuenta (5 fallos / 15 min) vive en la base y vale para todas. Un reinicio
+borra los contadores por IP; el bloqueo de cuenta no se pierde. Compartirlo
+(base o Redis) solo se justifica si se pasa a varias instancias. Detrás de un
+proxy, `TRUST_PROXY` debe ser el número de saltos: con `0` el limitador vería
+siempre la IP del proxy (el servidor avisa al arrancar en producción).
+
+## Cabeceras de seguridad (H11)
+
+- **API:** `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Resource-Policy: same-site`, `X-Frame-Options: DENY`,
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` y, solo
+  en producción y en peticiones HTTPS (con `TRUST_PROXY`),
+  `Strict-Transport-Security` de un año. `/docs` y `/docs-json` no se publican
+  en producción salvo `ENABLE_DOCS=true`.
+- **Panel:** CSP con nonce por petición (`web/src/proxy.ts`): scripts solo
+  propios o con el nonce; `connect-src` solo el propio origen y el de
+  `NEXT_PUBLIC_API_URL`; `style-src` conserva `'unsafe-inline'` porque
+  Recharts y Next emiten atributos `style` que un nonce no cubre. Además
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`
+  y HSTS en producción. Las páginas se renderizan por petición (necesario para
+  el nonce).
+
 ## 5. CORS y CSRF
 
 **CORS** (`CORS_ORIGINS`): lista de orígenes exactos (`scheme://host[:port]`,

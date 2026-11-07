@@ -51,6 +51,15 @@ export class EventLogService {
     });
   }
 
+  /**
+   * Erasure of a student: drops the personal fields that any earlier event
+   * may carry about them. Today no event stores them (only ids), so this is a
+   * defence for old rows and future events; it keeps the rest of the detail.
+   */
+  redactStudent(studentId: string): Promise<number> {
+    return this.repository.redactStudent(studentId, PERSONAL_KEYS);
+  }
+
   async record(type: string, detail?: Record<string, unknown>): Promise<void> {
     try {
       await this.recordOrThrow(type, detail);
@@ -63,6 +72,22 @@ export class EventLogService {
     }
   }
 }
+
+/** Detail keys that identify a person; removed from the trail on erasure. */
+const PERSONAL_KEYS = [
+  'name',
+  'nombre',
+  'studentName',
+  'document',
+  'documento',
+  'program',
+  'programa',
+  'displayName',
+  'email',
+  'correo',
+  'phone',
+  'telefono',
+] as const;
 
 /** Contact data is never shown in the audit trail, even if an old row had it. */
 const CONTACT_KEYS = /email|phone|correo|telefono/i;

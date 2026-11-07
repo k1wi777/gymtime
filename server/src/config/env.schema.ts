@@ -32,6 +32,50 @@ const encryptionKey = z
 const emptyAsUnset = (value: unknown): unknown =>
   typeof value === 'string' && value.trim() === '' ? undefined : value;
 
+/**
+ * Retired encryption keys: `"1:<base64>,2:<base64>"` (version:key). Each key
+ * must be a valid AES-256 key and each version appear once.
+ */
+const retiredKeys = z.preprocess(
+  emptyAsUnset,
+  z
+    .string()
+    .optional()
+    .transform((raw, context) => {
+      const keys: Array<{ version: number; key: string }> = [];
+      for (const item of (raw ?? '').split(',')) {
+        const entry = item.trim();
+        if (entry === '') continue;
+        const [versionText, key, ...rest] = entry.split(':');
+        const version = Number(versionText);
+        const ok =
+          rest.length === 0 &&
+          /^[1-9]\d{0,5}$/.test(versionText ?? '') &&
+          key !== undefined &&
+          BASE64.test(key) &&
+          Buffer.from(key, 'base64').length === ENCRYPTION_KEY_BYTES;
+        if (!ok) {
+          // Never echo the entry: it contains key material.
+          context.addIssue({
+            code: 'custom',
+            message:
+              'each entry must be <version>:<base64 of 32 bytes>, separated by commas',
+          });
+          return z.NEVER;
+        }
+        if (keys.some((k) => k.version === version)) {
+          context.addIssue({
+            code: 'custom',
+            message: `version ${version} appears more than once`,
+          });
+          return z.NEVER;
+        }
+        keys.push({ version, key });
+      }
+      return keys;
+    }),
+);
+
 const optionalText = z.preprocess(emptyAsUnset, z.string().trim().optional());
 
 /** An exact origin (`scheme://host[:port]`): no wildcard, path, query or userinfo. */
@@ -90,9 +134,19 @@ export const envSchema = z
         (value) => /^postgres(ql)?:\/\//.test(value),
         'must be a PostgreSQL connection URL',
       ),
-    DEVICE_TOKEN: secret,
+    // Shared token of the first iteration: optional since H11 (a device with its
+    // own token, or a revoked one, no longer accepts it). Unset = own tokens only.
+    DEVICE_TOKEN: z.preprocess(emptyAsUnset, secret.optional()),
     ADMIN_API_KEY: secret,
     ENCRYPTION_KEY: encryptionKey,
+    // Key ring (H11): ENCRYPTION_KEY is the CURRENT key and this its version;
+    // older versions stay readable through ENCRYPTION_KEYS_RETIRED until
+    // `npm run keys:rotate` has re-encrypted every template.
+    ENCRYPTION_KEY_VERSION: z.preprocess(
+      emptyAsUnset,
+      z.coerce.number().int().min(1).max(999_999).default(1),
+    ),
+    ENCRYPTION_KEYS_RETIRED: retiredKeys,
     // Default entry window of a schedule: opens N min before it starts and
     // closes M min before it ends (a schedule may override both).
     ENTRY_OPEN_MINUTES: z.coerce.number().int().min(0).max(240).default(10),
@@ -107,6 +161,9 @@ export const envSchema = z
     DISPLAY_COLS: z.coerce.number().int().min(8).max(40).default(16),
     DISPLAY_ROWS: z.coerce.number().int().min(1).max(4).default(2),
     DISPLAY_RESULT_SECONDS: z.coerce.number().int().min(1).max(60).default(3),
+    // JSON file `{version, text}` with the official consent text (E25-9);
+    // unset = the provisional text. Validated at startup.
+    CONSENT_FILE: optionalText,
     // Panel accounts: session cookie, CORS and sign-in protection.
     COOKIE_DOMAIN: optionalText,
     COOKIE_SAMESITE: z.preprocess(
@@ -122,11 +179,35 @@ export const envSchema = z
     LOGIN_RATE_LIMIT: authInt(1, 1000, 10),
     // Reverse-proxy hops to trust when reading the client IP.
     TRUST_PROXY: authInt(0, 10, 0),
+    // Minutes a device that had connected may stay offline before an alert is
+    // raised (log, audit trail, event stream and panel). 0 disables the alert.
+    DEVICE_OFFLINE_ALERT_MINUTES: authInt(0, 1440, 5),
+    // Seconds between attempts to take the scheduler lock (H11).
+    LEADER_RETRY_SECONDS: authInt(1, 300, 10),
+    // Publish /docs (Swagger UI) in production too. Off by default there.
+    ENABLE_DOCS: z.preprocess(
+      emptyAsUnset,
+      z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform((v) => v === 'true'),
+    ),
     // First administrator, created only when there are no accounts yet.
     FIRST_ADMIN_USERNAME: optionalText,
     FIRST_ADMIN_PASSWORD: z.preprocess(emptyAsUnset, z.string().optional()),
   })
   .superRefine((env, context) => {
+    if (
+      env.ENCRYPTION_KEYS_RETIRED.some(
+        (k) => k.version === env.ENCRYPTION_KEY_VERSION,
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['ENCRYPTION_KEYS_RETIRED'],
+        message: 'must not contain the current ENCRYPTION_KEY_VERSION',
+      });
+    }
     if (env.COOKIE_SAMESITE === 'None' && env.NODE_ENV !== 'production') {
       context.addIssue({
         code: 'custom',

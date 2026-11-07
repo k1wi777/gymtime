@@ -41,6 +41,22 @@ describe('InMemorySchedulesRepository', () => {
     expect(await repo.findByStudent('a', t(25))).toHaveLength(0);
   });
 
+  it('closes every open interval of a student, and only theirs', async () => {
+    const repo = new InMemorySchedulesRepository();
+    const s1 = await repo.create(base);
+    const s2 = await repo.create(base);
+    await repo.assignStudent(s1.id, 'a', t(0));
+    await repo.assignStudent(s2.id, 'a', t(0));
+    await repo.assignStudent(s1.id, 'b', t(0));
+    await repo.assignStudent(s2.id, 'a', t(0));
+    expect(await repo.closeAllForStudent('a', t(5))).toBe(2);
+    expect(await repo.closeAllForStudent('a', t(6))).toBe(0);
+    expect(
+      (await repo.listStudentIds([s1.id, s2.id], t(7))).get(s1.id),
+    ).toEqual(['b']);
+    expect((await repo.listAssignments(s2.id))[0]?.validTo).toEqual(t(5));
+  });
+
   it('opens a new interval when the student is assigned again', async () => {
     const repo = new InMemorySchedulesRepository();
     const s = await repo.create(base);

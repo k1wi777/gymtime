@@ -40,7 +40,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - `GET /events` (SSE con `x-api-key` o con la cookie de sesión): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
 - Las órdenes de enrolamiento y de alarma se guardan en `device_commands` antes de enviarse: si el lector está desconectado se entregan al reconectar, con el mismo `id` y en orden.
-- Swagger UI en `/docs`; OpenAPI JSON en `/docs-json`.
+- Swagger UI en `/docs`; OpenAPI JSON en `/docs-json` (en producción solo con `ENABLE_DOCS=true`).
 - Cuentas del panel (roles `asistente` y `admin`, sesión por cookie, bloqueo, CORS y CSRF): variables `COOKIE_*`, `CORS_ORIGINS`, `SESSION_*`, `LOGIN_*`, `TRUST_PROXY` y `FIRST_ADMIN_*` del `.env.example`, descritas en [`docs/autenticacion.md`](docs/autenticacion.md). La CLI y los scripts con `x-api-key` siguen funcionando igual. Para crear el primer administrador define `FIRST_ADMIN_USERNAME` y `FIRST_ADMIN_PASSWORD` antes de arrancar con la tabla de cuentas vacía.
 
 ## Panel web (`web/`)
@@ -157,8 +157,13 @@ backlog, con el simulador real contra el gateway y sin pasos manuales:
 - La cola de órdenes (ack, idempotencia y reenvío) se prueba en
   `server/test/commands.e2e-spec.ts` y corre con `npm run test:e2e`.
 
+## Producción (H11)
+
+Imágenes (`server/Dockerfile`, `web/Dockerfile`), `deploy/docker-compose.prod.yml` con Caddy, respaldo y restauración (`deploy/backup.sh`, `deploy/restore.sh`), rotación de la clave de cifrado (`npm run keys:rotate -w server`), tokens por lector (`gym device register|rotate|revoke`), alertas de lector sin conexión y supresión de datos (`gym student erase`). Cabeceras de seguridad y CSP en la API y el panel. Guías: [`docs/despliegue.md`](docs/despliegue.md), [`docs/runbook.md`](docs/runbook.md) y [`docs/guia_wss_firmware.md`](docs/guia_wss_firmware.md). Comprobaciones: `deploy/verify-images.sh` (imágenes), `npm run test:ops-db -w server` (respaldo, rotación y candado contra PostgreSQL), `deploy/security-review.sh` y `deploy/scan-secrets.sh`.
+
 ## Documentación
 
+- [`docs/despliegue.md`](docs/despliegue.md), [`docs/runbook.md`](docs/runbook.md), [`docs/guia_wss_firmware.md`](docs/guia_wss_firmware.md): despliegue, operación y `wss://` para el firmware.
 - [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
 - [`docs/manual_asistente.md`](docs/manual_asistente.md): manual del panel para el asistente del gimnasio.
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.

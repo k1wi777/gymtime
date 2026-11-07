@@ -61,6 +61,7 @@ describe('EventLogService (R19, R20)', () => {
     const service = new EventLogService({
       append: () => Promise.reject(new Error('db down')),
       search: () => Promise.reject(new Error('db down')),
+      redactStudent: () => Promise.reject(new Error('db down')),
     });
     await expect(service.record('x')).resolves.toBeUndefined();
   });

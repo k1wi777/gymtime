@@ -400,6 +400,14 @@ export class SchedulesService {
     }
   }
 
+  /**
+   * Closes every open interval of a student (called when they are deactivated),
+   * so later occurrences stop counting absences. Idempotent.
+   */
+  async closeStudentValidity(studentId: string): Promise<number> {
+    return this.repository.closeAllForStudent(studentId, this.clock.now());
+  }
+
   /** Every interval of a schedule, including the closed ones (history). */
   listAssignments(scheduleId: string): Promise<ScheduleAssignment[]> {
     return this.repository.listAssignments(scheduleId);

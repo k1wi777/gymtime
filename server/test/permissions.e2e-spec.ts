@@ -54,6 +54,7 @@ const MATRIX: Row[] = [
   { route: 'POST /students', access: 'any' },
   { route: 'PATCH /students/:id', access: 'any' },
   { route: 'DELETE /students/:id', access: 'admin' },
+  { route: 'POST /students/:id/erase', access: 'admin' },
   { route: 'POST /students/:id/enrollments', access: 'any' },
   { route: 'POST /enrollments/:id/cancel', access: 'any' },
   { route: 'GET /enrollments/:id', access: 'any' },
@@ -67,6 +68,10 @@ const MATRIX: Row[] = [
   { route: 'POST /alarm/off', access: 'any' },
   { route: 'GET /devices/status', access: 'any' },
   { route: 'POST /devices/messages', access: 'any' },
+  // H11: own token per device (register, rotate, revoke).
+  { route: 'POST /devices', access: 'admin' },
+  { route: 'POST /devices/:id/token/rotate', access: 'admin' },
+  { route: 'POST /devices/:id/token/revoke', access: 'admin' },
   { route: 'POST /sync', access: 'any' },
   { route: 'GET /events', access: 'any', stream: true },
   { route: 'GET /panel/now', access: 'any' },

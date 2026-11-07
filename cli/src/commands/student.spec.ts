@@ -238,3 +238,67 @@ describe('student remove', () => {
     expect((await invoke(['student', 'remove', 'a', 'b'])).code).toBe(2);
   });
 });
+
+describe('student erase (H11)', () => {
+  const server = (calls?: unknown[]) =>
+    fakeServer((call) => {
+      calls?.push(call);
+      if (call.method === 'GET') {
+        return {
+          body: [
+            {
+              id: 'a'.repeat(8) + '-aaaa-4aaa-8aaa-' + 'a'.repeat(12),
+              document: '123',
+              name: 'Ana',
+            },
+          ],
+        };
+      }
+      return { body: { studentId: 'x', templatesDeleted: 1 } };
+    });
+
+  it('needs --yes and sends nothing without it', async () => {
+    const s = server();
+    const { code } = await invoke(['student', 'erase', '123'], {
+      fetch: s.fetch,
+    });
+    expect(code).toBe(2);
+    expect(s.calls).toHaveLength(0);
+  });
+
+  it('resolves the document and confirms with it', async () => {
+    const s = server();
+    const { code, out } = await invoke(['student', 'erase', '123', '--yes'], {
+      fetch: s.fetch,
+    });
+    expect(code).toBe(0);
+    expect(s.calls[1]).toMatchObject({
+      method: 'POST',
+      body: { confirmDocument: '123' },
+    });
+    expect(s.calls[1]?.path).toMatch(/\/students\/.+\/erase$/);
+    expect(out).toContain('1 fingerprint');
+  });
+
+  it('re-applies by id after a restore, without any document', async () => {
+    const s = server();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const { code } = await invoke(
+      ['student', 'erase', '--id', id, '--reapply', '--yes'],
+      { fetch: s.fetch },
+    );
+    expect(code).toBe(0);
+    expect(s.calls).toHaveLength(1);
+    expect(s.calls[0]).toMatchObject({
+      path: `/students/${id}/erase`,
+      body: { reapply: true },
+    });
+    expect(
+      (
+        await invoke(['student', 'erase', '--reapply', '--yes'], {
+          fetch: s.fetch,
+        })
+      ).code,
+    ).toBe(2);
+  });
+});

@@ -75,8 +75,19 @@ describe('validateEnv', () => {
   });
 
   it('names the missing variable', () => {
+    const { ADMIN_API_KEY: _omitted, ...rest } = valid();
+    expect(() => validateEnv(rest)).toThrow(/ADMIN_API_KEY: is missing/);
+  });
+
+  it('DEVICE_TOKEN is optional since H11 but, when set, must be long enough', () => {
     const { DEVICE_TOKEN: _omitted, ...rest } = valid();
-    expect(() => validateEnv(rest)).toThrow(/DEVICE_TOKEN: is missing/);
+    expect(validateEnv(rest).DEVICE_TOKEN).toBeUndefined();
+    expect(validateEnv({ ...rest, DEVICE_TOKEN: '' }).DEVICE_TOKEN).toBe(
+      undefined,
+    );
+    expect(() => validateEnv({ ...rest, DEVICE_TOKEN: 'short' })).toThrow(
+      /DEVICE_TOKEN: must be at least 16/,
+    );
   });
 
   it('lists every defective variable', () => {
@@ -209,5 +220,64 @@ describe('validateEnv', () => {
         }),
       ).toThrow(/same_as_username/);
     });
+  });
+});
+
+describe('key ring variables (H11)', () => {
+  const key = () => randomBytes(32).toString('base64');
+
+  it('defaults to version 1 and no retired keys: existing deployments do not change', () => {
+    expect(validateEnv(valid())).toMatchObject({
+      ENCRYPTION_KEY_VERSION: 1,
+      ENCRYPTION_KEYS_RETIRED: [],
+    });
+  });
+
+  it('parses retired keys by version', () => {
+    const [a, b] = [key(), key()];
+    const env = validateEnv({
+      ...valid(),
+      ENCRYPTION_KEY_VERSION: '3',
+      ENCRYPTION_KEYS_RETIRED: `1:${a}, 2:${b}`,
+    });
+    expect(env.ENCRYPTION_KEY_VERSION).toBe(3);
+    expect(env.ENCRYPTION_KEYS_RETIRED).toEqual([
+      { version: 1, key: a },
+      { version: 2, key: b },
+    ]);
+  });
+
+  it('rejects malformed, duplicated or current-version entries without echoing keys', () => {
+    const secret = key();
+    for (const retired of [
+      `x:${secret}`,
+      `1:${secret.slice(0, 10)}`,
+      `1:${secret},1:${key()}`,
+      `1:${secret}`, // current version is 1 by default
+    ]) {
+      let message = '';
+      try {
+        validateEnv({ ...valid(), ENCRYPTION_KEYS_RETIRED: retired });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/ENCRYPTION_KEYS_RETIRED/);
+      expect(message).not.toContain(secret);
+    }
+  });
+});
+
+describe('ENABLE_DOCS', () => {
+  const base = {
+    DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+    ADMIN_API_KEY: 'admin-key-1234567890',
+    ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+  };
+  it('defaults to false and accepts true', () => {
+    expect(validateEnv(base).ENABLE_DOCS).toBe(false);
+    expect(validateEnv({ ...base, ENABLE_DOCS: 'true' }).ENABLE_DOCS).toBe(
+      true,
+    );
+    expect(validateEnv({ ...base, ENABLE_DOCS: '' }).ENABLE_DOCS).toBe(false);
   });
 });

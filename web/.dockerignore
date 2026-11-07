@@ -1,0 +1,9 @@
+# Context of web/Dockerfile.
+.env
+.env.*
+!.env.example
+node_modules
+.next
+test-results
+playwright-report
+*.tsbuildinfo

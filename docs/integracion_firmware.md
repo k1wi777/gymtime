@@ -56,7 +56,7 @@ Por ejemplo `ws://192.168.1.50:3000/device`. Es `ws://` (sin TLS) y la ruta `/de
 
 ## 4. Token y deviceId
 
-- **Token:** es el valor de `DEVICE_TOKEN` del `.env` del backend. El firmware lo lleva compilado y lo envía en cada `hello`. Si lo cambias en `.env`, reinicia el backend y actualiza el firmware.
+- **Token:** en desarrollo es el valor de `DEVICE_TOKEN` del `.env` del backend; en producción cada lector tiene su propio token (`gym device register <id>`, ver [`guia_wss_firmware.md`](guia_wss_firmware.md)). El firmware lo lleva compilado y lo envía en cada `hello`. Si lo cambias en `.env`, reinicia el backend y actualiza el firmware.
 - **deviceId:** texto libre pero fijo y único por dispositivo (por ejemplo `esp32-gym-01`). Con un solo dispositivo en la iteración 1, usa siempre el mismo.
 - **fw:** versión del firmware (por ejemplo `1.0.0`); aparece en el estado del dispositivo.
 
@@ -339,7 +339,7 @@ Triaje, en este orden: ¿abre el WebSocket? (8.1) ¿autentica con `hello`? (8.2)
 #### 8.2.1 `ack` con `UNAUTHORIZED` y cierre de la conexión <a id="token"></a>
 
 - **Síntoma** — llega un `ack` con `ok: false` y `error: UNAUTHORIZED`; el servidor cierra con 4401 y en `gym watch` no aparece `device.connected`.
-- **Causa probable** — el token de `hello` no coincide con `DEVICE_TOKEN` (espacios, comillas, `.env` de otro entorno).
+- **Causa probable** — el token de `hello` no coincide con el del lector (o con `DEVICE_TOKEN` si aún usa el compartido), o fue rotado/revocado con `gym device rotate|revoke` (espacios, comillas, `.env` de otro entorno).
 - **Verificación** — el log del backend muestra `auth_failed` con el `deviceId` y el `id` del `hello`; compara el token del firmware con el valor de `DEVICE_TOKEN` sin copiarlo a logs ni informes.
 - **Solución** — copia el valor exacto; si lo cambiaste en `.env`, reinicia el backend y reflashea el firmware.
 

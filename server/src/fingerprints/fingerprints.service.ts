@@ -88,7 +88,11 @@ export class FingerprintsService {
         fingerprints.push({
           studentId,
           fingerprintId: row.id,
-          template: this.cipher.decrypt({ data: row.template, iv: row.iv }),
+          template: this.cipher.decrypt({
+            data: row.template,
+            iv: row.iv,
+            keyVersion: row.keyVersion,
+          }),
         });
       } catch {
         this.logger.error({ event: 'template_unreadable', studentId });

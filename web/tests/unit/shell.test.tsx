@@ -113,6 +113,58 @@ describe('shell (R10, R11, R19)', () => {
     expect(document.title).toContain('Lector fuera de línea');
   });
 
+  it('keeps an alert while the reader stays offline past the threshold and clears it on reconnection (H11)', async () => {
+    installFakeApi({
+      ...base,
+      'GET /auth/me': account(),
+      'GET /devices/status': [
+        {
+          deviceId: 'esp32-01',
+          online: true,
+          lastConnectedAt: '2026-11-06T15:00:00.000Z',
+          firmwareVersion: '1',
+          pendingCommands: 0,
+          tokenStatus: 'own',
+          offlineSince: null,
+          offlineAlert: false,
+          alertThresholdMinutes: 5,
+        },
+      ],
+    });
+    panel();
+    await screen.findByText('contenido');
+    const source = await liveSource();
+    act(() => source.open());
+    act(() =>
+      source.emit('device.disconnected', {
+        deviceId: 'esp32-01',
+        reason: 'heartbeat_timeout',
+      }),
+    );
+    expect(await screen.findByText('Lector fuera de línea')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    act(() =>
+      source.emit('device.offline_alert', {
+        deviceId: 'esp32-01',
+        offlineMinutes: 5,
+        thresholdMinutes: 5,
+      }),
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Lector sin conexión');
+    expect(alert.textContent).toContain('esp32-01');
+    expect(alert.textContent).toContain('5 min');
+
+    act(() =>
+      source.emit('device.connected', {
+        deviceId: 'esp32-01',
+        firmwareVersion: '1',
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  });
+
   it('shows a permissions notice when the API answers 403', async () => {
     const user = userEvent.setup();
     const fake = installFakeApi({ ...base, 'GET /auth/me': account() });

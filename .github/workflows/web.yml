@@ -1,0 +1,38 @@
+# Panel (web/): lint, types, component tests and production build
+# (V9-V11, V13). The browser flows (V12) need the system Chrome and run
+# manually or in a dedicated job once the runner provides it.
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'server/openapi.json'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'server/openapi.json'
+      - '.github/workflows/web.yml'
+
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001

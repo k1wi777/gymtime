@@ -1131,7 +1131,8 @@
               "closed",
               "replaced",
               "heartbeat_timeout",
-              "server_shutdown"
+              "server_shutdown",
+              "token_revoked"
             ],
             "type": "string"
           }
@@ -1165,8 +1166,56 @@
         ],
         "type": "object"
       },
+      "DeviceOfflineAlertDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "offlineMinutes": {
+            "description": "Minutes offline when the alert fired",
+            "type": "number"
+          },
+          "thresholdMinutes": {
+            "description": "Configured threshold (DEVICE_OFFLINE_ALERT_MINUTES)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "deviceId",
+          "offlineMinutes",
+          "thresholdMinutes"
+        ],
+        "type": "object"
+      },
+      "DeviceOfflineAlertEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeviceOfflineAlertDataDto"
+          },
+          "type": {
+            "enum": [
+              "device.offline_alert"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
       "DeviceStatusDto": {
         "properties": {
+          "alertThresholdMinutes": {
+            "description": "DEVICE_OFFLINE_ALERT_MINUTES (0 = alerts disabled)",
+            "type": "number"
+          },
           "deviceId": {
             "type": "string"
           },
@@ -1179,12 +1228,31 @@
             "nullable": true,
             "type": "string"
           },
+          "offlineAlert": {
+            "description": "True from the offline alert until the device reconnects (the panel shows it)",
+            "type": "boolean"
+          },
+          "offlineSince": {
+            "description": "Since when the device is offline",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "online": {
             "type": "boolean"
           },
           "pendingCommands": {
             "description": "Orders in pending or sent that the device has not confirmed yet",
             "type": "number"
+          },
+          "tokenStatus": {
+            "description": "Credential of the device: the shared DEVICE_TOKEN (legacy), its own token, or revoked (nothing accepted)",
+            "enum": [
+              "legacy",
+              "own",
+              "revoked"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -1192,7 +1260,11 @@
           "online",
           "lastConnectedAt",
           "firmwareVersion",
-          "pendingCommands"
+          "pendingCommands",
+          "tokenStatus",
+          "offlineSince",
+          "offlineAlert",
+          "alertThresholdMinutes"
         ],
         "type": "object"
       },
@@ -1308,6 +1380,36 @@
           "failureReason",
           "expiresAt"
         ],
+        "type": "object"
+      },
+      "EraseResultDto": {
+        "properties": {
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "templatesDeleted": {
+            "description": "Templates deleted by this call",
+            "type": "number"
+          }
+        },
+        "required": [
+          "studentId",
+          "templatesDeleted"
+        ],
+        "type": "object"
+      },
+      "EraseStudentDto": {
+        "properties": {
+          "confirmDocument": {
+            "description": "The current document of the student, to confirm",
+            "type": "string"
+          },
+          "reapply": {
+            "description": "Re-apply an erasure after restoring a backup (no document needed)",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "ExceptionResultDto": {
@@ -1628,6 +1730,22 @@
         "required": [
           "row",
           "errors"
+        ],
+        "type": "object"
+      },
+      "IssuedTokenDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "token": {
+            "description": "Shown only in this response (Cache-Control: no-store); the server keeps just its hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "token"
         ],
         "type": "object"
       },
@@ -2041,6 +2159,12 @@
           "active": {
             "type": "boolean"
           },
+          "anonymizedAt": {
+            "description": "Set when the personal data was erased (Ley 1581)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "consentAt": {
             "format": "date-time",
             "nullable": true,
@@ -2099,6 +2223,7 @@
           "consented",
           "consentVersion",
           "consentAt",
+          "anonymizedAt",
           "fingerprintEnrolledAt"
         ],
         "type": "object"
@@ -2306,6 +2431,19 @@
         ],
         "type": "object"
       },
+      "RegisterDeviceDto": {
+        "properties": {
+          "deviceId": {
+            "example": "esp32-01",
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId"
+        ],
+        "type": "object"
+      },
       "ReportColumnDto": {
         "properties": {
           "key": {
@@ -2508,6 +2646,24 @@
           "entryOpensAt",
           "entryClosesAt",
           "entryOpen"
+        ],
+        "type": "object"
+      },
+      "RevokedTokenDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "tokenStatus": {
+            "enum": [
+              "revoked"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "tokenStatus"
         ],
         "type": "object"
       },
@@ -3112,6 +3268,12 @@
           "active": {
             "type": "boolean"
           },
+          "anonymizedAt": {
+            "description": "Set when the personal data was erased (Ley 1581)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "consentAt": {
             "format": "date-time",
             "nullable": true,
@@ -3164,7 +3326,8 @@
           "active",
           "consented",
           "consentVersion",
-          "consentAt"
+          "consentAt",
+          "anonymizedAt"
         ],
         "type": "object"
       },
@@ -3381,7 +3544,8 @@
               "before_start",
               "after_end",
               "manual",
-              "attendance"
+              "attendance",
+              "erasure"
             ],
             "type": "string"
           },
@@ -4637,6 +4801,77 @@
         ]
       }
     },
+    "/devices": {
+      "post": {
+        "description": "Creates the device if needed. The token is returned only here; the server stores its hash.",
+        "operationId": "DevicesController_register",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDeviceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedTokenDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "The device already has an own token (DEVICE_ALREADY_REGISTERED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Register a device and issue its own token (shown once)",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
     "/devices/messages": {
       "post": {
         "description": "Persisted and delivered like any order: when the device is offline it is queued and sent on reconnection.",
@@ -4766,6 +5001,144 @@
           }
         ],
         "summary": "Connection state of every known device",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/devices/{id}/token/revoke": {
+      "post": {
+        "operationId": "DevicesController_revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedTokenDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unknown device (DEVICE_NOT_FOUND)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Revoke the token: nothing is accepted for the device until it is rotated",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/devices/{id}/token/rotate": {
+      "post": {
+        "operationId": "DevicesController_rotate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedTokenDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Unknown device (DEVICE_NOT_FOUND)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Rotate the token: the old one dies at once and the connection closes",
         "tags": [
           "devices"
         ]
@@ -4955,6 +5328,7 @@
                       "command": "#/components/schemas/CommandEventDto",
                       "device.connected": "#/components/schemas/DeviceConnectedEventDto",
                       "device.disconnected": "#/components/schemas/DeviceDisconnectedEventDto",
+                      "device.offline_alert": "#/components/schemas/DeviceOfflineAlertEventDto",
                       "enrollment": "#/components/schemas/EnrollmentEventDto",
                       "keepalive": "#/components/schemas/KeepaliveEventDto",
                       "scan": "#/components/schemas/ScanEventDto"
@@ -4967,6 +5341,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/DeviceDisconnectedEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeviceOfflineAlertEventDto"
                     },
                     {
                       "$ref": "#/components/schemas/ScanEventDto"
@@ -9320,6 +9697,106 @@
         "summary": "Start the fingerprint enrollment of a student",
         "tags": [
           "enrollments"
+        ]
+      }
+    },
+    "/students/{id}/erase": {
+      "post": {
+        "description": "Deletes templates and enrollments, anonymises name, document, program, contact and display name, deactivates and closes the validity. Sessions and reports are kept. Idempotent; the reader drops the fingerprint at its next sync, even if it is offline now.",
+        "operationId": "StudentsController_erase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseStudentDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EraseResultDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid id or body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Student not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "CONFIRMATION_MISMATCH: the document does not match"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Erase the personal data of a student (Ley 1581)",
+        "tags": [
+          "students"
         ]
       }
     },

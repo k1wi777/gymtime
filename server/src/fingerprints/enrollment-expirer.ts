@@ -5,6 +5,11 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
+import {
+  ALWAYS_LEADER,
+  LEADER_LOCK,
+  type LeaderLock,
+} from '../common/concurrency/leader-lock.js';
 import { EnrollmentService } from './enrollment.service.js';
 import {
   FINGERPRINTS_CONFIG,
@@ -24,6 +29,7 @@ export class EnrollmentExpirer implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly enrollments: EnrollmentService,
     @Inject(FINGERPRINTS_CONFIG) private readonly config: FingerprintsConfig,
+    @Inject(LEADER_LOCK) private readonly lock: LeaderLock = ALWAYS_LEADER,
   ) {}
 
   onModuleInit(): void {
@@ -43,6 +49,7 @@ export class EnrollmentExpirer implements OnModuleInit, OnModuleDestroy {
 
   /** Never throws: a failing sweep is logged and retried on the next tick. */
   async sweep(): Promise<void> {
+    if (!this.lock.isLeader()) return;
     try {
       await this.enrollments.expireOverdue();
     } catch (error) {

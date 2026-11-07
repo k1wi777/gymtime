@@ -197,7 +197,11 @@ export class EnrollmentService {
       const encrypted = this.cipher.encrypt(checked.bytes);
       const done = await this.enrollments.completeWithFingerprint(
         enrollment.id,
-        { template: encrypted.data, iv: encrypted.iv },
+        {
+          template: encrypted.data,
+          iv: encrypted.iv,
+          keyVersion: encrypted.keyVersion,
+        },
       );
       if (done) {
         this.publish(done);
@@ -244,6 +248,16 @@ export class EnrollmentService {
       );
       this.logger.log({ event: 'enrollment_failed', enrollmentId, reason });
     });
+  }
+
+  /**
+   * Erasure of a student (Ley 1581): deletes every template and every
+   * enrollment record. Idempotent; returns how many templates were deleted.
+   */
+  async onStudentErased(student: Student): Promise<number> {
+    const deleted = await this.fingerprints.deleteByStudent(student.id);
+    await this.enrollments.deleteByStudent(student.id);
+    return deleted;
   }
 
   /** Cleanup after a deactivation: no open enrollments and no fingerprint. */

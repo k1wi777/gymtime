@@ -5,7 +5,18 @@ export interface SystemEventMap {
   'device.connected': { deviceId: string; firmwareVersion: string };
   'device.disconnected': {
     deviceId: string;
-    reason: 'closed' | 'replaced' | 'heartbeat_timeout' | 'server_shutdown';
+    reason:
+      | 'closed'
+      | 'replaced'
+      | 'heartbeat_timeout'
+      | 'server_shutdown'
+      | 'token_revoked';
+  };
+  /** A device that had connected has been offline longer than the threshold. */
+  'device.offline_alert': {
+    deviceId: string;
+    offlineMinutes: number;
+    thresholdMinutes: number;
   };
   scan: {
     deviceId: string;
@@ -54,6 +65,7 @@ export interface SystemEventMap {
 export const SYSTEM_EVENT_TYPES = [
   'device.connected',
   'device.disconnected',
+  'device.offline_alert',
   'scan',
   'command',
   'alarm',

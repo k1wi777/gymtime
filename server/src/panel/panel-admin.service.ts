@@ -107,6 +107,7 @@ export class PanelAdminService {
       items: page.map((student) => ({
         ...student,
         consentAt: student.consentAt?.toISOString() ?? null,
+        anonymizedAt: student.anonymizedAt?.toISOString() ?? null,
         fingerprintEnrolledAt: since.get(student.id)?.toISOString() ?? null,
       })),
     };

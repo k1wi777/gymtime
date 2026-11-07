@@ -7,7 +7,10 @@ import {
   type StudentFilter,
   type StudentPatch,
 } from '../domain/student.js';
-import type { StudentsRepository } from '../domain/students.repository.js';
+import type {
+  AnonymizedValues,
+  StudentsRepository,
+} from '../domain/students.repository.js';
 
 const norm = (text: string) =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -35,6 +38,7 @@ export class InMemoryStudentsRepository implements StudentsRepository {
       consented: consent != null,
       consentVersion: consent?.version ?? null,
       consentAt: consent?.at ?? null,
+      anonymizedAt: null,
     };
     this.students.set(student.id, student);
     return { ...student };
@@ -94,6 +98,17 @@ export class InMemoryStudentsRepository implements StudentsRepository {
 
   async deactivate(id: string) {
     return this.change(id, { active: false });
+  }
+
+  async anonymize(id: string, values: AnonymizedValues, at: Date) {
+    return this.change(id, {
+      ...values,
+      program: null,
+      email: null,
+      phone: null,
+      active: false,
+      anonymizedAt: at,
+    });
   }
 
   async recordConsent(id: string, consent: ConsentRecord) {

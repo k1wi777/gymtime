@@ -2,6 +2,10 @@ import { currentActor } from '../common/audit/actor.js';
 import { randomUUID } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.schema.js';
+import { EventLogService } from '../common/audit/event-log.service.js';
+import { InMemoryEventLogRepository } from '../common/audit/in-memory-event-log.repository.js';
+import { systemClock } from '../common/time/clock.js';
+import { DeviceTokensService } from './device-tokens.service.js';
 import { ConnectionRegistry } from './connection-registry.js';
 import { defaultDevicesConfig } from './devices.config.js';
 import { DevicesService } from './devices.service.js';
@@ -26,13 +30,15 @@ function sent(actions: Action[]) {
 describe('MessageProcessor', () => {
   let processor: MessageProcessor;
   let devices: DevicesService;
+  let tokens: DeviceTokensService;
   let sender: OutboundSender;
   let processed: InMemoryProcessedMessagesRepository;
   let session: Session;
 
   beforeEach(() => {
+    const devicesRepo = new InMemoryDevicesRepository();
     devices = new DevicesService(
-      new InMemoryDevicesRepository(),
+      devicesRepo,
       new InMemoryDeviceCommandsRepository(),
     );
     sender = new OutboundSender(
@@ -46,10 +52,17 @@ describe('MessageProcessor', () => {
     const config = {
       get: () => TOKEN,
     } as unknown as ConfigService<Env, true>;
+    tokens = new DeviceTokensService(
+      devicesRepo,
+      new ConnectionRegistry(),
+      new EventLogService(new InMemoryEventLogRepository()),
+      config,
+      systemClock,
+    );
     processor = new MessageProcessor(
       devices,
       sender,
-      config,
+      tokens,
       defaultDevicesConfig,
       processed,
     );
@@ -90,6 +103,34 @@ describe('MessageProcessor', () => {
       });
       expect(actions.some((a) => a.kind === 'close')).toBe(true);
       expect(await devices.listStatus()).toEqual([]);
+    });
+
+    it('a device with its own token connects with it and no longer with the shared one (H11)', async () => {
+      const { token } = await tokens.register('esp32-1');
+      const refused = await processor.process(session, helloFrame(TOKEN));
+      expect(sent(refused)[0]).toMatchObject({
+        payload: { ok: false, error: 'UNAUTHORIZED' },
+      });
+      const accepted = await processor.process(session, helloFrame(token));
+      expect(accepted[0]).toMatchObject({ kind: 'authenticated' });
+    });
+
+    it('a revoked or rotated token receives UNAUTHORIZED (H11)', async () => {
+      const first = await tokens.register('esp32-1');
+      const second = await tokens.rotate('esp32-1');
+      const old = await processor.process(session, helloFrame(first.token));
+      expect(sent(old)[0]).toMatchObject({
+        payload: { ok: false, error: 'UNAUTHORIZED' },
+      });
+      await tokens.revoke('esp32-1');
+      const revoked = await processor.process(
+        session,
+        helloFrame(second.token),
+      );
+      expect(sent(revoked)[0]).toMatchObject({
+        payload: { ok: false, error: 'UNAUTHORIZED' },
+      });
+      expect(revoked.some((a) => a.kind === 'close')).toBe(true);
     });
 
     it('answers a repeated hello again without new authentication', async () => {

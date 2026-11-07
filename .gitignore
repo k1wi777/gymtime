@@ -19,3 +19,4 @@ server/src/generated/
 next-env.d.ts
 playwright-report/
 test-results/
+!.env.*.example

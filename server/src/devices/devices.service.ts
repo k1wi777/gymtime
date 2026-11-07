@@ -1,5 +1,14 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { DeviceStatus } from './domain/device.js';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  DEVICES_CONFIG,
+  defaultDevicesConfig,
+  type DevicesConfig,
+} from './devices.config.js';
+import {
+  tokenStatusOf,
+  type Device,
+  type DeviceStatus,
+} from './domain/device.js';
 import {
   DEVICE_COMMANDS_REPOSITORY,
   type DeviceCommandsRepository,
@@ -10,16 +19,21 @@ import {
 } from './domain/devices.repository.js';
 
 export type ConnectedListener = (deviceId: string) => Promise<void> | void;
+export type RecoveredListener = (deviceId: string) => Promise<void> | void;
 
 @Injectable()
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
   private readonly connectedListeners: ConnectedListener[] = [];
+  private readonly recoveredListeners: RecoveredListener[] = [];
 
   constructor(
     @Inject(DEVICES_REPOSITORY) private readonly repository: DevicesRepository,
     @Inject(DEVICE_COMMANDS_REPOSITORY)
     private readonly commands: DeviceCommandsRepository,
+    @Optional()
+    @Inject(DEVICES_CONFIG)
+    private readonly config: DevicesConfig = defaultDevicesConfig,
   ) {}
 
   /**
@@ -28,6 +42,14 @@ export class DevicesService {
    */
   onConnected(listener: ConnectedListener): void {
     this.connectedListeners.push(listener);
+  }
+
+  /**
+   * Called when a device reconnects after an offline alert fired (the alert
+   * is over). Failures are logged and never block the connection.
+   */
+  onRecovered(listener: RecoveredListener): void {
+    this.recoveredListeners.push(listener);
   }
 
   /**
@@ -49,12 +71,28 @@ export class DevicesService {
     }
   }
 
-  markOnline(
+  async markOnline(
     deviceId: string,
     firmwareVersion: string,
     at: Date = new Date(),
   ): Promise<void> {
-    return this.repository.upsertOnline(deviceId, firmwareVersion, at);
+    const { recovered } = await this.repository.upsertOnline(
+      deviceId,
+      firmwareVersion,
+      at,
+    );
+    if (!recovered) return;
+    for (const listener of this.recoveredListeners) {
+      try {
+        await listener(deviceId);
+      } catch (error) {
+        this.logger.error({
+          event: 'recovered_listener_failed',
+          deviceId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   /** Current delivery status of commands by id (order history). */
@@ -69,12 +107,35 @@ export class DevicesService {
     return this.repository.ensure(deviceId);
   }
 
-  markOffline(deviceId: string): Promise<void> {
-    return this.repository.setOffline(deviceId);
+  markOffline(deviceId: string, at: Date = new Date()): Promise<void> {
+    return this.repository.setOffline(deviceId, at);
   }
 
-  markAllOffline(): Promise<void> {
-    return this.repository.setAllOffline();
+  markAllOffline(at: Date = new Date()): Promise<void> {
+    return this.repository.setAllOffline(at);
+  }
+
+  /** Devices still offline past the threshold that were not alerted yet. */
+  async findOverdueOffline(now: Date): Promise<Device[]> {
+    const minutes = this.config.offlineAlertMinutes;
+    if (minutes <= 0) return [];
+    const limit = now.getTime() - minutes * 60_000;
+    return (await this.repository.findAll()).filter(
+      (device) =>
+        device.lastConnectedAt !== null &&
+        !device.online &&
+        device.offlineAlertedAt === null &&
+        device.offlineSince !== null &&
+        device.offlineSince.getTime() <= limit,
+    );
+  }
+
+  claimOfflineAlert(deviceId: string, at: Date): Promise<boolean> {
+    return this.repository.markAlerted(deviceId, at);
+  }
+
+  get offlineAlertMinutes(): number {
+    return this.config.offlineAlertMinutes;
   }
 
   async listStatus(): Promise<DeviceStatus[]> {
@@ -86,6 +147,10 @@ export class DevicesService {
         lastConnectedAt: device.lastConnectedAt?.toISOString() ?? null,
         firmwareVersion: device.firmwareVersion,
         pendingCommands: await this.commands.countUnconfirmed(device.id),
+        tokenStatus: tokenStatusOf(device),
+        offlineSince: device.offlineSince?.toISOString() ?? null,
+        offlineAlert: device.offlineAlertedAt !== null,
+        alertThresholdMinutes: this.config.offlineAlertMinutes,
       })),
     );
   }

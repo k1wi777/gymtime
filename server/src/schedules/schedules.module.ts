@@ -12,6 +12,7 @@ import { PrismaPeriodsRepository } from './periods/prisma-periods.repository.js'
 import { OccurrenceRepairJob } from './periods/occurrence-repair.job.js';
 import { PeriodsController } from './periods/periods.controller.js';
 import { PeriodsService } from './periods/periods.service.js';
+import { SchedulesDeactivationRegistrar } from './schedules-deactivation.registrar.js';
 import { InstancesService } from './instances.service.js';
 import {
   SCHEDULES_CONFIG,
@@ -42,6 +43,7 @@ import { SchedulesService } from './schedules.service.js';
     SchedulesService,
     PeriodsService,
     OccurrenceRepairJob,
+    SchedulesDeactivationRegistrar,
   ],
   exports: [SchedulesService, InstancesService, PeriodsService],
 })

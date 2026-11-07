@@ -8,6 +8,7 @@ import type {
 export interface EncryptedPayload {
   template: Buffer;
   iv: Buffer;
+  keyVersion: number;
 }
 
 export interface EnrollmentsRepository {
@@ -17,6 +18,8 @@ export interface EnrollmentsRepository {
   /** Enrollments in `pending` or `in_progress` on the device. */
   findOpenByDevice(deviceId: string): Promise<Enrollment[]>;
   findOpenByStudent(studentId: string): Promise<Enrollment[]>;
+  /** Deletes every enrollment of the student (erasure); returns how many. */
+  deleteByStudent(studentId: string): Promise<number>;
   /** Open enrollments whose expiry is at or before `now`. */
   findOverdue(now: Date): Promise<Enrollment[]>;
   /**

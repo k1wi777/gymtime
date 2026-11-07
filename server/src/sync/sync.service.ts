@@ -29,7 +29,8 @@ export type SyncReason =
   | 'before_start'
   | 'after_end'
   | 'manual'
-  | 'attendance';
+  | 'attendance'
+  | 'erasure';
 
 export type SyncFailure = 'PLAN_FAILED' | 'CHUNK_FAILED';
 

@@ -1,9 +1,15 @@
 import {
+  Inject,
   Injectable,
   Logger,
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
+import {
+  ALWAYS_LEADER,
+  LEADER_LOCK,
+  type LeaderLock,
+} from '../common/concurrency/leader-lock.js';
 import { AuthService } from './auth.service.js';
 
 const HOUR_MS = 3_600_000;
@@ -14,7 +20,10 @@ export class SessionCleanup implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SessionCleanup.name);
   private timer: NodeJS.Timeout | undefined;
 
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    @Inject(LEADER_LOCK) private readonly lock: LeaderLock = ALWAYS_LEADER,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.purge();
@@ -27,6 +36,7 @@ export class SessionCleanup implements OnModuleInit, OnModuleDestroy {
   }
 
   private async purge(): Promise<void> {
+    if (!this.lock.isLeader()) return;
     try {
       const removed = await this.auth.purgeDeadSessions();
       if (removed > 0) {

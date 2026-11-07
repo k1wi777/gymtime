@@ -79,7 +79,10 @@ sql <<'SQL'
 INSERT INTO students (id, documento, nombre, programa, consentimiento) VALUES
   ('00000000-0000-4000-8000-000000000001', '1001', 'Ana Maria Gomez Perez', 'Ingenieria', true),
   ('00000000-0000-4000-8000-000000000002', '1002', 'Luis Mora', NULL, true),
-  ('00000000-0000-4000-8000-000000000003', '1003', 'Eva Ruiz', NULL, false);
+  ('00000000-0000-4000-8000-000000000003', '1003', 'Eva Ruiz', NULL, false),
+  ('00000000-0000-4000-8000-000000000004', '1004', 'Inactivo Con Evento', NULL, true),
+  ('00000000-0000-4000-8000-000000000005', '1005', 'Inactivo Sin Evento', NULL, true);
+UPDATE students SET activo = false WHERE documento IN ('1004', '1005');
 INSERT INTO fingerprints (student_id, plantilla, iv) VALUES
   ('00000000-0000-4000-8000-000000000001', '\xdeadbeef', '\x00112233');
 INSERT INTO devices (id, version_firmware) VALUES ('esp32-1', '1.0.0');
@@ -93,7 +96,9 @@ INSERT INTO schedule_instances (id, schedule_id, fecha, inicio, fin) VALUES
 INSERT INTO schedule_students (schedule_id, student_id) VALUES
   ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001'),
   ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000002'),
-  ('00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001');
+  ('00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-000000000001'),
+  ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000004'),
+  ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000005');
 INSERT INTO attendance_sessions (student_id, instance_id, entrada, salida, origen_entrada, origen_salida, estado) VALUES
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b1', '2026-10-26 15:05+00', '2026-10-26 15:55+00', 'device', 'device', 'cerrada'),
   ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2', '2026-11-02 15:02+00', NULL, 'device', NULL, 'abierta'),
@@ -105,6 +110,9 @@ INSERT INTO device_commands (device_id, tipo, payload, estado) VALUES
   ('esp32-1', 'schedule.set', '{}', 'pending');
 INSERT INTO processed_messages (message_id, device_id) VALUES ('m1', 'esp32-1');
 INSERT INTO event_log (tipo, detalle) VALUES ('legacy.event', '{"a":1}');
+INSERT INTO event_log (tipo, detalle, fecha) VALUES
+  ('student.deactivated', '{"studentId":"00000000-0000-4000-8000-000000000004"}', '2026-11-03 20:00+00'),
+  ('student.deactivated', '{"studentId":"00000000-0000-4000-8000-000000000004"}', '2026-11-09 20:00+00');
 SQL
 
 TABLES=(students fingerprints devices schedules schedule_students schedule_instances
@@ -121,20 +129,21 @@ for table in "${TABLES[@]}"; do
 done
 
 echo "== Expected values =="
-expect "students: display_name, correo and telefono start NULL" "3" \
+expect "students: display_name, correo and telefono start NULL" "5" \
   "SELECT count(*) FROM students WHERE display_name IS NULL AND correo IS NULL AND telefono IS NULL"
 expect "students keep their names and degree" "Ana Maria Gomez Perez|Ingenieria" \
   "SELECT nombre || '|' || programa FROM students WHERE documento = '1001'"
-expect "assignments stay active" "3" "SELECT count(*) FROM schedule_students WHERE valid_to IS NULL"
+expect "assignments of active students stay active" "3" \
+  "SELECT count(*) FROM schedule_students ss JOIN students s ON s.id = ss.student_id WHERE s.activo AND ss.valid_to IS NULL"
 expect "valid_from is the first occurrence (Bogota midnight)" "2026-10-26 05:00:00+00" \
   "SELECT valid_from AT TIME ZONE 'UTC' || '+00' FROM schedule_students WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND student_id = '00000000-0000-4000-8000-000000000001'"
 expect "valid_from without occurrences is not in the future" "0" \
   "SELECT count(*) FROM schedule_students WHERE valid_from > now()"
 expect "the past sessions are covered by their assignment" "3" \
   "SELECT count(*) FROM attendance_sessions a JOIN schedule_instances i ON i.id = a.instance_id JOIN schedule_students ss ON ss.schedule_id = i.schedule_id AND ss.student_id = a.student_id WHERE ss.valid_from <= a.entrada AND ss.valid_to IS NULL"
-expect "every assignment got an id" "3" "SELECT count(DISTINCT id) FROM schedule_students"
+expect "every assignment got an id" "5" "SELECT count(DISTINCT id) FROM schedule_students"
 expect "old event_log rows are attributed to system" "system|" \
-  "SELECT actor_type || '|' || coalesce(actor_id, '') FROM event_log"
+  "SELECT actor_type || '|' || coalesce(actor_id, '') FROM event_log WHERE tipo = 'legacy.event'"
 
 expect "panel accounts and sessions start empty (H7)" "0|0" \
   "SELECT (SELECT count(*) FROM panel_users) || '|' || (SELECT count(*) FROM auth_sessions)"
@@ -148,7 +157,7 @@ expect "legacy recurring schedule keeps a NULL period and its occurrences" "NULL
   "SELECT coalesce(period_id::text, 'NULL') || '|' || (SELECT count(*) FROM schedule_instances WHERE schedule_id = s.id) FROM schedules s WHERE id = '00000000-0000-4000-8000-0000000000a1'"
 expect "existing students with consent get the current text version" "v1-provisional|v1-provisional|NULL" \
   "SELECT (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1001') || '|' || (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1002') || '|' || (SELECT coalesce(consent_version, 'NULL') FROM students WHERE documento = '1003')"
-expect "their consent date is the registration date and nobody authored it" "2|0" \
+expect "their consent date is the registration date and nobody authored it" "4|0" \
   "SELECT count(*) FILTER (WHERE consent_at = created_at) || '|' || count(*) FILTER (WHERE consent_by IS NOT NULL) FROM students WHERE consent_version IS NOT NULL"
 expect "no student carries the old 'legacy' label" "0" \
   "SELECT count(*) FROM students WHERE consent_version = 'legacy'"
@@ -182,6 +191,24 @@ sql -c "UPDATE schedules SET period_id = NULL WHERE id = '00000000-0000-4000-800
 sql -c "INSERT INTO service_exceptions (period_id, desde, hasta, motivo) VALUES ('00000000-0000-4000-8000-0000000000d1', '2026-10-12', '2026-10-12', 'Festivo')" >/dev/null
 sql -c "DELETE FROM periods WHERE id = '00000000-0000-4000-8000-0000000000d1'" >/dev/null
 expect "deleting a period deletes its exceptions" "0" "SELECT count(*) FROM service_exceptions"
+
+echo "== H11: validity backfill for deactivated students =="
+expect "inactive student with event: interval closed at the FIRST event" "2026-11-03 20:00:00+00" \
+  "SELECT valid_to AT TIME ZONE 'UTC' || '+00' FROM schedule_students WHERE student_id = '00000000-0000-4000-8000-000000000004'"
+expect "inactive student without event: interval left open (listed in the NOTICE)" "1" \
+  "SELECT count(*) FROM schedule_students WHERE student_id = '00000000-0000-4000-8000-000000000005' AND valid_to IS NULL"
+expect "intervals of active students were not touched" "3" \
+  "SELECT count(*) FROM schedule_students ss JOIN students s ON s.id = ss.student_id WHERE s.activo AND ss.valid_to IS NULL"
+sql -f "$MIGRATIONS/20261106200000_h11_schedule_validity_backfill/migration.sql" >/dev/null 2>&1 || fail "the backfill failed when run a second time"
+expect "running the backfill twice changes nothing" "2026-11-03 20:00:00+00" \
+  "SELECT valid_to AT TIME ZONE 'UTC' || '+00' FROM schedule_students WHERE student_id = '00000000-0000-4000-8000-000000000004'"
+
+echo "== H11: tokens, key versions, erasure and alerts =="
+expect "existing templates are key version 1" "1|1" \
+  "SELECT count(*) || '|' || count(*) FILTER (WHERE key_version = 1) FROM fingerprints"
+expect "devices start without own token, revocation or alert" "1" \
+  "SELECT count(*) FROM devices WHERE token_hash IS NULL AND token_created_at IS NULL AND token_revoked_at IS NULL AND offline_since IS NULL AND offline_alerted_at IS NULL"
+expect "no student starts anonymised" "0" "SELECT count(*) FROM students WHERE anonymized_at IS NOT NULL"
 
 echo "== Constraints =="
 if sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null 2>&1; then
@@ -229,5 +256,14 @@ plan_uses "assignments of a student over time" "schedule_students_student_id_val
   "SELECT * FROM schedule_students WHERE student_id = '$S' AND valid_from <= now()"
 plan_uses "active assignments of a schedule" "schedule_students_(one_active|schedule_id_valid_to_idx)" \
   "SELECT * FROM schedule_students WHERE schedule_id = '00000000-0000-4000-8000-0000000000a1' AND valid_to IS NULL"
+
+echo "== Schema drift (schema.prisma vs migrations) =="
+SERVER_DIR="$(cd "$HERE/.." && pwd)"
+if (cd "$SERVER_DIR" && DATABASE_URL="$TEMP_URL" npx --no-install prisma migrate diff \
+  --from-config-datasource --to-schema prisma/schema.prisma --exit-code >/dev/null 2>&1); then
+  echo "ok   migrations and schema.prisma agree"
+else
+  fail "schema.prisma differs from what the migrations produce (run prisma migrate diff)"
+fi
 
 echo "Migration check passed."

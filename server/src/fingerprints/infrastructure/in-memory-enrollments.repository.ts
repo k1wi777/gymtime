@@ -43,6 +43,17 @@ export class InMemoryEnrollmentsRepository implements EnrollmentsRepository {
     return this.open((e) => e.studentId === studentId);
   }
 
+  async deleteByStudent(studentId: string) {
+    let removed = 0;
+    for (const [id, row] of this.rows) {
+      if (row.studentId === studentId) {
+        this.rows.delete(id);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
   async findOverdue(now: Date) {
     return this.open((e) => e.expiresAt.getTime() <= now.getTime());
   }
@@ -62,6 +73,7 @@ export class InMemoryEnrollmentsRepository implements EnrollmentsRepository {
       current.studentId,
       fingerprint.template,
       fingerprint.iv,
+      fingerprint.keyVersion,
     );
     return this.apply(id, ['in_progress'], { status: 'done' });
   }

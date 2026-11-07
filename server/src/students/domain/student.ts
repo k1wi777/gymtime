@@ -15,6 +15,8 @@ export interface Student {
   /** Version of the consent text accepted; null without consent. */
   consentVersion: string | null;
   consentAt: Date | null;
+  /** When the personal data was erased (Ley 1581); null for everyone else. */
+  anonymizedAt?: Date | null;
 }
 
 /** A consent as recorded: `by` is the panel user, or null for the system key. */

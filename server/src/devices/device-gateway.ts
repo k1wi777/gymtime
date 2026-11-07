@@ -12,6 +12,7 @@ import type { ServerMessage } from '@gymtime/shared';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import {
+  CLOSE_TOKEN_CHANGED,
   ConnectionRegistry,
   type DeviceConnection,
 } from './connection-registry.js';
@@ -31,7 +32,11 @@ const CLOSE_HEARTBEAT = 4402;
 const CLOSE_SHUTDOWN = 1001;
 
 type DisconnectReason =
-  'closed' | 'replaced' | 'heartbeat_timeout' | 'server_shutdown';
+  | 'closed'
+  | 'replaced'
+  | 'heartbeat_timeout'
+  | 'server_shutdown'
+  | 'token_revoked';
 
 /** Thin transport layer: turns frames into processor calls and back. */
 @Injectable()
@@ -232,5 +237,6 @@ function disconnectReason(code: number): DisconnectReason {
   if (code === CLOSE_HEARTBEAT) return 'heartbeat_timeout';
   if (code === CLOSE_REPLACED) return 'replaced';
   if (code === CLOSE_SHUTDOWN) return 'server_shutdown';
+  if (code === CLOSE_TOKEN_CHANGED) return 'token_revoked';
   return 'closed';
 }

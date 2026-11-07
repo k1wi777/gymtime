@@ -8,6 +8,8 @@ export interface DevicesConfig {
   heartbeatSec: number;
   /** Two heartbeat intervals: a silence beyond this marks the link dead. */
   heartbeatTimeoutMs: number;
+  /** Minutes offline before the alert (0 = no alert). */
+  offlineAlertMinutes: number;
 }
 
 export const DEVICES_CONFIG = Symbol('DEVICES_CONFIG');
@@ -18,4 +20,5 @@ export const defaultDevicesConfig: DevicesConfig = {
   maxResends: 3,
   heartbeatSec: 30,
   heartbeatTimeoutMs: 30 * 2 * 1000,
+  offlineAlertMinutes: 5,
 };

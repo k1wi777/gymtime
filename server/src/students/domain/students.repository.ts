@@ -24,8 +24,24 @@ export interface StudentsRepository {
   update(id: string, patch: StudentPatch): Promise<Student | null>;
   /** Marks the student inactive; returns null when it does not exist. */
   deactivate(id: string): Promise<Student | null>;
+  /**
+   * Replaces every personal field by neutral values and marks the student
+   * inactive and anonymised, in one write. Null when the student is missing.
+   */
+  anonymize(
+    id: string,
+    values: AnonymizedValues,
+    at: Date,
+  ): Promise<Student | null>;
   /** Stores the consent; returns null when the student does not exist. */
   recordConsent(id: string, consent: ConsentRecord): Promise<Student | null>;
+}
+
+/** What replaces the personal data of an erased student. */
+export interface AnonymizedValues {
+  name: string;
+  document: string;
+  displayName: string;
 }
 
 export const STUDENTS_REPOSITORY = Symbol('STUDENTS_REPOSITORY');

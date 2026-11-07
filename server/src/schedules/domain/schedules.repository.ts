@@ -43,6 +43,11 @@ export interface SchedulesRepository {
     studentId: string,
     at: Date,
   ): Promise<boolean>;
+  /**
+   * Closes every open interval of the student at `at` (all schedules), without
+   * deleting them. Returns how many were closed; 0 when none was open.
+   */
+  closeAllForStudent(studentId: string, at: Date): Promise<number>;
   /** Student ids assigned at `at` per schedule, in one query. */
   listStudentIds(
     scheduleIds: string[],

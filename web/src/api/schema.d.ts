@@ -234,6 +234,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a device and issue its own token (shown once)
+         * @description Creates the device if needed. The token is returned only here; the server stores its hash.
+         */
+        post: operations["DevicesController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/devices/messages": {
         parameters: {
             query?: never;
@@ -265,6 +285,40 @@ export interface paths {
         get: operations["DevicesController_status"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/{id}/token/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke the token: nothing is accepted for the device until it is rotated */
+        post: operations["DevicesController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/{id}/token/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate the token: the old one dies at once and the connection closes */
+        post: operations["DevicesController_rotate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1087,6 +1141,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/students/{id}/erase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Erase the personal data of a student (Ley 1581)
+         * @description Deletes templates and enrollments, anonymises name, document, program, contact and display name, deactivates and closes the validity. Sessions and reports are kept. Idempotent; the reader drops the fingerprint at its next sync, even if it is offline now.
+         */
+        post: operations["StudentsController_erase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sync": {
         parameters: {
             query?: never;
@@ -1540,7 +1614,7 @@ export interface components {
         DeviceDisconnectedDataDto: {
             deviceId: string;
             /** @enum {string} */
-            reason: "closed" | "replaced" | "heartbeat_timeout" | "server_shutdown";
+            reason: "closed" | "replaced" | "heartbeat_timeout" | "server_shutdown" | "token_revoked";
         };
         DeviceDisconnectedEventDto: {
             /** Format: date-time */
@@ -1552,14 +1626,45 @@ export interface components {
              */
             type: "device.disconnected";
         };
+        DeviceOfflineAlertDataDto: {
+            deviceId: string;
+            /** @description Minutes offline when the alert fired */
+            offlineMinutes: number;
+            /** @description Configured threshold (DEVICE_OFFLINE_ALERT_MINUTES) */
+            thresholdMinutes: number;
+        };
+        DeviceOfflineAlertEventDto: {
+            /** Format: date-time */
+            at: string;
+            data: components["schemas"]["DeviceOfflineAlertDataDto"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "device.offline_alert";
+        };
         DeviceStatusDto: {
+            /** @description DEVICE_OFFLINE_ALERT_MINUTES (0 = alerts disabled) */
+            alertThresholdMinutes: number;
             deviceId: string;
             firmwareVersion: string | null;
             /** Format: date-time */
             lastConnectedAt: string | null;
+            /** @description True from the offline alert until the device reconnects (the panel shows it) */
+            offlineAlert: boolean;
+            /**
+             * Format: date-time
+             * @description Since when the device is offline
+             */
+            offlineSince: string | null;
             online: boolean;
             /** @description Orders in pending or sent that the device has not confirmed yet */
             pendingCommands: number;
+            /**
+             * @description Credential of the device: the shared DEVICE_TOKEN (legacy), its own token, or revoked (nothing accepted)
+             * @enum {string}
+             */
+            tokenStatus: "legacy" | "own" | "revoked";
         };
         EnrollmentDataDto: {
             deviceId: string;
@@ -1594,6 +1699,18 @@ export interface components {
             step: string | null;
             /** Format: uuid */
             studentId: string;
+        };
+        EraseResultDto: {
+            /** Format: uuid */
+            studentId: string;
+            /** @description Templates deleted by this call */
+            templatesDeleted: number;
+        };
+        EraseStudentDto: {
+            /** @description The current document of the student, to confirm */
+            confirmDocument?: string;
+            /** @description Re-apply an erasure after restoring a backup (no document needed) */
+            reapply?: boolean;
         };
         ExceptionResultDto: {
             exception: components["schemas"]["ServiceExceptionDto"];
@@ -1693,6 +1810,11 @@ export interface components {
             errors: components["schemas"]["RowErrorDto"][];
             /** @description Line of the file; the header is line 1 */
             row: number;
+        };
+        IssuedTokenDto: {
+            deviceId: string;
+            /** @description Shown only in this response (Cache-Control: no-store); the server keeps just its hash */
+            token: string;
         };
         KeepaliveDataDto: Record<string, never>;
         KeepaliveEventDto: {
@@ -1823,6 +1945,11 @@ export interface components {
         };
         PanelStudentDto: {
             active: boolean;
+            /**
+             * Format: date-time
+             * @description Set when the personal data was erased (Ley 1581)
+             */
+            anonymizedAt: string | null;
             /** Format: date-time */
             consentAt: string | null;
             consentVersion: string | null;
@@ -1904,6 +2031,10 @@ export interface components {
             /** @description Future occurrences moved to the new hours */
             updated: number;
         };
+        RegisterDeviceDto: {
+            /** @example esp32-01 */
+            deviceId: string;
+        };
         ReportColumnDto: {
             /** @example obligations */
             key: string;
@@ -1969,6 +2100,11 @@ export interface components {
             /** Format: uuid */
             scheduleId: string;
             scheduleName: string;
+        };
+        RevokedTokenDto: {
+            deviceId: string;
+            /** @enum {string} */
+            tokenStatus: "revoked";
         };
         RosterCountsDto: {
             attended: number;
@@ -2155,6 +2291,11 @@ export interface components {
         };
         StudentResponseDto: {
             active: boolean;
+            /**
+             * Format: date-time
+             * @description Set when the personal data was erased (Ley 1581)
+             */
+            anonymizedAt: string | null;
             /** Format: date-time */
             consentAt: string | null;
             consentVersion: string | null;
@@ -2242,7 +2383,7 @@ export interface components {
             /** @description Students left out for lack of slots */
             omitted: number;
             /** @enum {string} */
-            reason: "connected" | "enrollment" | "before_start" | "after_end" | "manual" | "attendance";
+            reason: "connected" | "enrollment" | "before_start" | "after_end" | "manual" | "attendance" | "erasure";
             scheduleId: string | null;
             /** @enum {string} */
             status: "ok" | "failed";
@@ -2987,6 +3128,56 @@ export interface operations {
             };
         };
     };
+    DevicesController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedTokenDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description The device already has an own token (DEVICE_ALREADY_REGISTERED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     DevicesController_sendMessage: {
         parameters: {
             query?: never;
@@ -3074,6 +3265,102 @@ export interface operations {
             };
             /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DevicesController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevokedTokenDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unknown device (DEVICE_NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    DevicesController_rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedTokenDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unknown device (DEVICE_NOT_FOUND) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3221,7 +3508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/event-stream": components["schemas"]["DeviceConnectedEventDto"] | components["schemas"]["DeviceDisconnectedEventDto"] | components["schemas"]["ScanEventDto"] | components["schemas"]["CommandEventDto"] | components["schemas"]["AlarmEventDto"] | components["schemas"]["AttendanceEventDto"] | components["schemas"]["EnrollmentEventDto"] | components["schemas"]["KeepaliveEventDto"];
+                    "text/event-stream": components["schemas"]["DeviceConnectedEventDto"] | components["schemas"]["DeviceDisconnectedEventDto"] | components["schemas"]["DeviceOfflineAlertEventDto"] | components["schemas"]["ScanEventDto"] | components["schemas"]["CommandEventDto"] | components["schemas"]["AlarmEventDto"] | components["schemas"]["AttendanceEventDto"] | components["schemas"]["EnrollmentEventDto"] | components["schemas"]["KeepaliveEventDto"];
                 };
             };
             /** @description No valid credential */
@@ -5903,6 +6190,76 @@ export interface operations {
                 };
             };
             /** @description Student inactive or without consent (CONSENT_REQUIRED), device busy or device unavailable */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    StudentsController_erase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EraseStudentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EraseResultDto"];
+                };
+            };
+            /** @description Invalid id or body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Student not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description CONFIRMATION_MISMATCH: the document does not match */
             409: {
                 headers: {
                     [name: string]: unknown;

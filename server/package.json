@@ -30,7 +30,9 @@
     "openapi:export": "nest build && node dist/openapi/export-openapi.js",
     "test:panel-server": "vitest run --config ./vitest.config.panel.ts",
     "seed:reports": "nest build && node dist/reports/seed/run-seed.js",
-    "test:reports-db": "bash scripts/verify-reports-db.sh"
+    "keys:rotate": "node dist/keys/rotate.js",
+    "test:reports-db": "bash scripts/verify-reports-db.sh",
+    "test:ops-db": "bash scripts/verify-ops-db.sh"
   },
   "dependencies": {
     "@gymtime/shared": "*",
@@ -45,6 +47,7 @@
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
+    "prisma": "^7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "ws": "^8.22.1",
@@ -66,7 +69,6 @@
     "oxlint-tsgolint": "^7.0.2001",
     "pino-pretty": "^13.2.0",
     "prettier": "^3.4.2",
-    "prisma": "^7.10.1",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "typescript": "^6.0.2",

@@ -8,7 +8,10 @@ import {
   type StudentFilter,
   type StudentPatch,
 } from '../domain/student.js';
-import type { StudentsRepository } from '../domain/students.repository.js';
+import type {
+  AnonymizedValues,
+  StudentsRepository,
+} from '../domain/students.repository.js';
 import { toStudent } from './student-mapper.js';
 
 const UNIQUE_VIOLATION = 'P2002';
@@ -89,6 +92,17 @@ export class PrismaStudentsRepository implements StudentsRepository {
 
   deactivate(id: string) {
     return this.updateOrNull(id, { active: false });
+  }
+
+  anonymize(id: string, values: AnonymizedValues, at: Date) {
+    return this.updateOrNull(id, {
+      ...values,
+      program: null,
+      email: null,
+      phone: null,
+      active: false,
+      anonymizedAt: at,
+    });
   }
 
   recordConsent(id: string, consent: ConsentRecord) {

@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Inject,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -29,6 +30,9 @@ import { DisplayValidationError } from '../common/display/display.errors.js';
 import { DuplicateDocumentError, type Student } from './domain/student.js';
 import {
   ConsentTextDto,
+  EraseResultDto,
+  EraseStudentDto,
+  eraseBodySchema,
   RecordConsentDto,
   consentBodySchema,
   CreateStudentDto,
@@ -38,9 +42,11 @@ import {
   listStudentsQuerySchema,
   updateStudentSchema,
 } from './dto/student.dto.js';
-import { CONSENT_TEXT, CONSENT_VERSION } from './consent.js';
+import { CONSENT, type ConsentText } from './consent.loader.js';
 import {
   ConsentVersionStaleError,
+  ErasureConfirmationError,
+  type ErasureResult,
   StudentsService,
 } from './students.service.js';
 import type { z } from 'zod';
@@ -50,7 +56,10 @@ import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 @ApiAuth()
 @Controller('students')
 export class StudentsController {
-  constructor(private readonly students: StudentsService) {}
+  constructor(
+    private readonly students: StudentsService,
+    @Inject(CONSENT) private readonly consent: ConsentText,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a student' })
@@ -104,7 +113,7 @@ export class StudentsController {
   })
   @ApiOkResponse({ type: ConsentTextDto })
   consentText(): ConsentTextDto {
-    return { version: CONSENT_VERSION, text: CONSENT_TEXT };
+    return { ...this.consent };
   }
 
   @Post(':id/consent')
@@ -174,6 +183,45 @@ export class StudentsController {
   @ApiBadRequestResponse({ description: 'Invalid id' })
   async deactivate(@Param('id', ParseUUIDPipe) id: string): Promise<Student> {
     return this.orNotFound(await this.students.deactivate(id));
+  }
+
+  @Post(':id/erase')
+  @Roles('admin')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Erase the personal data of a student (Ley 1581)',
+    description:
+      'Deletes templates and enrollments, anonymises name, document, program, contact and display name, deactivates and closes the validity. Sessions and reports are kept. Idempotent; the reader drops the fingerprint at its next sync, even if it is offline now.',
+  })
+  @ApiBody({ type: EraseStudentDto })
+  @ApiOkResponse({ type: EraseResultDto })
+  @ApiNotFoundResponse({ description: 'Student not found' })
+  @ApiConflictResponse({
+    description: 'CONFIRMATION_MISMATCH: the document does not match',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid id or body' })
+  async erase(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(eraseBodySchema))
+    body: z.infer<typeof eraseBodySchema>,
+  ): Promise<ErasureResult> {
+    try {
+      const result = await this.students.erase(
+        id,
+        'confirmDocument' in body ? body.confirmDocument : null,
+      );
+      if (!result) throw new NotFoundException('Student not found');
+      return result;
+    } catch (error) {
+      if (error instanceof ErasureConfirmationError) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'CONFIRMATION_MISMATCH',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
   private orNotFound(student: Student | null): Student {

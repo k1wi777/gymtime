@@ -17,6 +17,7 @@ const config = {
   maxResends: 3,
   heartbeatSec: 30,
   heartbeatTimeoutMs: 60000,
+  offlineAlertMinutes: 5,
 };
 
 const message = (): ServerMessage => ({

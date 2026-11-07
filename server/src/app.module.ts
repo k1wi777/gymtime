@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { AlarmModule } from './alarm/alarm.module.js';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { LeaderLockModule } from './common/concurrency/leader-lock.module.js';
 import { AuditModule } from './common/audit/audit.module.js';
 import { AppLoggerModule } from './common/logging/app-logger.module.js';
 import { SystemEventsModule } from './common/events/system-events.module.js';
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module.js';
     AppLoggerModule,
     SystemEventsModule,
     AuditModule,
+    LeaderLockModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

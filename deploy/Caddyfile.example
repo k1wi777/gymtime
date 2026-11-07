@@ -1,0 +1,13 @@
+# Copy to deploy/Caddyfile and replace example.edu with your domain.
+# Caddy obtains and renews the HTTPS certificates by itself and proxies the
+# WebSocket upgrade (wss://api.example.edu/ws) without extra configuration.
+# The DNS records for both names must point to this server first.
+
+api.example.edu {
+	# One proxy hop: the API must run with TRUST_PROXY=1 (the compose file sets it).
+	reverse_proxy server:3000
+}
+
+app.example.edu {
+	reverse_proxy web:3000
+}

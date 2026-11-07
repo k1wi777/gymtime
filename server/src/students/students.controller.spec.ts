@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { STUDENTS_REPOSITORY } from './domain/students.repository.js';
 import { InMemoryStudentsRepository } from './infrastructure/in-memory-students.repository.js';
+import { CONSENT, PROVISIONAL_CONSENT } from './consent.loader.js';
 import { StudentsController } from './students.controller.js';
 import { StudentsService } from './students.service.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
@@ -31,6 +32,7 @@ describe('StudentsController (HTTP)', () => {
         ...authTestProviders({ corsOrigins: [TEST_ORIGIN] }),
         ...auditTestProviders,
         StudentsService,
+        { provide: CONSENT, useValue: PROVISIONAL_CONSENT },
         { provide: CLOCK, useValue: systemClock },
         { provide: STUDENTS_REPOSITORY, useClass: InMemoryStudentsRepository },
       ],
@@ -208,6 +210,53 @@ describe('StudentsController (HTTP)', () => {
         .set(auth)
         .send({ phone: 'abc' })
         .expect(400);
+    });
+  });
+
+  describe('POST /students/:id/erase (H11)', () => {
+    it('only an admin may erase, with the document or reapply', async () => {
+      const assistant = await signInAs(moduleRef, 'ana', 'asistente');
+      const { body: s } = await http().post('/students').set(auth).send(body);
+      await http()
+        .post(`/students/${s.id}/erase`)
+        .set('Cookie', assistant)
+        .set(panelHeaders())
+        .send({ confirmDocument: '100' })
+        .expect(403);
+      await http()
+        .post(`/students/${s.id}/erase`)
+        .set(auth)
+        .send({})
+        .expect(400);
+      await http()
+        .post(`/students/${s.id}/erase`)
+        .set(auth)
+        .send({ confirmDocument: 'nope' })
+        .expect(409)
+        .expect((res) => expect(res.body.code).toBe('CONFIRMATION_MISMATCH'));
+      const ok = await http()
+        .post(`/students/${s.id}/erase`)
+        .set(auth)
+        .send({ confirmDocument: '100' })
+        .expect(200);
+      expect(ok.body).toEqual({ studentId: s.id, templatesDeleted: 0 });
+      const list = await http().get('/students').set(auth).expect(200);
+      expect(list.body[0]).toMatchObject({
+        name: 'Estudiante anonimizado',
+        active: false,
+        email: null,
+      });
+      expect(list.body[0].anonymizedAt).toEqual(expect.any(String));
+      await http()
+        .post(`/students/${s.id}/erase`)
+        .set(auth)
+        .send({ reapply: true })
+        .expect(200);
+      await http()
+        .post('/students/00000000-0000-4000-8000-000000000000/erase')
+        .set(auth)
+        .send({ reapply: true })
+        .expect(404);
     });
   });
 });
