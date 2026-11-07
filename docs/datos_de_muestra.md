@@ -8,7 +8,7 @@ npm run seed:dev -- --dry-run                  # muestra qué se borra y qué se
 npm run seed:dev -- --confirm gymtime          # ejecuta (el valor es el nombre de la base)
 npm run seed:dev                               # en una terminal pide escribir el nombre de la base
 npm run seed:dev -- --confirm gymtime --today 2026-11-07   # fija «hoy» (reproducible)
-npm run seed:dev -- --confirm gymtime --with-semester      # además el semestre simulado SIM- de seed:reports
+npm run seed:dev -- --confirm gymtime --with-semester      # además el semestre simulado SIM- de seed:reports (en una segunda transacción, posterior a la de la muestra principal: si fallara, la muestra principal ya está confirmada)
 ```
 
 ## Protecciones
