@@ -31,7 +31,7 @@ No continúes hasta completar estos pasos.
 
 **GymTime UniCórdoba** (nombre provisional) es un sistema de control de acceso y de tiempo de permanencia para el gimnasio institucional de la Universidad de Córdoba, que funciona por horarios de aproximadamente una hora con un grupo de estudiantes asignado a cada uno. Cada estudiante marca entrada y salida con su huella en un dispositivo ESP32; un servicio en la nube decide si es entrada, salida o rechazo, registra la asistencia y activa una alarma cuando termina el horario y aún hay gente adentro. Un panel web permite a los encargados controlar en vivo, hacer registros manuales y consultar métricas. Así el control del tiempo deja de depender de una persona vigilando el reloj.
 
-Estado actual: iteración 1 (backend local, CLI y simulador de ESP32 para probar el hardware); ver `backlog_iteracion_1_backend.md`.
+Estado actual: iteración 2 completa (servidor, CLI, simulador, panel web para asistente y administrador, periodos, importación, reportes, producción y modo sin conexión; ver `backlog_iteracion_2.md` y `docs/decisiones_iteracion_2.md`). La iteración 3 depende del hardware (pruebas con el ESP32 real, estado de periféricos).
 
 ## Para quién
 
@@ -74,11 +74,11 @@ Estado actual: iteración 1 (backend local, CLI y simulador de ESP32 para probar
 - **Despliegue:** local en la iteración 1; objetivo VPS pequeño o Railway/Render con HTTPS/`wss`.
 - **Hardware:** ESP32 con lector de huellas AS608 (firmware a cargo de otro equipo, Arduino/PlatformIO).
 
-Monorepo previsto: `server/` (existe), `cli/`, `simulator/`, `shared/`, `docs/` (aún no existen).
+Monorepo: workspaces npm `server/`, `cli/`, `simulator/` y `shared/`; el panel `web/` (Next.js) vive fuera de los workspaces con su propio `package.json`; además `deploy/` (producción) y `docs/`.
 
 ## Comandos principales
 
-*Se ejecutan desde `server/` (npm).*
+*Servidor, desde `server/` (npm).*
 
 - `cd server && npm run start:dev` — Desarrollo.
 - `cd server && npm test` — Tests unitarios.
@@ -86,6 +86,14 @@ Monorepo previsto: `server/` (existe), `cli/`, `simulator/`, `shared/`, `docs/` 
 - `cd server && npm run lint` — Linter.
 - `cd server && npx tsc --noEmit` — Typecheck.
 - `cd server && npm run build` — Build.
+
+*Desde la raíz.*
+
+- `npm run test:scenarios` — Escenarios A1-A12 y B (`-- --db` añade B13); `npm run test:load` — prueba de carga (V19).
+- `npm run seed:dev` — Datos de muestra de la base local de desarrollo (pide confirmación; `docs/datos_de_muestra.md`).
+- `npm run dev:server` (API en 3001) y `npm run dev:web` (panel en 3000); `npm run install:web` instala el panel.
+
+*Panel, con `npm --prefix web`:* `run lint`, `run typecheck`, `test`, `run test:e2e` (Chrome real) y `run build` (con `NEXT_PUBLIC_API_URL`).
 
 ---
 
@@ -95,8 +103,11 @@ Monorepo previsto: `server/` (existe), `cli/`, `simulator/`, `shared/`, `docs/` 
 
 | Ruta | Propósito |
 |------|-----------|
-| `src/` | Código fuente del proyecto. |
-| `tests/` | Suite de pruebas. |
+| `server/` | Servidor NestJS (API REST, WebSocket, Prisma); sus tests están en `server/src` y `server/test`. |
+| `cli/`, `simulator/`, `shared/` | CLI `gym`, ESP32 simulado y esquemas compartidos (workspaces npm). |
+| `web/` | Panel web Next.js (asistente y administrador); proyecto aparte. |
+| `deploy/` | Compose de producción, Caddy, respaldo/restauración y revisión de seguridad. |
+| `docs/` | Protocolo, guías de firmware, manuales, despliegue, escenarios y datos de muestra. |
 | `.rei/specs/` | Work Items y planificación del REI Harness. |
 | `.rei/progress/` | Estado actual (`current.md`), historial general (`history.md`) y detalle de Work Items. |
 | `.rei/progress/work-items/` | Registros detallados de cada Work Item, organizados cronológicamente. |

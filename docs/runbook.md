@@ -103,6 +103,24 @@ token en el firmware (`docs/guia_wss_firmware.md`). `DEVICE_TOKEN` compartido
 sigue valiendo solo para lectores sin token propio y no revocados, con un aviso
 en el log (`legacy_token_used`): quítalo del entorno al terminar la transición.
 
+**Retirar el `DEVICE_TOKEN` compartido (al registrar el lector real):**
+
+1. `gym device register <id>` y flashear el token que imprime (una sola vez).
+2. Comprobar que conecta (`gym device status`, columna token = `own`).
+3. Borrar `DEVICE_TOKEN` del entorno de producción y reiniciar el servidor. Desde
+   entonces ningún lector puede conectar con un secreto compartido. Mientras la
+   variable exista, el servidor lo avisa en cada arranque («retírelo al registrar el
+   lector real»).
+
+**Valores de ejemplo rechazados.** Con `NODE_ENV=production` el servidor se niega a
+arrancar si `ADMIN_API_KEY`, `DEVICE_TOKEN` o `FIRST_ADMIN_PASSWORD` empiezan por
+`change-me`, `changeme`, `replace-me`, `your-`, `example`, `placeholder`, `secret`,
+`password`, `admin-key`, `device-token`, `dev-`, `test-` o `demo-`, o repiten un solo
+carácter; si `ENCRYPTION_KEY` son bytes repetidos (por ejemplo 32 ceros); o si la
+contraseña de `DATABASE_URL` es vacía, `gymtime_dev_password`, `ci_password`,
+`postgres` o `password`. El mensaje nombra cada variable y nunca imprime su valor.
+Genere uno real con `openssl rand -base64 32`.
+
 ## 6. Alertas de lector sin conexión
 
 Un lector que se conectó alguna vez y lleva más de `DEVICE_OFFLINE_ALERT_MINUTES`
@@ -240,6 +258,7 @@ nuevos y prueba una restauración periódicamente (sección 3).
 
 | Síntoma | Causa y solución |
 |---|---|
+| El servidor no arranca y dice «looks like an example value» | Esa variable conserva un valor de ejemplo en producción (sección 5); genere uno con `openssl rand -base64 32`. |
 | El servidor no arranca y nombra `ENCRYPTION_KEYS_RETIRED` | Falta la clave de la versión indicada; agrégala y reinicia (sección 4). |
 | `/docs` da 404 | Es lo esperado en producción; `ENABLE_DOCS=true` lo publica. |
 | Todos los intentos de login parecen de la misma IP | `TRUST_PROXY` debe ser el número de proxies (1 con Caddy). |

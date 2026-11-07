@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { checkPassword } from '../auth/password-policy.js';
 import { USERNAME_PATTERN, normalizeUsername } from '../auth/username.js';
+import {
+  HOW_TO_GENERATE,
+  hasPlaceholderDbPassword,
+  isPlaceholderKey,
+  isPlaceholderSecret,
+} from './placeholder-secrets.js';
 
 const LOG_LEVELS = [
   'fatal',
@@ -119,6 +125,54 @@ const authInt = (min: number, max: number, fallback: number) =>
     z.coerce.number().int().min(min).max(max).default(fallback),
   );
 
+/**
+ * In production the example values of `.env.example` are public knowledge:
+ * refuse to start. The message names the variable and how to generate a real
+ * one; it never contains the value.
+ */
+function rejectPlaceholders(
+  env: {
+    ADMIN_API_KEY: string;
+    DEVICE_TOKEN?: string;
+    FIRST_ADMIN_PASSWORD?: string;
+    ENCRYPTION_KEY: string;
+    DATABASE_URL: string;
+  },
+  context: z.RefinementCtx,
+): void {
+  const reject = (name: string, why: string) =>
+    context.addIssue({
+      code: 'custom',
+      path: [name],
+      message: `${why} in production; use a random value, e.g. ${HOW_TO_GENERATE}`,
+    });
+  const secrets = {
+    ADMIN_API_KEY: env.ADMIN_API_KEY,
+    DEVICE_TOKEN: env.DEVICE_TOKEN,
+    FIRST_ADMIN_PASSWORD: env.FIRST_ADMIN_PASSWORD,
+  };
+  for (const [name, value] of Object.entries(secrets)) {
+    if (value !== undefined && isPlaceholderSecret(value)) {
+      reject(
+        name,
+        'looks like an example value ("change-me*", repeated characters...)',
+      );
+    }
+  }
+  if (
+    BASE64.test(env.ENCRYPTION_KEY) &&
+    isPlaceholderKey(Buffer.from(env.ENCRYPTION_KEY, 'base64'))
+  ) {
+    reject('ENCRYPTION_KEY', 'is a trivial key (repeated bytes)');
+  }
+  if (hasPlaceholderDbPassword(env.DATABASE_URL)) {
+    reject(
+      'DATABASE_URL',
+      'has an empty or example database password (the one of the development files)',
+    );
+  }
+}
+
 export const envSchema = z
   .object({
     NODE_ENV: z
@@ -226,6 +280,7 @@ export const envSchema = z
           'None requires NODE_ENV=production (the cookie must be Secure)',
       });
     }
+    if (env.NODE_ENV === 'production') rejectPlaceholders(env, context);
     const { FIRST_ADMIN_USERNAME: username, FIRST_ADMIN_PASSWORD: password } =
       env;
     if ((username === undefined) !== (password === undefined)) {

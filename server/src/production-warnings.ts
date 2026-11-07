@@ -33,7 +33,7 @@ export function productionWarnings(
   }
   if (env.DEVICE_TOKEN) {
     warnings.push(
-      'DEVICE_TOKEN is set: the shared token is a transition; register each reader (gym device register) and remove it',
+      'DEVICE_TOKEN is set: the shared token is a transition; when you register the real reader (gym device register) remove DEVICE_TOKEN and restart, so no reader can connect with a shared secret',
     );
   }
   return warnings;

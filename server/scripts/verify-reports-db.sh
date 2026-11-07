@@ -41,8 +41,11 @@ if ! psql "$ADMIN_URL" -qtAc 'select 1' >/dev/null 2>&1; then
   exit 0
 fi
 
+SEED_DB="gymtime_seed_dev_check_$$"
+SEED_URL="$SERVER_URL/$SEED_DB"
 cleanup() {
   psql "$ADMIN_URL" -qc "DROP DATABASE IF EXISTS \"$TEMP_DB\" WITH (FORCE)" >/dev/null 2>&1 || true
+  psql "$ADMIN_URL" -qc "DROP DATABASE IF EXISTS \"$SEED_DB\" WITH (FORCE)" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 psql "$ADMIN_URL" -qc "CREATE DATABASE \"$TEMP_DB\"" >/dev/null
@@ -96,5 +99,56 @@ check_plan "schedule_students by schedule" \
   "SELECT * FROM schedule_students WHERE schedule_id IN (SELECT id FROM schedules) AND valid_to IS NULL"
 check_plan "alarm_events by occurrence" \
   "SELECT * FROM alarm_events WHERE instance_id IN (SELECT id FROM schedule_instances WHERE $RANGE)"
+
+echo "== seed:dev on its own throw-away database =="
+# The name contains "seed" and "dev", so the guard of seed:dev accepts it; the
+# development database is never involved.
+psql "$ADMIN_URL" -qc "CREATE DATABASE \"$SEED_DB\"" >/dev/null
+seed_sql() { psql "$SEED_URL" -v ON_ERROR_STOP=1 -qtA "$@"; }
+seed_dev() { DATABASE_URL="$SEED_URL" node dist/dev-seed/run-seed-dev.js "$@"; }
+TODAY_FIXED="2026-11-07"
+
+# Refusals first: nothing may change.
+set +e
+NODE_ENV=production DATABASE_URL="$SEED_URL" node dist/dev-seed/run-seed-dev.js --confirm "$SEED_DB" >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "seed:dev did not refuse NODE_ENV=production"
+DATABASE_URL="postgresql://u:p@db.invalid:5432/$SEED_DB" node dist/dev-seed/run-seed-dev.js --confirm "$SEED_DB" >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "seed:dev did not refuse a non-local host"
+DATABASE_URL="postgresql://u:p@localhost:5432/gymtime_prod" node dist/dev-seed/run-seed-dev.js --confirm gymtime_prod >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "seed:dev did not refuse a database that is not for development"
+seed_dev --today "$TODAY_FIXED" --confirm wrong_name >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "seed:dev accepted a wrong confirmation"
+seed_dev --today "$TODAY_FIXED" </dev/null >/dev/null 2>&1
+[[ $? -eq 2 ]] || fail "seed:dev wrote without confirmation"
+seed_dev --today "$TODAY_FIXED" --dry-run >/dev/null || fail "dry-run failed"
+set -e
+[[ "$(seed_sql -c "select count(*) from information_schema.tables where table_schema='public'")" == "0" ]] \
+  || fail "a refused or simulated run changed the database"
+echo "ok   refusals and --dry-run change nothing"
+
+seed_dev --today "$TODAY_FIXED" --confirm "$SEED_DB" >/dev/null
+count() { seed_sql -c "select count(*) from $1"; }
+[[ "$(count students)" == 30 && "$(count fingerprints)" == 21 && "$(count panel_users)" == 2 ]] \
+  || fail "unexpected sample counts"
+[[ "$(seed_sql -c "select count(*) from fingerprints where length(plantilla) = 512 + 16 and length(iv) = 12")" == 21 ]] \
+  || fail "sample templates are not 512 bytes sealed with AES-GCM"
+[[ "$(seed_sql -c "select count(*) from panel_users where password_hash like '\$argon2id\$%' and not must_change_password")" == 2 ]] \
+  || fail "sample users do not have argon2id hashes"
+MIGRATIONS="$(count _prisma_migrations)"
+digest() { seed_sql -c "select md5(string_agg(id::text, ',' order by id)) from attendance_sessions"; }
+FIRST="$(digest)"
+echo "ok   sample set loaded: $(count attendance_sessions) sessions, $(count alarm_events) alarms, $(count offline_events) offline events"
+
+# A foreign row must disappear (the wipe is total) and a second run must give the same set.
+seed_sql -c "insert into students (documento, nombre) values ('MANUAL-1', 'Manual')" >/dev/null
+seed_dev --today "$TODAY_FIXED" --confirm "$SEED_DB" >/dev/null
+[[ "$(count students)" == 30 ]] || fail "second run left the foreign student"
+[[ "$(digest)" == "$FIRST" ]] || fail "two runs with the same --today differ"
+[[ "$(count _prisma_migrations)" == "$MIGRATIONS" ]] || fail "_prisma_migrations changed"
+echo "ok   second run gives the same set and keeps _prisma_migrations"
+
+seed_dev --today "$TODAY_FIXED" --confirm "$SEED_DB" --with-semester >/dev/null
+[[ "$(seed_sql -c "select count(*) from students where documento like 'SIM-%'")" == 40 ]] || fail "--with-semester did not add the simulated semester"
+echo "ok   --with-semester adds the SIM- semester"
 
 echo "V15 passed."

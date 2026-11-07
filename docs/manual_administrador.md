@@ -1,5 +1,8 @@
 # Manual del administrador
 
+> Decisiones del producto que afectan a este manual (baja irreversible, importación sin sobrescritura, exportación solo CSV): [`decisiones_iteracion_2.md`](decisiones_iteracion_2.md).
+
+
 Todo lo del [manual del asistente](manual_asistente.md) más las secciones del menú reservadas a administradores. El asistente no las ve ni puede abrirlas.
 
 ## Periodos

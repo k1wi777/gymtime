@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { validateEnv } from './env.schema.js';
 
 const valid = () => ({
@@ -167,7 +169,13 @@ describe('validateEnv', () => {
       const raw = { ...valid(), COOKIE_SAMESITE: 'None' };
       expect(() => validateEnv(raw)).toThrow(/COOKIE_SAMESITE: None requires/);
       expect(
-        validateEnv({ ...raw, NODE_ENV: 'production' }).COOKIE_SAMESITE,
+        validateEnv({
+          ...raw,
+          NODE_ENV: 'production',
+          // Production refuses the example secrets of `valid()`.
+          DEVICE_TOKEN: randomBytes(16).toString('hex'),
+          ADMIN_API_KEY: randomBytes(24).toString('base64'),
+        }).COOKIE_SAMESITE,
       ).toBe('None');
     });
 
@@ -279,5 +287,135 @@ describe('ENABLE_DOCS', () => {
       true,
     );
     expect(validateEnv({ ...base, ENABLE_DOCS: '' }).ENABLE_DOCS).toBe(false);
+  });
+});
+
+describe('validateEnv: example values in production', () => {
+  const production = () => ({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://gt:Zq8vLm2pXr4tYw6n@db.example:5432/gt',
+    DEVICE_TOKEN: randomBytes(16).toString('hex'),
+    ADMIN_API_KEY: randomBytes(24).toString('base64'),
+    ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+  });
+
+  /** The messages of the thrown error, one per variable. */
+  const failure = (raw: Record<string, unknown>): string => {
+    try {
+      validateEnv(raw);
+    } catch (error) {
+      return (error as Error).message;
+    }
+    return '';
+  };
+
+  it('accepts random values', () => {
+    expect(validateEnv(production()).NODE_ENV).toBe('production');
+  });
+
+  it.each([
+    'change-me-admin-api-key',
+    'Change-Me-Please-1234',
+    'changeme-changeme-1',
+    'replace-me-with-a-key',
+    'your-api-key-goes-here',
+    'example-key-1234567890',
+    'placeholder-1234567890',
+    'secret-secret-secret-1',
+    'password-password-1',
+    'admin-key-1234567890',
+    'device-token-123456',
+    'dev-key-1234567890123',
+    'test-key-1234567890123',
+    'Demo-Admin-2026',
+    'aaaaaaaaaaaaaaaaaaaa',
+  ])(
+    'rejects %s as ADMIN_API_KEY, DEVICE_TOKEN or FIRST_ADMIN_PASSWORD',
+    (v) => {
+      for (const name of ['ADMIN_API_KEY', 'DEVICE_TOKEN']) {
+        const message = failure({ ...production(), [name]: v });
+        expect(message, name).toContain(
+          `- ${name}: looks like an example value`,
+        );
+        expect(message).toContain('openssl rand');
+        expect(message).not.toContain(v);
+      }
+      const message = failure({
+        ...production(),
+        FIRST_ADMIN_USERNAME: 'admin.real',
+        FIRST_ADMIN_PASSWORD: v,
+      });
+      expect(message).toContain('FIRST_ADMIN_PASSWORD: looks like an example');
+    },
+  );
+
+  it('rejects trivial encryption keys', () => {
+    for (const bytes of [
+      Buffer.alloc(32, 0),
+      Buffer.alloc(32, 0x41),
+      Buffer.from('abcd'.repeat(8)),
+    ]) {
+      const message = failure({
+        ...production(),
+        ENCRYPTION_KEY: bytes.toString('base64'),
+      });
+      expect(message).toContain('ENCRYPTION_KEY: is a trivial key');
+    }
+  });
+
+  it('rejects the development database passwords and an empty one', () => {
+    for (const url of [
+      'postgresql://gymtime:gymtime_dev_password@db:5432/gymtime',
+      'postgresql://u:ci_password@db:5432/gt',
+      'postgresql://u:postgres@db.example:5432/gt',
+      'postgresql://u@db:5432/gt',
+    ]) {
+      const message = failure({ ...production(), DATABASE_URL: url });
+      expect(message).toContain('DATABASE_URL: has an empty or example');
+      expect(message).not.toContain('gymtime_dev_password');
+    }
+  });
+
+  it('names every offending variable at once', () => {
+    const message = failure({
+      ...production(),
+      ADMIN_API_KEY: 'change-me-admin-api-key',
+      DEVICE_TOKEN: 'change-me-device-token',
+    });
+    expect(message).toContain('ADMIN_API_KEY');
+    expect(message).toContain('DEVICE_TOKEN');
+  });
+
+  it('accepts the same values in development and test', () => {
+    for (const NODE_ENV of ['development', 'test']) {
+      const env = validateEnv({
+        ...production(),
+        NODE_ENV,
+        DATABASE_URL:
+          'postgresql://gymtime:gymtime_dev_password@localhost:5432/gymtime',
+        ADMIN_API_KEY: 'change-me-admin-api-key',
+        DEVICE_TOKEN: 'change-me-device-token',
+        ENCRYPTION_KEY: Buffer.alloc(32, 0).toString('base64'),
+      });
+      expect(env.NODE_ENV).toBe(NODE_ENV);
+    }
+  });
+
+  it('.env.example is refused in production and accepted in development', () => {
+    const file = readFileSync(
+      resolve(import.meta.dirname, '../../../.env.example'),
+      'utf8',
+    );
+    const raw: Record<string, string> = {};
+    for (const line of file.split('\n')) {
+      const match = /^([A-Z_]+)=(.*)$/.exec(line);
+      if (match) raw[match[1]] = match[2];
+    }
+    raw.ENCRYPTION_KEY = randomBytes(32).toString('base64');
+    expect(validateEnv(raw).NODE_ENV).toBe('development');
+    const message = failure({ ...raw, NODE_ENV: 'production' });
+    for (const name of ['ADMIN_API_KEY', 'DEVICE_TOKEN', 'DATABASE_URL']) {
+      expect(message).toContain(`- ${name}:`);
+    }
   });
 });

@@ -1,7 +1,9 @@
 import { defineConfig } from 'vitest/config';
+import { memoryTestFiles } from './test/scenarios/b-map.js';
 
 /**
- * Scenarios A1–A12: one command, no PostgreSQL and no hardware. Kept out of
+ * Scenarios A1–A12 and B (the in-memory ones of `test/scenarios/b-map.ts`):
+ * one command, no PostgreSQL and no hardware. Kept out of
  * `vitest.config.ts` (unit) and of `rei check` because they drive the real
  * simulator and wait real time for the short beep.
  */
@@ -10,7 +12,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: './',
-    include: ['test/scenarios/**/*.e2e-spec.ts'],
+    include: ['test/scenarios/**/*.e2e-spec.ts', ...memoryTestFiles()],
     // A11 waits the 5 s of the short beep; the rest moves a fake clock.
     testTimeout: 20_000,
     hookTimeout: 20_000,

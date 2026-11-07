@@ -6,8 +6,13 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
-    // The A1–A12 scenarios have their own command (`npm run test:scenarios`):
-    // they wait real seconds and must not share the process or the timeout.
-    exclude: ['**/node_modules/**', '**/dist/**', 'test/scenarios/**'],
+    // The scenarios (`npm run test:scenarios`) and the load test (`npm run test:load`)
+    // have their own command: they wait real seconds and must not share the process or the timeout.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'test/scenarios/**',
+      'test/load/**',
+    ],
   },
 });

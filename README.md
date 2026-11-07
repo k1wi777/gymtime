@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`, más el panel `web/` (Next.js, fuera de los workspaces).
 
-**Estado:** iteración 1 completa: hitos H1 (conexión), H2 (enrolamiento), H3 (asistencia y horarios), H4 (alarma y vencimientos) y H5 (órdenes con confirmación, heartbeat, eventos en vivo y pruebas integrales A1–A12) cerrados. El panel web arranca en la siguiente iteración con H8 (base y panel del asistente); el detalle está en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** iteración 2 completa: panel web (asistente y administrador), periodos y horarios recurrentes, importación de estudiantes, reportes y exportación CSV, producción (HTTPS, tokens por lector, respaldos, supresión de datos) y modo sin conexión con revisión de conflictos (H6-H12), más el cierre de la iteración (escenarios B1-B17, prueba de carga, rechazo de claves de ejemplo en producción y datos de muestra). Pendiente de hardware, y por tanto sin probar: el modo sin conexión con el ESP32 real (ventana de 72 h) y el estado de periféricos (iteración 3). Decisiones del usuario: [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md); estado del firmware en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Estructura
 
@@ -12,8 +12,9 @@ Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQ
 | `shared/` | Protocolo y esquemas compartidos. |
 | `simulator/` | ESP32 simulado. |
 | `cli/` | Comando `gym`. |
-| `web/` | Panel web (Next.js 16, React 19): vistas del asistente. Proyecto aparte, con su propio `package.json`. |
-| `docs/` | Documentación para firmware y protocolo. |
+| `web/` | Panel web (Next.js 16, React 19): vistas del asistente y del administrador. Proyecto aparte, con su propio `package.json`. |
+| `deploy/` | Compose de producción, Caddy, respaldo y restauración, revisión de seguridad. |
+| `docs/` | Protocolo, guías de firmware, manuales, despliegue, escenarios y datos de muestra. |
 
 ## Puesta en marcha
 
@@ -123,39 +124,37 @@ npm test            # pruebas unitarias de todos los workspaces
 npm run test:e2e    # pruebas e2e (lentas)
 npm --prefix web test   # panel: componentes (vitest + jsdom) y tipos de la API al día
 npm --prefix web run test:e2e  # panel en Chrome real (lento; ver «Panel web»)
-npm run test:scenarios  # escenarios integrales A1–A12 con el simulador
+npm run test:scenarios  # A1–A12 y B en memoria (con -- --db también B13); ver «Escenarios»
+npm run test:load       # prueba de carga ligera: una hora simulada, 30 estudiantes por horario (V19)
+npm run seed:dev        # datos de muestra de la base de desarrollo (simulación por defecto; ver docs/datos_de_muestra.md)
 npm run test:migration  # migra una base de la iteración 1 y verifica datos e índices (requiere PostgreSQL, p. ej. docker compose up -d)
 ```
 
-### Escenarios integrales A1–A12
+### Escenarios A1–A12 y B1–B17
 
-`npm run test:scenarios` ejecuta con un solo comando los doce escenarios del
-backlog, con el simulador real contra el gateway y sin pasos manuales:
+`npm run test:scenarios` ejecuta con un solo comando A1–A12 y los escenarios B que
+se demuestran en memoria (B1–B11, B14–B16), con el simulador real, un reloj
+controlado y sin PostgreSQL ni hardware; con `-- --db` añade B13 (respaldo y
+restauración, requiere PostgreSQL). Al final imprime una tabla por escenario y la
+lista de lo que solo puede probarse en el despliegue de prueba (B12, B17).
+La tabla completa (prueba, comando, entorno y resultado esperado) y los
+procedimientos manuales están en [`docs/escenarios.md`](docs/escenarios.md); el
+mapa vive en `server/test/scenarios/b-map.ts` y una prueba lo compara con el documento.
 
-| Escenario | Qué demuestra |
-|---|---|
-| A1 | El enrolamiento deja la plantilla cifrada y lista para el lector. |
-| A2/A3 | La misma huella registra la entrada y después la salida. |
-| A4 | Una huella desconocida muestra «No reconocida» / «Intente de nuevo» y no abre sesión. |
-| A5 | Un estudiante del lector que ya no está en el horario es rechazado con `NOT_IN_SCHEDULE`. |
-| A6 | Un escaneo sin horario activo se rechaza con `NO_ACTIVE_SCHEDULE`. |
-| A7/A8 | Al terminar un horario con gente dentro la alarma sigue encendida (`PENDING_EXIT`) y se apaga (`CLEARED`) cuando sale el último. |
-| A9 | El apagado manual por botón o por CLI silencia la sirena y deja las sesiones `no_registrada`. |
-| A10 | La orden encolada se entrega al reconectar con su `id` y un mensaje duplicado no se procesa dos veces. |
-| A11 | Un horario vacío pita 5 s y la alarma se apaga sola. |
-| A12 | Dos horarios consecutivos resuelven cada estudiante a su propio horario. |
-
-- **Requisitos:** Node 24 y `npm install`. No hace falta Docker, PostgreSQL ni
-  hardware: los escenarios arrancan el servidor con repositorios en memoria, un
-  reloj controlado y una alarma con tick corto.
-- **Duración esperada:** por debajo de 60 s (unos 12 s incluyendo la compilación
-  de `shared` y `simulator`). Solo A11 espera tiempo real, los 5 s del aviso
-  corto; el resto mueve el reloj.
-- **Código:** arranque y utilidades en `server/test/support/scenario-app.ts`,
-  cliente mínimo de protocolo en `server/test/support/raw-device.ts` y los
-  escenarios en `server/test/scenarios/a1-a12.e2e-spec.ts`.
+- **Código:** arranque en `server/test/support/scenario-app.ts`, cliente mínimo de
+  protocolo en `server/test/support/raw-device.ts`, A1–A12 en
+  `server/test/scenarios/a1-a12.e2e-spec.ts`.
+- **Prueba de carga:** `npm run test:load` (V19, `server/test/load/`): dos horarios
+  consecutivos de 30 estudiantes, sin mensajes perdidos ni alarmas duplicadas, también
+  con dos instancias y candado de líder.
 - La cola de órdenes (ack, idempotencia y reenvío) se prueba en
   `server/test/commands.e2e-spec.ts` y corre con `npm run test:e2e`.
+
+### Datos de muestra de desarrollo
+
+`npm run seed:dev` borra los datos de la base local de desarrollo (con confirmación)
+y carga un conjunto completo y reproducible para que el panel y los reportes se vean
+llenos: [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md).
 
 ## Producción (H11)
 
@@ -163,17 +162,21 @@ Imágenes (`server/Dockerfile`, `web/Dockerfile`), `deploy/docker-compose.prod.y
 
 ## Documentación
 
+- [`docs/manual_administrador.md`](docs/manual_administrador.md) y [`docs/manual_asistente.md`](docs/manual_asistente.md): manuales del panel.
 - [`docs/despliegue.md`](docs/despliegue.md), [`docs/runbook.md`](docs/runbook.md), [`docs/guia_wss_firmware.md`](docs/guia_wss_firmware.md): despliegue, operación y `wss://` para el firmware.
 - [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
-- [`docs/manual_asistente.md`](docs/manual_asistente.md): manual del panel para el asistente del gimnasio.
+- [`docs/escenarios.md`](docs/escenarios.md): escenarios A1–A12 y B1–B17 y prueba de carga.
+- [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md): datos de muestra de desarrollo y sus usuarios.
+- [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md): decisiones del usuario de la iteración 2.
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
-- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar los problemas comunes (sección 8).
-- [`docs/protocolo_v0.md`](docs/protocolo_v0.md): protocolo.
-- [`backlog_iteracion_1_backend.md`](backlog_iteracion_1_backend.md): backlog e hitos.
+- [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar problemas (sección 8).
+- [`docs/modo_sin_conexion_firmware.md`](docs/modo_sin_conexion_firmware.md): modo sin conexión para el firmware.
+- [`docs/protocolo_v0.md`](docs/protocolo_v0.md), [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md): protocolo y textos de la pantalla.
+- [`backlog_iteracion_1_backend.md`](backlog_iteracion_1_backend.md) y [`backlog_iteracion_2.md`](backlog_iteracion_2.md): backlogs e hitos.
 
 ## Scripts (raíz)
 
-`npm run simulator`, `npm run gym`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`, `install:web`, `dev:server` (API en el puerto 3001) y `dev:web`.
+`npm run simulator`, `npm run gym`, `lint`, `format`, `format:check`, `test`, `test:e2e`, `test:scenarios`, `test:load`, `seed:dev`, `test:migration`, `build`, `migrate`, `migrate:deploy` (entornos no interactivos), `db:generate`, `install:web`, `dev:server` (API en el puerto 3001) y `dev:web`.
 
 ## Notas
 

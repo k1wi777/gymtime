@@ -32,6 +32,10 @@ de terceros está en «Pendientes externos» al final.
    y completa cada valor (`openssl rand -base64 32` para los secretos);
    `cp deploy/Caddyfile.example deploy/Caddyfile` con tu dominio.
    `CORS_ORIGINS=https://app.<dominio>` y `COOKIE_DOMAIN=.<dominio>`.
+   **Con `NODE_ENV=production` el servidor se niega a arrancar** si
+   `ADMIN_API_KEY`, `DEVICE_TOKEN`, `FIRST_ADMIN_PASSWORD`, `ENCRYPTION_KEY` o la
+   contraseña de `DATABASE_URL` conservan un valor de ejemplo (`change-me*`,
+   `gymtime_dev_password`, bytes repetidos...); la lista está en `docs/runbook.md` §5.
 4. **Arranque.**
    ```bash
    cd deploy
@@ -41,7 +45,9 @@ de terceros está en «Pendientes externos» al final.
    la primera vez, entra al panel, cambia la contraseña temporal y quita ambas
    variables.
 6. **Lectores:** `gym device register <id>` por cada uno y flashear su token
-   (`docs/guia_wss_firmware.md`); después retira `DEVICE_TOKEN`.
+   (`docs/guia_wss_firmware.md`); después **retira `DEVICE_TOKEN`** y reinicia: el
+   token compartido solo es una transición y el servidor lo avisa mientras exista
+   (procedimiento en `docs/runbook.md` §5).
 7. **Respaldos:** programa `deploy/backup.sh` y guarda las claves aparte
    (`docs/runbook.md`).
 

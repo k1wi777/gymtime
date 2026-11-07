@@ -1,5 +1,8 @@
 # Guía de firmware: modo sin conexión
 
+> Estado: la ventana de 72 h queda lista pero sin probar hasta tener el ESP32 (ver [`decisiones_iteracion_2.md`](decisiones_iteracion_2.md)).
+
+
 Para el equipo de firmware del ESP32. Describe qué guarda el dispositivo cuando no hay conexión, cómo decide entradas y salidas por su cuenta, el formato de la cola y de los mensajes, los límites y el orden al reconectar. Está escrita para implementarse **sin leer el código del servidor**. El contrato base sigue en [`protocolo_v0.md`](./protocolo_v0.md) (sección 10); los textos de pantalla, en [`mensajes_pantalla.md`](./mensajes_pantalla.md).
 
 > **Estado:** borrador de contrato (H12). Los puntos C1 a C11 de la sección 9 están **pendientes de confirmación por escrito del equipo de firmware**. El servidor ya cumple este contrato; si el equipo propone otro valor, se ajusta aquí y en la configuración, no en el código. Toda la extensión es **aditiva**: un firmware que no declara `capabilities` funciona exactamente como en v0 y no recibe ni envía nada de lo descrito aquí.

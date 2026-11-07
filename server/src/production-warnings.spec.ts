@@ -30,4 +30,13 @@ describe('productionWarnings', () => {
     expect(warnings).toHaveLength(4);
     expect(warnings.join(' ')).not.toContain('secret-shared-token-123');
   });
+
+  it('tells how to retire the shared device token when the real reader is registered', () => {
+    const [warning] = productionWarnings({
+      ...base,
+      DEVICE_TOKEN: 'a-random-shared-token',
+    });
+    expect(warning).toContain('gym device register');
+    expect(warning).toContain('remove DEVICE_TOKEN and restart');
+  });
 });
