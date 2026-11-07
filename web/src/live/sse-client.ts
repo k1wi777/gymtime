@@ -36,6 +36,8 @@ const EVENT_TYPES: readonly SystemEventType[] = [
   'device.connected',
   'device.disconnected',
   'device.offline_alert',
+  'device.clock_skew',
+  'offline.review',
   'scan',
   'command',
   'alarm',

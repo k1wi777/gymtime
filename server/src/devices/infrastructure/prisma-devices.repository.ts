@@ -15,6 +15,9 @@ const DEVICE_FIELDS = {
   tokenRevokedAt: true,
   offlineSince: true,
   offlineAlertedAt: true,
+  capabilities: true,
+  clockOffsetSec: true,
+  clockCheckedAt: true,
 } as const;
 
 @Injectable()
@@ -30,7 +33,12 @@ export class PrismaDevicesRepository implements DevicesRepository {
     });
   }
 
-  async upsertOnline(id: string, firmwareVersion: string, at: Date) {
+  async upsertOnline(
+    id: string,
+    firmwareVersion: string,
+    at: Date,
+    capabilities: string[] = [],
+  ) {
     const before = await this.prisma.device.findUnique({
       where: { id },
       select: { offlineAlertedAt: true },
@@ -41,6 +49,7 @@ export class PrismaDevicesRepository implements DevicesRepository {
       firmwareVersion,
       offlineSince: null,
       offlineAlertedAt: null,
+      capabilities,
     };
     await this.prisma.device.upsert({
       where: { id },
@@ -48,6 +57,13 @@ export class PrismaDevicesRepository implements DevicesRepository {
       update: data,
     });
     return { recovered: before?.offlineAlertedAt != null };
+  }
+
+  async setClock(id: string, offsetSec: number, at: Date) {
+    await this.prisma.device.updateMany({
+      where: { id },
+      data: { clockOffsetSec: offsetSec, clockCheckedAt: at },
+    });
   }
 
   async setOffline(id: string, at: Date) {

@@ -1,10 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { AlarmService } from '../alarm/alarm.service.js';
 import type { AlarmEvent } from '../alarm/domain/alarm-event.js';
 import type { AttendanceSession } from '../attendance/domain/attendance-session.js';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
-import { addDays, toBogotaParts, weekdayOf } from '../common/time/bogota.js';
+import {
+  addDays,
+  fromBogota,
+  toBogotaParts,
+  weekdayOf,
+} from '../common/time/bogota.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import { DevicesService } from '../devices/devices.service.js';
 import { InstancesService } from '../schedules/instances.service.js';
@@ -29,6 +34,7 @@ import {
 import { computeFlow, flowTable } from './domain/flow.js';
 import { computeLate } from './domain/late.js';
 import { computeObligations, type Obligation } from './domain/occurrences.js';
+import { OfflineReviewService } from '../offline/offline-review.service.js';
 import { computeQuality } from './domain/quality.js';
 import { computeStay } from './domain/stay.js';
 import { computeStudentDetail } from './domain/student-detail.js';
@@ -93,6 +99,7 @@ export class ReportsService {
     private readonly devices: DevicesService,
     private readonly eventLog: EventLogService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Optional() private readonly offline?: OfflineReviewService,
   ) {}
 
   private today(): string {
@@ -298,7 +305,17 @@ export class ReportsService {
 
   async quality(query: ReportQuery): Promise<FilteredTable> {
     const ds = await this.load(await this.filtersOf(query));
-    return this.finish(ds.filters, computeQuality(ds.sessions, ds.ctx), query);
+    const outcomes = await this.offline?.outcomeCounts({
+      from: fromBogota(ds.filters.from, '00:00'),
+      to: new Date(
+        fromBogota(addDays(ds.filters.to, 1), '00:00').getTime() - 1,
+      ),
+    });
+    return this.finish(
+      ds.filters,
+      computeQuality(ds.sessions, ds.ctx, outcomes),
+      query,
+    );
   }
 
   /** Null when the student does not exist. */

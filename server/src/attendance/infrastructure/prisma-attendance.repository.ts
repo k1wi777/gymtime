@@ -82,6 +82,45 @@ export class PrismaAttendanceRepository implements AttendanceRepository {
     return [...new Set(rows.map((r) => r.instanceId))];
   }
 
+  async listClosedStudentIds(instanceId: string) {
+    const rows = await this.prisma.attendanceSession.findMany({
+      where: { instanceId, status: 'cerrada' },
+      select: { studentId: true },
+    });
+    return [...new Set(rows.map((r) => r.studentId))];
+  }
+
+  async closeUnregistered(id: string, data: CloseAttendanceSession) {
+    const { count } = await this.prisma.attendanceSession.updateMany({
+      where: { id, status: 'no_registrada' },
+      data: {
+        exitedAt: data.exitedAt,
+        exitSource: data.exitSource,
+        manualReason: data.manualReason ?? null,
+        status: 'cerrada',
+      },
+    });
+    if (count === 0) return null;
+    const row = await this.prisma.attendanceSession.findUnique({
+      where: { id },
+    });
+    return row ? toDomain(row) : null;
+  }
+
+  async findOfflineSession(
+    studentId: string,
+    kind: 'entry' | 'exit',
+    at: Date,
+  ) {
+    const row = await this.prisma.attendanceSession.findFirst({
+      where:
+        kind === 'entry'
+          ? { studentId, enteredAt: at, entrySource: 'offline' }
+          : { studentId, exitedAt: at, exitSource: 'offline' },
+    });
+    return row ? toDomain(row) : null;
+  }
+
   countOpenByInstance(instanceId: string) {
     return this.prisma.attendanceSession.count({
       where: { instanceId, status: 'abierta' },

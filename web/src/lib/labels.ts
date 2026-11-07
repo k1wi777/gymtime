@@ -85,4 +85,47 @@ export const ALARM_REASON_LABELS: Record<string, string> = {
   CLEARED: 'Apagada',
 };
 
-export const SOURCE_LABELS = { device: 'Huella', manual: 'Manual' } as const;
+export const SOURCE_LABELS = {
+  device: 'Huella',
+  manual: 'Manual',
+  offline: 'Sin conexión',
+} as const;
+
+/** Why an event recorded without connection waits for a person (closed set). */
+export const REVIEW_REASON_LABELS: Record<string, string> = {
+  EXIT_WITHOUT_ENTRY: 'Salida sin entrada registrada',
+  DUPLICATE_ENTRY: 'El estudiante ya estaba dentro',
+  OUTSIDE_WINDOW: 'Entrada fuera de la ventana del horario',
+  NOT_IN_SCHEDULE: 'El estudiante no pertenece a ese horario',
+  ALREADY_EXITED: 'El estudiante ya había salido de ese horario',
+  STUDENT_INACTIVE: 'El estudiante estaba dado de baja',
+  SESSION_ALREADY_CLOSED: 'La sesión ya se había cerrado como «no registrada»',
+  OUT_OF_ORDER: 'Llegó fuera de orden respecto a otro registro',
+  TS_FUTURE: 'La hora del lector está en el futuro',
+  TS_TOO_OLD: 'La hora es demasiado antigua',
+  UNKNOWN_SNAPSHOT: 'No se reconoce la lista con la que decidió el lector',
+  UNKNOWN_SLOT: 'La huella no estaba en la lista del lector',
+};
+
+export const reviewReasonLabel = (code: string | null): string =>
+  code ? (REVIEW_REASON_LABELS[code] ?? code) : '—';
+
+export const REVIEW_TYPE_LABELS: Record<string, string> = {
+  entry: 'Entrada',
+  exit: 'Salida',
+  unknown: 'Huella desconocida',
+  alarm: 'Alarma local',
+};
+
+export const REVIEW_ACTION_LABELS: Record<string, string> = {
+  aprobar: 'Aprobar tal cual',
+  corregir: 'Corregir la hora',
+  descartar: 'Descartar',
+};
+
+export const REVIEW_OUTCOME_LABELS: Record<string, string> = {
+  por_revisar: 'Por revisar',
+  aprobado: 'Aprobado',
+  corregido: 'Corregido',
+  descartado: 'Descartado',
+};

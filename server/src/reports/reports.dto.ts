@@ -173,6 +173,11 @@ export class AlarmSummaryDto {
   closedSessions: number;
   @ApiProperty({ type: AlarmByClosureDto })
   byClosure: AlarmByClosureDto;
+  @ApiProperty({
+    description:
+      'Alarms sounded by the reader itself while offline (not in the other counts)',
+  })
+  local: number;
 }
 
 export class AlarmsReportDto extends ReportTableDto {

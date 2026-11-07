@@ -2,6 +2,7 @@ import type {
   AlarmEvent,
   CloseAlarmEvent,
   NewAlarmEvent,
+  NewLocalAlarmEvent,
 } from './alarm-event.js';
 
 export interface AlarmHistoryFilter {
@@ -14,9 +15,16 @@ export interface AlarmHistoryFilter {
 
 export interface AlarmRepository {
   create(data: NewAlarmEvent): Promise<AlarmEvent>;
-  /** Every event still open (no `endedAt`), oldest first. */
+  /**
+   * Stores a local alarm; returns the existing row, flagged, when that reader
+   * event was already stored.
+   */
+  createLocal(
+    data: NewLocalAlarmEvent,
+  ): Promise<{ event: AlarmEvent; created: boolean }>;
+  /** Every server event still open (no `endedAt`), oldest first. */
   findOpen(): Promise<AlarmEvent[]>;
-  /** The open event of an occurrence, if any. */
+  /** The open server event of an occurrence, if any. */
   findOpenByInstance(instanceId: string): Promise<AlarmEvent | null>;
   /** Ids, among these occurrences, that have at least one alarm event. */
   instanceIdsWithEvents(instanceIds: string[]): Promise<string[]>;

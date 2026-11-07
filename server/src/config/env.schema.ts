@@ -182,6 +182,16 @@ export const envSchema = z
     // Minutes a device that had connected may stay offline before an alert is
     // raised (log, audit trail, event stream and panel). 0 disables the alert.
     DEVICE_OFFLINE_ALERT_MINUTES: authInt(0, 1440, 5),
+    // Offline mode (H12). Seconds an event time may be ahead of the server
+    // clock, and hours it may be behind it, before it goes to review.
+    OFFLINE_TS_FUTURE_TOLERANCE_SEC: authInt(0, 3600, 120),
+    OFFLINE_TS_MAX_AGE_HOURS: authInt(1, 720, 72),
+    // Seconds the snapshot waits for a reader's queued events to arrive.
+    OFFLINE_SNAPSHOT_WAIT_SEC: authInt(0, 600, 60),
+    // Days a snapshot is kept to resolve late events.
+    OFFLINE_SNAPSHOT_RETENTION_DAYS: authInt(1, 365, 14),
+    // |device clock - server clock| in seconds that raises the clock warning.
+    CLOCK_OFFSET_WARN_SEC: authInt(1, 3600, 30),
     // Seconds between attempts to take the scheduler lock (H11).
     LEADER_RETRY_SECONDS: authInt(1, 300, 10),
     // Publish /docs (Swagger UI) in production too. Off by default there.

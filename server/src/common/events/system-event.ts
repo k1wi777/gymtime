@@ -18,6 +18,16 @@ export interface SystemEventMap {
     offlineMinutes: number;
     thresholdMinutes: number;
   };
+  /**
+   * The reader's clock differs from the server's by more than the threshold
+   * (`warning`), or came back inside it (`warning` false). Emitted on change.
+   */
+  'device.clock_skew': {
+    deviceId: string;
+    offsetSec: number;
+    thresholdSec: number;
+    warning: boolean;
+  };
   scan: {
     deviceId: string;
     slot: number | null;
@@ -42,7 +52,7 @@ export interface SystemEventMap {
   /** An attendance session was opened or closed (by fingerprint or by hand). */
   attendance: {
     change: 'entry' | 'exit';
-    source: 'device' | 'manual';
+    source: 'device' | 'manual' | 'offline';
     studentId: string;
     studentName: string;
     instanceId: string;
@@ -58,6 +68,8 @@ export interface SystemEventMap {
     step: string | null;
     failureReason: string | null;
   };
+  /** The count of offline events waiting for a person changed (H12). */
+  'offline.review': { pending: number };
   keepalive: Record<string, never>;
 }
 
@@ -66,11 +78,13 @@ export const SYSTEM_EVENT_TYPES = [
   'device.connected',
   'device.disconnected',
   'device.offline_alert',
+  'device.clock_skew',
   'scan',
   'command',
   'alarm',
   'attendance',
   'enrollment',
+  'offline.review',
   'keepalive',
 ] as const satisfies ReadonlyArray<keyof SystemEventMap>;
 

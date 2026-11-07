@@ -67,6 +67,18 @@ No pasan por el servidor; el firmware los dibuja por su cuenta.
 | Enrolamiento: listo | `Huella guardada` | (vacía) |
 | Enrolamiento: error | `Error. Reintente` | (vacía) |
 
+### Sin conexión (modo local, H12)
+
+Los dibuja el firmware con el snapshot; ver [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md). Pendientes de confirmación (C11).
+
+| Situación | Línea 1 | Línea 2 |
+|---|---|---|
+| Entrada decidida en el lector | `<NOMBRE>` | `Entrada local` |
+| Salida decidida en el lector | `<NOMBRE>` | `Salida local` |
+| Cola llena (500) | `Cola llena` | `Avise asistente` |
+| Sin hora válida | `Sin hora` | `No registra` |
+| Sin horario próximo | `Sin horario` | `en este momento` |
+
 ## Compatibilidad
 
 Los cambios de H6 son aditivos: `scan.result` conserva su estructura (`result`, `studentName`, `reason`, `display.line1/line2/color`) y solo cambia el texto de `display`; `display.message` ya estaba en el contrato v0 (`v: 1`). Un firmware que ya dibuja `line1` y `line2` de `scan.result` no necesita cambios, y uno que aún no implementa `display.message` solo debe confirmarlo con `ack`.

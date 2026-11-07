@@ -3,6 +3,7 @@ import { AlarmModule } from '../alarm/alarm.module.js';
 import { AttendanceModule } from '../attendance/attendance.module.js';
 import { CLOCK, systemClock } from '../common/time/clock.js';
 import { DevicesModule } from '../devices/devices.module.js';
+import { OfflineModule } from '../offline/offline.module.js';
 import { SchedulesModule } from '../schedules/schedules.module.js';
 import { StudentsModule } from '../students/students.module.js';
 import { ReportsController } from './reports.controller.js';
@@ -14,6 +15,7 @@ import { ReportsService } from './reports.service.js';
     AlarmModule,
     AttendanceModule,
     DevicesModule,
+    OfflineModule,
     SchedulesModule,
     StudentsModule,
   ],

@@ -17,7 +17,10 @@ export interface DevicesRepository {
     id: string,
     firmwareVersion: string,
     at: Date,
+    capabilities?: string[],
   ): Promise<{ recovered: boolean }>;
+  /** Stores the last measured clock offset of the device. */
+  setClock(id: string, offsetSec: number, at: Date): Promise<void>;
   /** Marks the device offline, keeping its last connection. */
   setOffline(id: string, at: Date): Promise<void>;
   /** Every device goes offline; an `offlineSince` already set is kept. */

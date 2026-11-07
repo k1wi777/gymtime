@@ -237,6 +237,14 @@
             "format": "uuid",
             "type": "string"
           },
+          "origin": {
+            "description": "local = sounded by the reader itself while offline (history only)",
+            "enum": [
+              "server",
+              "local"
+            ],
+            "type": "string"
+          },
           "schedule": {
             "allOf": [
               {
@@ -264,6 +272,7 @@
           "endedAt",
           "closedBy",
           "closedSessions",
+          "origin",
           "closedByActor"
         ],
         "type": "object"
@@ -352,6 +361,10 @@
           "closedSessions": {
             "type": "number"
           },
+          "local": {
+            "description": "Alarms sounded by the reader itself while offline (not in the other counts)",
+            "type": "number"
+          },
           "open": {
             "description": "Still without an end",
             "type": "number"
@@ -371,7 +384,8 @@
           "totalMinutes",
           "averageMinutes",
           "closedSessions",
-          "byClosure"
+          "byClosure",
+          "local"
         ],
         "type": "object"
       },
@@ -488,7 +502,8 @@
           "source": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "type": "string"
           },
@@ -570,7 +585,8 @@
           "entrySource": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "type": "string"
           },
@@ -587,7 +603,8 @@
           "exitSource": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "nullable": true,
             "type": "string"
@@ -1080,6 +1097,94 @@
         "required": [
           "from",
           "to"
+        ],
+        "type": "object"
+      },
+      "DeviceClockDto": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "clockCheckedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "clockOffsetSec": {
+            "description": "Device clock minus server clock at the last hello, seconds",
+            "nullable": true,
+            "type": "number"
+          },
+          "clockThresholdSec": {
+            "type": "number"
+          },
+          "clockWarning": {
+            "description": "|offset| above the threshold",
+            "type": "boolean"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "capabilities",
+          "clockOffsetSec",
+          "clockCheckedAt",
+          "clockWarning",
+          "clockThresholdSec"
+        ],
+        "type": "object"
+      },
+      "DeviceClockSkewDataDto": {
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "offsetSec": {
+            "description": "Device clock minus server clock, in seconds",
+            "type": "number"
+          },
+          "thresholdSec": {
+            "description": "Configured threshold (CLOCK_OFFSET_WARN_SEC)",
+            "type": "number"
+          },
+          "warning": {
+            "description": "True while |offsetSec| exceeds the threshold",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deviceId",
+          "offsetSec",
+          "thresholdSec",
+          "warning"
+        ],
+        "type": "object"
+      },
+      "DeviceClockSkewEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeviceClockSkewDataDto"
+          },
+          "type": {
+            "enum": [
+              "device.clock_skew"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
         ],
         "type": "object"
       },
@@ -1809,6 +1914,41 @@
         ],
         "type": "object"
       },
+      "OfflineReviewDataDto": {
+        "properties": {
+          "pending": {
+            "description": "Offline events waiting for a person",
+            "type": "number"
+          }
+        },
+        "required": [
+          "pending"
+        ],
+        "type": "object"
+      },
+      "OfflineReviewEventDto": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OfflineReviewDataDto"
+          },
+          "type": {
+            "enum": [
+              "offline.review"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
       "OpenSessionDto": {
         "properties": {
           "enteredAt": {
@@ -2131,7 +2271,8 @@
           "source": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "nullable": true,
             "type": "string"
@@ -2615,6 +2756,33 @@
         ],
         "type": "object"
       },
+      "ResolveReviewDto": {
+        "properties": {
+          "action": {
+            "enum": [
+              "aprobar",
+              "corregir",
+              "descartar"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why, in the person words",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "ts": {
+            "description": "New instant (same Bogota day, not in the future); corregir",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
       "ResolvedOccurrenceDto": {
         "properties": {
           "entryClosesAt": {
@@ -2646,6 +2814,219 @@
           "entryOpensAt",
           "entryClosesAt",
           "entryOpen"
+        ],
+        "type": "object"
+      },
+      "ReviewCountDto": {
+        "properties": {
+          "pending": {
+            "description": "Events waiting for a person",
+            "type": "number"
+          }
+        },
+        "required": [
+          "pending"
+        ],
+        "type": "object"
+      },
+      "ReviewItemDto": {
+        "properties": {
+          "actions": {
+            "description": "Actions valid for this event while it is pending",
+            "items": {
+              "enum": [
+                "aprobar",
+                "corregir",
+                "descartar"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "correctedTs": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "id": {
+            "description": "Event id made by the device",
+            "format": "uuid",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "pendiente",
+              "applied",
+              "por_revisar",
+              "aprobado",
+              "corregido",
+              "descartado",
+              "informativo",
+              "invalido"
+            ],
+            "type": "string"
+          },
+          "receivedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolution": {
+            "enum": [
+              "aprobar",
+              "corregir",
+              "descartar"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "resolutionNote": {
+            "nullable": true,
+            "type": "string"
+          },
+          "resolvedAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "reviewReason": {
+            "enum": [
+              "EXIT_WITHOUT_ENTRY",
+              "DUPLICATE_ENTRY",
+              "OUTSIDE_WINDOW",
+              "NOT_IN_SCHEDULE",
+              "ALREADY_EXITED",
+              "STUDENT_INACTIVE",
+              "SESSION_ALREADY_CLOSED",
+              "OUT_OF_ORDER",
+              "TS_FUTURE",
+              "TS_TOO_OLD",
+              "UNKNOWN_SNAPSHOT",
+              "UNKNOWN_SLOT"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "schedule": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewScheduleDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "slot": {
+            "nullable": true,
+            "type": "number"
+          },
+          "student": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewStudentDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "ts": {
+            "description": "When it happened",
+            "format": "date-time",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "entry",
+              "exit",
+              "unknown",
+              "alarm"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deviceId",
+          "type",
+          "slot",
+          "ts",
+          "receivedAt",
+          "outcome",
+          "reviewReason",
+          "student",
+          "schedule",
+          "actions",
+          "resolution",
+          "resolvedAt",
+          "resolutionNote",
+          "correctedTs",
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "ReviewPageDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewItemDto"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "type": "object"
+      },
+      "ReviewScheduleDto": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "startsAt"
+        ],
+        "type": "object"
+      },
+      "ReviewStudentDto": {
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "document"
         ],
         "type": "object"
       },
@@ -2810,7 +3191,8 @@
           "source": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "nullable": true,
             "type": "string"
@@ -3117,14 +3499,16 @@
           "entrySource": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "type": "string"
           },
           "exitSource": {
             "enum": [
               "device",
-              "manual"
+              "manual",
+              "offline"
             ],
             "nullable": true,
             "type": "string"
@@ -5326,11 +5710,13 @@
                       "alarm": "#/components/schemas/AlarmEventDto",
                       "attendance": "#/components/schemas/AttendanceEventDto",
                       "command": "#/components/schemas/CommandEventDto",
+                      "device.clock_skew": "#/components/schemas/DeviceClockSkewEventDto",
                       "device.connected": "#/components/schemas/DeviceConnectedEventDto",
                       "device.disconnected": "#/components/schemas/DeviceDisconnectedEventDto",
                       "device.offline_alert": "#/components/schemas/DeviceOfflineAlertEventDto",
                       "enrollment": "#/components/schemas/EnrollmentEventDto",
                       "keepalive": "#/components/schemas/KeepaliveEventDto",
+                      "offline.review": "#/components/schemas/OfflineReviewEventDto",
                       "scan": "#/components/schemas/ScanEventDto"
                     },
                     "propertyName": "type"
@@ -5344,6 +5730,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/DeviceOfflineAlertEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeviceClockSkewEventDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OfflineReviewEventDto"
                     },
                     {
                       "$ref": "#/components/schemas/ScanEventDto"
@@ -5626,9 +6018,330 @@
         ]
       }
     },
+    "/offline/clock": {
+      "get": {
+        "operationId": "OfflineController_clock",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceClockDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Capabilities and clock offset of each reader",
+        "tags": [
+          "offline"
+        ]
+      }
+    },
+    "/offline/review": {
+      "get": {
+        "operationId": "OfflineController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "enum": [
+                "pending",
+                "resolved",
+                "discarded",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPageDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid query"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Offline events by state: pending, resolved or discarded",
+        "tags": [
+          "offline"
+        ]
+      }
+    },
+    "/offline/review/count": {
+      "get": {
+        "operationId": "OfflineController_count",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewCountDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "How many offline events wait for a person",
+        "tags": [
+          "offline"
+        ]
+      }
+    },
+    "/offline/review/{id}/resolve": {
+      "post": {
+        "description": "The reason is mandatory and goes to the audit trail with the user. Correcting is limited to the same day of the event.",
+        "operationId": "OfflineController_resolve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveReviewDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItemDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Invalid body or correction"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "No valid credential"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "EVENT_NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "ALREADY_RESOLVED, NOT_APPROVABLE, NOT_CORRECTABLE, NO_OCCURRENCE, SESSION_ALREADY_OPEN, NO_OPEN_SESSION, INCONSISTENT_TIME"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            },
+            "description": "STILL_CONFLICT: the corrected hour still conflicts"
+          }
+        },
+        "security": [
+          {
+            "admin-key": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "summary": "Approve, correct the hour or discard a pending offline event",
+        "tags": [
+          "offline"
+        ]
+      }
+    },
     "/panel/attendance/history": {
       "get": {
-        "description": "Filters: date range of the entry, schedule, student, origin (`device` fingerprint or `manual`), status and a name/document search. Manual rows carry the reason and who registered them. The offline origin does not exist yet.",
+        "description": "Filters: date range of the entry, schedule, student, origin (`device` fingerprint, `manual` or `offline`), status and a name/document search. Manual rows carry the reason and who registered them. The `offline` origin marks sessions reconciled from the device queue.",
         "operationId": "PanelAdminController_attendanceHistory",
         "parameters": [
           {
@@ -5668,7 +6381,8 @@
             "schema": {
               "enum": [
                 "device",
-                "manual"
+                "manual",
+                "offline"
               ],
               "type": "string"
             }

@@ -12,6 +12,11 @@ export interface Device {
   offlineSince: Date | null;
   /** When the offline alert fired; one per drop, cleared on reconnection. */
   offlineAlertedAt: Date | null;
+  /** Optional features declared in the last hello (empty = a v0 reader). */
+  capabilities: string[];
+  /** Device clock minus server clock at the last hello, in seconds. */
+  clockOffsetSec: number | null;
+  clockCheckedAt: Date | null;
 }
 
 /** Which credential a device is on: shared DEVICE_TOKEN, its own token, or none. */

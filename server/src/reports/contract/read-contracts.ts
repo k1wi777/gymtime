@@ -201,6 +201,44 @@ export function describeReportReads(
       expect(await repos.alarm.findByInstanceIds([])).toEqual([]);
     });
 
+    it('a local alarm (H12) is stored once, never counts as open and keeps its origin', async () => {
+      const { repos, all } = await world();
+      const [i1] = all;
+      const local = {
+        instanceId: i1!.id,
+        startedAt: at('2026-03-02', '07:00'),
+        endedAt: at('2026-03-02', '07:02'),
+        closedBy: 'button' as const,
+        deviceId: 'esp32-1',
+        deviceEventId: '00000000-0000-4000-8000-0000000000e1',
+      };
+      const first = await repos.alarm.createLocal(local);
+      const again = await repos.alarm.createLocal(local);
+      expect(first.created).toBe(true);
+      expect(again).toMatchObject({
+        created: false,
+        event: { id: first.event.id },
+      });
+      expect(first.event).toMatchObject({
+        origin: 'local',
+        deviceId: 'esp32-1',
+        endedAt: local.endedAt,
+        closedBy: 'button',
+      });
+      expect(await repos.alarm.findOpen()).toEqual([]);
+      expect(await repos.alarm.findOpenByInstance(i1!.id)).toBeNull();
+      const server = await repos.alarm.create({
+        instanceId: i1!.id,
+        startedAt: at('2026-03-02', '07:00'),
+      });
+      expect(server.origin).toBe('server');
+      expect((await repos.alarm.findOpenByInstance(i1!.id))?.id).toBe(
+        server.id,
+      );
+      const found = await repos.alarm.findByInstanceIds([i1!.id]);
+      expect(found.map((e) => e.origin).sort()).toEqual(['local', 'server']);
+    });
+
     it('attendance.list by occurrences and students keeps every state and source', async () => {
       const { repos, ana, beto, all } = await world();
       const [i1, i2] = all;

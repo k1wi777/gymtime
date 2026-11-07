@@ -41,6 +41,8 @@ Operación = lo que el asistente hace cada día en el gimnasio.
 | `GET /devices/status`, `POST /devices/messages`, `POST /sync` | 401 | sí | sí | sí |
 | `GET /panel/now`, `GET /panel/schedules/:id/roster`, `GET /panel/fingerprints` | 401 | sí | sí | sí |
 | `GET /events` (SSE) | 401 | sí | sí | sí |
+| `GET /offline/review`, `GET /offline/review/count`, `POST /offline/review/:id/resolve`, `GET /offline/clock` | 401 | sí | sí | sí |
+| `GET /favicon.ico` | público | público | público | público |
 | `GET /schedules`, `GET /schedules/:id`, `GET /schedules/resolve` | 401 | sí | sí | sí |
 | `POST /schedules`, `PUT/DELETE /schedules/:id/students/:studentId` | 401 | 403 | sí | sí |
 

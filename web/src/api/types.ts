@@ -21,6 +21,8 @@ export type SystemEvent =
   | Schemas['DeviceConnectedEventDto']
   | Schemas['DeviceDisconnectedEventDto']
   | Schemas['DeviceOfflineAlertEventDto']
+  | Schemas['DeviceClockSkewEventDto']
+  | Schemas['OfflineReviewEventDto']
   | Schemas['ScanEventDto']
   | Schemas['CommandEventDto']
   | Schemas['AlarmEventDto']
@@ -57,3 +59,7 @@ export type AlarmsReport = Schemas['AlarmsReportDto'];
 export type ReportOptions = Schemas['ReportOptionsDto'];
 export type StudentDetail = Schemas['StudentDetailDto'];
 export type ReportsSummary = Schemas['SummaryDto'];
+
+export type ReviewItem = Schemas['ReviewItemDto'];
+export type ReviewPage = Schemas['ReviewPageDto'];
+export type DeviceClock = Schemas['DeviceClockDto'];

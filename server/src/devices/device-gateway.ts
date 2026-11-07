@@ -4,11 +4,11 @@ import {
   Inject,
   Injectable,
   Logger,
+  type BeforeApplicationShutdown,
   type OnApplicationBootstrap,
-  type OnApplicationShutdown,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import type { ServerMessage } from '@gymtime/shared';
+import { FRAME_MAX_BYTES, type ServerMessage } from '@gymtime/shared';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import {
@@ -30,6 +30,8 @@ const CLOSE_HELLO_TIMEOUT = 4408;
 const CLOSE_REPLACED = 4409;
 const CLOSE_HEARTBEAT = 4402;
 const CLOSE_SHUTDOWN = 1001;
+/** How long a reader has to answer the close before it is terminated. */
+const SHUTDOWN_GRACE_MS = 1000;
 
 type DisconnectReason =
   | 'closed'
@@ -41,10 +43,15 @@ type DisconnectReason =
 /** Thin transport layer: turns frames into processor calls and back. */
 @Injectable()
 export class DeviceGateway
-  implements OnApplicationBootstrap, OnApplicationShutdown
+  implements OnApplicationBootstrap, BeforeApplicationShutdown
 {
   private readonly logger = new Logger(DeviceGateway.name);
-  private readonly wss = new WebSocketServer({ noServer: true });
+  private readonly wss = new WebSocketServer({
+    noServer: true,
+    // A frame above this closes the connection (code 1009): the largest
+    // legitimate message (a batch of 50 events) is about 10 KB.
+    maxPayload: FRAME_MAX_BYTES,
+  });
   private httpServer?: Server;
 
   constructor(
@@ -84,10 +91,30 @@ export class DeviceGateway
     this.httpServer.on('upgrade', this.onUpgrade);
   }
 
-  onApplicationShutdown(): void {
+  /**
+   * Runs BEFORE Nest closes the HTTP server, which does not finish while a
+   * WebSocket is open: closing the readers afterwards would wait forever (or
+   * until Docker kills the process). A reader that does not answer the close
+   * handshake within a second is terminated.
+   */
+  async beforeApplicationShutdown(): Promise<void> {
     this.httpServer?.off('upgrade', this.onUpgrade);
-    for (const client of this.wss.clients) client.close(CLOSE_SHUTDOWN);
-    this.wss.close();
+    const open = [...this.wss.clients];
+    const closed = Promise.all(
+      open.map(
+        (client) =>
+          new Promise<void>((resolve) => client.once('close', () => resolve())),
+      ),
+    );
+    for (const client of open) client.close(CLOSE_SHUTDOWN);
+    let timer: NodeJS.Timeout | undefined;
+    const grace = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, SHUTDOWN_GRACE_MS);
+    });
+    await Promise.race([closed, grace]);
+    clearTimeout(timer);
+    for (const client of this.wss.clients) client.terminate();
+    await new Promise<void>((resolve) => this.wss.close(() => resolve()));
   }
 
   private onConnection(ws: WebSocket): void {

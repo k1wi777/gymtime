@@ -42,9 +42,21 @@ La huella se carga en el lector antes del próximo horario del estudiante.
 - **Mensaje en pantalla:** hasta dos líneas de 16 caracteres, sin tildes especiales. Si el lector está sin conexión, el mensaje queda en cola y se muestra al reconectarse.
 - «Órdenes recientes» muestra si el lector confirmó cada orden.
 
+## Por revisar
+
+Si el lector estuvo sin conexión, guardó cada entrada y salida con su hora y las envió al reconectar. Casi todas se registran solas con la hora real. Las que **no encajan** con lo que ya había (por ejemplo, una entrada de alguien que ya estaba dentro, o una salida sin entrada) quedan en **Por revisar**; el número rojo del menú dice cuántas hay y se actualiza solo.
+
+Para cada una pulse **Resolver** y elija:
+
+- **Aprobar tal cual**: se registra con la hora que anotó el lector (solo si el motivo lo permite).
+- **Corregir la hora**: escriba la hora correcta (HH:mm, del mismo día).
+- **Descartar**: no se registra nada.
+
+El **motivo** de la decisión es obligatorio y queda en la auditoría con su usuario. Si otra persona ya la resolvió, el panel se lo indica.
+
 ## Dispositivo y horarios
 
-**Dispositivo** indica si el lector está conectado y cuándo respondió por última vez. **Horarios** lista los horarios y sus asistentes (solo consulta; los cambios los hace el administrador).
+**Dispositivo** indica si el lector está conectado y cuándo respondió por última vez. Si el reloj del lector se desvía más de 30 segundos del servidor aparece un aviso: avise al equipo técnico, porque los registros hechos sin conexión usan la hora del lector. **Horarios** lista los horarios y sus asistentes (solo consulta; los cambios los hace el administrador).
 
 ## Qué hacer si el panel dice «Desconectado»
 

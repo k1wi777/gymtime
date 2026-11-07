@@ -34,6 +34,7 @@ import { OutboundSender } from './outbound-sender.service.js';
         offlineAlertMinutes: config.get('DEVICE_OFFLINE_ALERT_MINUTES', {
           infer: true,
         }),
+        clockWarnSec: config.get('CLOCK_OFFSET_WARN_SEC', { infer: true }),
       }),
     },
     { provide: DEVICES_REPOSITORY, useClass: PrismaDevicesRepository },

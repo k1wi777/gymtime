@@ -20,13 +20,22 @@ export interface AlarmSummary {
   averageMinutes: number | null;
   closedSessions: number;
   byClosure: Record<AlarmClosedBy, number>;
+  /** Alarms the reader sounded by itself while offline: counted apart (H12). */
+  local: number;
 }
 
 const minutesOf = (e: AlarmEvent): number =>
   e.endedAt ? (e.endedAt.getTime() - e.startedAt.getTime()) / 60_000 : 0;
 
-/** `Σ byClosure + open = total` holds by construction: each event is counted once. */
-export function summarizeAlarms(events: readonly AlarmEvent[]): AlarmSummary {
+/**
+ * `Σ byClosure + open = total` holds by construction: each server event is
+ * counted once. Local alarms (sounded by the reader offline) never count as
+ * server alarms, open ones or minutes of the siren: they only add to `local`.
+ */
+export function summarizeAlarms(
+  allEvents: readonly AlarmEvent[],
+): AlarmSummary {
+  const events = allEvents.filter((e) => e.origin === 'server');
   const byClosure: Record<AlarmClosedBy, number> = {
     all_exited: 0,
     button: 0,
@@ -51,6 +60,7 @@ export function summarizeAlarms(events: readonly AlarmEvent[]): AlarmSummary {
     averageMinutes: average(minutes, closed),
     closedSessions,
     byClosure,
+    local: allEvents.length - events.length,
   };
 }
 
@@ -59,7 +69,8 @@ export function computeAlarms(
   events: readonly AlarmEvent[],
   ctx: ReportContext,
 ): ReportTable & { summary: AlarmSummary } {
-  const rows: ReportRow[] = [...events]
+  const rows: ReportRow[] = events
+    .filter((e) => e.origin === 'server')
     .sort(
       (a, b) =>
         b.startedAt.getTime() - a.startedAt.getTime() ||

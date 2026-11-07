@@ -1,3 +1,4 @@
+import type { AttendanceSource } from '../attendance/domain/attendance-session.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { AlarmService } from '../alarm/alarm.service.js';
 import { toAlarmStatusDto } from '../alarm/dto/alarm.dto.js';
@@ -240,7 +241,7 @@ export class PanelService {
 interface SessionLike {
   enteredAt: Date;
   exitedAt?: Date | null;
-  entrySource?: 'device' | 'manual';
+  entrySource?: AttendanceSource;
   status?: PanelPersonDto['sessionStatus'];
 }
 

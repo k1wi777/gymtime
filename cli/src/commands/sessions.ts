@@ -34,8 +34,8 @@ export interface OpenSession {
 
 export interface Session extends OpenSession {
   exitedAt: string | null;
-  entrySource: 'device' | 'manual';
-  exitSource: 'device' | 'manual' | null;
+  entrySource: 'device' | 'manual' | 'offline';
+  exitSource: 'device' | 'manual' | 'offline' | null;
   status: SessionStatus;
   manualReason: string | null;
 }

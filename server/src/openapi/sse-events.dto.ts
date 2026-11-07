@@ -1,3 +1,5 @@
+import type { AttendanceSource } from '../attendance/domain/attendance-session.js';
+import { ATTENDANCE_SOURCES } from '../attendance/dto/attendance.dto.js';
 import { ApiProperty } from '@nestjs/swagger';
 import { ALARM_REASONS, REJECT_REASONS, SCAN_RESULTS } from '@gymtime/shared';
 import { ALARM_CLOSED_BY } from '../alarm/dto/alarm.dto.js';
@@ -46,6 +48,22 @@ export class DeviceOfflineAlertDataDto implements Data<'device.offline_alert'> {
   thresholdMinutes: number;
 }
 
+export class DeviceClockSkewDataDto implements Data<'device.clock_skew'> {
+  @ApiProperty()
+  deviceId: string;
+  @ApiProperty({ description: 'Device clock minus server clock, in seconds' })
+  offsetSec: number;
+  @ApiProperty({ description: 'Configured threshold (CLOCK_OFFSET_WARN_SEC)' })
+  thresholdSec: number;
+  @ApiProperty({ description: 'True while |offsetSec| exceeds the threshold' })
+  warning: boolean;
+}
+
+export class OfflineReviewDataDto implements Data<'offline.review'> {
+  @ApiProperty({ description: 'Offline events waiting for a person' })
+  pending: number;
+}
+
 export class ScanDataDto implements Data<'scan'> {
   @ApiProperty()
   deviceId: string;
@@ -88,8 +106,8 @@ export class AlarmDataDto implements Data<'alarm'> {
 export class AttendanceDataDto implements Data<'attendance'> {
   @ApiProperty({ enum: ['entry', 'exit'] })
   change: 'entry' | 'exit';
-  @ApiProperty({ enum: ['device', 'manual'] })
-  source: 'device' | 'manual';
+  @ApiProperty({ enum: ATTENDANCE_SOURCES })
+  source: AttendanceSource;
   @ApiProperty({ format: 'uuid' })
   studentId: string;
   @ApiProperty()
@@ -143,6 +161,20 @@ export class DeviceOfflineAlertEventDto extends EventEnvelope {
   data: DeviceOfflineAlertDataDto;
 }
 
+export class DeviceClockSkewEventDto extends EventEnvelope {
+  @ApiProperty({ enum: ['device.clock_skew'] })
+  type: 'device.clock_skew';
+  @ApiProperty({ type: DeviceClockSkewDataDto })
+  data: DeviceClockSkewDataDto;
+}
+
+export class OfflineReviewEventDto extends EventEnvelope {
+  @ApiProperty({ enum: ['offline.review'] })
+  type: 'offline.review';
+  @ApiProperty({ type: OfflineReviewDataDto })
+  data: OfflineReviewDataDto;
+}
+
 export class ScanEventDto extends EventEnvelope {
   @ApiProperty({ enum: ['scan'] })
   type: 'scan';
@@ -190,6 +222,8 @@ export const SSE_EVENT_DTOS = {
   'device.connected': DeviceConnectedEventDto,
   'device.disconnected': DeviceDisconnectedEventDto,
   'device.offline_alert': DeviceOfflineAlertEventDto,
+  'device.clock_skew': DeviceClockSkewEventDto,
+  'offline.review': OfflineReviewEventDto,
   scan: ScanEventDto,
   command: CommandEventDto,
   alarm: AlarmEventDto,

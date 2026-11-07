@@ -74,6 +74,8 @@ CLI `gym` (opciones y configuración en el [README](../README.md#cli-gym)):
 | `gym device status` | Estado del lector: en línea, última conexión, firmware y órdenes pendientes. |
 | `gym device message "línea 1" ["línea 2"] [--seconds N] [--device ID]` | Muestra un mensaje en el LCD del lector (sin tildes, máximo 2 líneas de 16 caracteres). Sale con error si el lector no lo confirma. |
 | `gym watch` | Eventos del servidor en vivo, con reconexión automática y salida limpia con Ctrl+C. |
+| `offline.snapshot` | servidor | Disponible (opcional) | Solo para dispositivos que declaran `offline` en `hello`: horario con ventana, roster `slot` -> nombre corto, quién está dentro y límites. Se confirma con `ack`. Ver [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md). |
+| `offline.events` | dispositivo | Disponible (opcional) | Lote de 1 a 50 eventos de la cola local (`entry`, `exit`, `unknown`, `alarm`) con su hora original. El servidor reconcilia, no duplica por `id` y deja en «Por revisar» lo que contradice el estado. |
 
 ## El simulador como referencia
 
@@ -83,6 +85,7 @@ El simulador (`simulator/`) habla el mismo protocolo que el ESP32 y sirve para p
 - `simulator/src/sender.ts`: reenvío del mismo `id` hasta 3 veces si no llega `ack` (a los 5 s).
 - `simulator/src/enrollment-simulator.ts`: respuesta a `enroll.start` y `enroll.cancel`.
 - `simulator/src/reader-simulator.ts`: memoria del lector; guarda el mapa slot -> plantilla de `templates.sync`, borra todo al llegar un `syncId` nuevo y guarda `schedule.set`. Un `ack` por bloque; `status.fingerprintCount` informa cuántas plantillas hay.
+- Modo sin conexión (opcional): `--offline` (o `SIM_OFFLINE=1`) declara `capabilities: ["offline"]`; `--clock-offset-sec=N` suma un desfase al reloj; `--state-file ruta` guarda la cola y el estado local (reinicio sin red). Comandos de consola `net off|on` (perder y recuperar la red) y `scan <slot>`, que sin red se decide localmente con el último snapshot. Es el modelo de referencia de las reglas de [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md): `offline-engine.ts` (decisión), `offline-queue.ts` (cola de 500, JSON por línea) y `offline-sync.ts` (lotes con `ack`). Sin `--offline` el simulador no cambia.
 - `display.message`: el simulador imprime `display.message: "<línea 1>" / "<línea 2>" (<n>s)` (o `(screen cleared)` con dos líneas vacías) y lo confirma con `ack`.
 - `simulator/src/alarm-simulator.ts`: sirena del dispositivo simulado; imprime `ALARM ON (motivo) continua` o `ALARM ON (motivo) N s`, y `ALARM OFF (motivo)`. Con `durationSec` numérico el `DeviceClient` la apaga al cumplirse el tiempo y envía `alarm.state {on:false, source:"local"}`.
 
@@ -112,5 +115,6 @@ Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
 | Heartbeat obligatorio y detección de conexiones muertas | Disponible |
 | Eventos en vivo por SSE y `gym watch` | Disponible |
 | Mensajes de pantalla (`display.message`) y textos de 16 × 2 | Disponible |
+| Modo sin conexión (`offline.snapshot`, `offline.events`, revisión en el panel) | Disponible en el servidor y el simulador; **pendiente de confirmación del firmware** (puntos C1 a C11) y de pruebas con el ESP32 |
 
 El firmware ya puede implementar el flujo completo de la iteración 1: `scan.result`, `schedule.set`, `alarm.set` y el efecto de `button.pressed`. Debe enviar `status` con la periodicidad anunciada en `hello.ok` y confirmar con `ack` los mensajes del servidor; las órdenes que no se confirmaron se reenvían, con el mismo `id`, al reconectar el lector. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.

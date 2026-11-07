@@ -7,3 +7,4 @@ export * from './parse.js';
 export * from './display.js';
 export * from './csv.js';
 export * from './student-fields.js';
+export * from './offline.js';

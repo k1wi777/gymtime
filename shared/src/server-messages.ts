@@ -10,6 +10,7 @@ import {
 } from './envelope.js';
 import { rejectReasonSchema } from './errors.js';
 import { ackSchema } from './ack.js';
+import { offlineSnapshotPayloadSchema } from './offline.js';
 
 export const SCAN_RESULTS = ['entry', 'exit', 'denied', 'unknown'] as const;
 
@@ -167,6 +168,11 @@ export const displayMessageSchema = message(
   }),
 );
 
+export const offlineSnapshotSchema = message(
+  'offline.snapshot',
+  offlineSnapshotPayloadSchema,
+);
+
 /** Messages sent by the server. `ack` is shared by both directions. */
 export const serverMessageSchema = z.discriminatedUnion('type', [
   helloOkSchema,
@@ -177,6 +183,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   scheduleSetSchema,
   alarmSetSchema,
   displayMessageSchema,
+  offlineSnapshotSchema,
   ackSchema,
 ]);
 

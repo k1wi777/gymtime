@@ -48,6 +48,8 @@ enum SessionStatus {
 enum AttendanceSource {
   device
   manual
+  // H12: reconstructed from the queue a reader kept while it had no connection.
+  offline
 
   @@map("attendance_source")
 }
@@ -76,6 +78,14 @@ enum PanelRole {
   @@map("panel_role")
 }
 
+// H12: `local` alarms were sounded by the reader itself while offline.
+enum AlarmOrigin {
+  server
+  local
+
+  @@map("alarm_origin")
+}
+
 enum AlarmClosedBy {
   all_exited
   button
@@ -86,12 +96,12 @@ enum AlarmClosedBy {
 }
 
 model Student {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  document  String  @unique @map("documento")
-  name      String  @map("nombre")
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  document       String    @unique @map("documento")
+  name           String    @map("nombre")
   // The student's degree ("carrera").
-  program   String? @map("programa")
-  active    Boolean @default(true) @map("activo")
+  program        String?   @map("programa")
+  active         Boolean   @default(true) @map("activo")
   // Consent to the processing of biometric data (Ley 1581): version of the text
   // accepted, when and by which panel user (NULL = the system key or a
   // pre-existing student). `consented` is derived: consent_version IS NOT NULL.
@@ -105,18 +115,19 @@ model Student {
   importBatchId  String?   @map("import_batch_id") @db.Uuid
   // Short name for the reader LCD (ASCII, up to DISPLAY_COLS). NULL = generated
   // from `name` when read.
-  displayName String? @map("display_name")
+  displayName    String?   @map("display_name")
   // Optional contact data (Ley 1581: data minimisation). Never logged, never
   // sent to the reader.
-  email     String? @map("correo")
-  phone     String? @map("telefono")
+  email          String?   @map("correo")
+  phone          String?   @map("telefono")
 
-  fingerprints Fingerprint[]
-  enrollments  Enrollment[]
-  schedules    ScheduleStudent[]
-  sessions     AttendanceSession[]
-  consentUser  PanelUser?   @relation(fields: [consentBy], references: [id], onDelete: SetNull)
-  importBatch  ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  fingerprints  Fingerprint[]
+  enrollments   Enrollment[]
+  schedules     ScheduleStudent[]
+  sessions      AttendanceSession[]
+  offlineEvents OfflineEvent[]
+  consentUser   PanelUser?          @relation(fields: [consentBy], references: [id], onDelete: SetNull)
+  importBatch   ImportBatch?        @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@index([importBatchId])
   @@map("students")
@@ -157,13 +168,13 @@ model ServiceException {
 // One row per CSV import. Only counts: the error report holds personal data
 // and is never stored.
 model ImportBatch {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  filename  String    @map("archivo")
-  userId    String?   @map("user_id") @db.Uuid
-  createdAt DateTime  @default(now()) @map("fecha") @db.Timestamptz()
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename  String   @map("archivo")
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("fecha") @db.Timestamptz()
   total     Int
-  valid     Int       @map("validas")
-  errors    Int       @map("con_error")
+  valid     Int      @map("validas")
+  errors    Int      @map("con_error")
 
   user     PanelUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
   students Student[]
@@ -172,16 +183,16 @@ model ImportBatch {
 }
 
 model Fingerprint {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId String   @map("student_id") @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
   // Already encrypted (AES-256-GCM, tag appended); never plain.
-  template  Bytes    @map("plantilla")
-  iv        Bytes
+  template   Bytes    @map("plantilla")
+  iv         Bytes
   // At most one active per student: partial unique index in the migration.
-  active    Boolean  @default(true) @map("activa")
+  active     Boolean  @default(true) @map("activa")
   // Version of the encryption key that sealed `template` (H11); existing rows are 1.
-  keyVersion Int     @default(1) @map("key_version")
-  createdAt DateTime @default(now()) @map("creada") @db.Timestamptz()
+  keyVersion Int      @default(1) @map("key_version")
+  createdAt  DateTime @default(now()) @map("creada") @db.Timestamptz()
 
   student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   slots   DeviceSlot[]
@@ -192,27 +203,34 @@ model Fingerprint {
 }
 
 model Device {
-  id              String    @id
-  name            String?   @map("nombre")
-  lastConnectedAt DateTime? @map("ultima_conexion") @db.Timestamptz()
-  firmwareVersion String?   @map("version_firmware")
+  id               String    @id
+  name             String?   @map("nombre")
+  lastConnectedAt  DateTime? @map("ultima_conexion") @db.Timestamptz()
+  firmwareVersion  String?   @map("version_firmware")
   // Reset to false on server start: no connection survives a restart.
-  online          Boolean   @default(false) @map("en_linea")
+  online           Boolean   @default(false) @map("en_linea")
   // Own token (H11): only the SHA-256 hex hash is stored. NULL with
   // `tokenRevokedAt` NULL = still on the shared DEVICE_TOKEN (transition);
   // NULL with `tokenRevokedAt` set = revoked, nothing is accepted.
-  tokenHash       String?   @map("token_hash")
-  tokenCreatedAt  DateTime? @map("token_created_at") @db.Timestamptz()
-  tokenRevokedAt  DateTime? @map("token_revoked_at") @db.Timestamptz()
+  tokenHash        String?   @map("token_hash")
+  tokenCreatedAt   DateTime? @map("token_created_at") @db.Timestamptz()
+  tokenRevokedAt   DateTime? @map("token_revoked_at") @db.Timestamptz()
   // Offline alert (H11): since when it is offline and when it was alerted
   // (one alert per drop). Both cleared when it reconnects.
-  offlineSince      DateTime? @map("offline_since") @db.Timestamptz()
-  offlineAlertedAt  DateTime? @map("offline_alerted_at") @db.Timestamptz()
+  offlineSince     DateTime? @map("offline_since") @db.Timestamptz()
+  offlineAlertedAt DateTime? @map("offline_alerted_at") @db.Timestamptz()
+  // H12: what the hello declared (empty = a v0 reader) and the last clock check
+  // (device time minus server time, in seconds).
+  capabilities     String[]  @default([])
+  clockOffsetSec   Int?      @map("clock_offset_sec")
+  clockCheckedAt   DateTime? @map("clock_checked_at") @db.Timestamptz()
 
-  enrollments Enrollment[]
-  slots       DeviceSlot[]
-  commands    DeviceCommand[]
-  messages    ProcessedMessage[]
+  enrollments      Enrollment[]
+  slots            DeviceSlot[]
+  commands         DeviceCommand[]
+  messages         ProcessedMessage[]
+  offlineSnapshots OfflineSnapshot[]
+  offlineEvents    OfflineEvent[]
 
   @@map("devices")
 }
@@ -265,7 +283,7 @@ model Schedule {
   // legacy ones and for one-off schedules. A period with schedules is not deleted.
   periodId          String?   @map("period_id") @db.Uuid
 
-  period    Period?   @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  period    Period?            @relation(fields: [periodId], references: [id], onDelete: Restrict)
   students  ScheduleStudent[]
   instances ScheduleInstance[]
 
@@ -292,18 +310,19 @@ model ScheduleStudent {
 }
 
 model ScheduleInstance {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  scheduleId String   @map("schedule_id") @db.Uuid
-  date       DateTime @map("fecha") @db.Date
-  startsAt   DateTime @map("inicio") @db.Timestamptz()
-  endsAt     DateTime @map("fin") @db.Timestamptz()
-  status     String   @default("scheduled") @map("estado")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId  String    @map("schedule_id") @db.Uuid
+  date        DateTime  @map("fecha") @db.Date
+  startsAt    DateTime  @map("inicio") @db.Timestamptz()
+  endsAt      DateTime  @map("fin") @db.Timestamptz()
+  status      String    @default("scheduled") @map("estado")
   // Informative: when the generator created the row (NULL for older rows).
   generatedAt DateTime? @map("generated_at") @db.Timestamptz()
 
-  schedule Schedule            @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  sessions AttendanceSession[]
-  alarms   AlarmEvent[]
+  schedule      Schedule            @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  sessions      AttendanceSession[]
+  alarms        AlarmEvent[]
+  offlineEvents OfflineEvent[]
 
   // Makes the daily generator idempotent.
   @@unique([scheduleId, date])
@@ -323,8 +342,9 @@ model AttendanceSession {
   status       SessionStatus     @default(abierta) @map("estado")
   manualReason String?           @map("motivo_manual")
 
-  student  Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  student       Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instance      ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  offlineEvents OfflineEvent[]
 
   @@index([instanceId, status])
   // Reports: sessions by entry date and by student within a date range.
@@ -334,10 +354,10 @@ model AttendanceSession {
 }
 
 model DeviceCommand {
-  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  deviceId String        @map("device_id")
-  type     String        @map("tipo")
-  payload  Json
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deviceId  String        @map("device_id")
+  type      String        @map("tipo")
+  payload   Json
   status    CommandStatus @default(pending) @map("estado")
   attempts  Int           @default(0) @map("intentos")
   // FIFO order for replaying pending commands after a reconnection.
@@ -364,29 +384,89 @@ model ProcessedMessage {
 }
 
 model AlarmEvent {
-  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  instanceId String         @map("instance_id") @db.Uuid
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instanceId     String         @map("instance_id") @db.Uuid
   startedAt      DateTime       @map("inicio") @db.Timestamptz()
   endedAt        DateTime?      @map("fin") @db.Timestamptz()
   closedBy       AlarmClosedBy? @map("cerrada_por")
   // Open sessions marked no_registrada when the alarm was silenced manually.
   closedSessions Int            @default(0) @map("sesiones_cerradas")
+  // H12: `local` rows come from a reader's offline queue and never drive the siren.
+  origin         AlarmOrigin    @default(server)
+  deviceId       String?        @map("device_id")
+  deviceEventId  String?        @map("device_event_id") @db.Uuid
 
-  instance ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  instance      ScheduleInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  offlineEvents OfflineEvent[]
 
   @@index([instanceId])
+  // Partial unique index (device_id, device_event_id) WHERE device_event_id IS NOT NULL
+  // is added by hand in the h12_offline_tables migration.
   @@map("alarm_events")
 }
 
+// H12: roster a reader decided with. `roster` is {slot: studentId} (internal ids,
+// no names, no biometrics). Purged after 14 days.
+model OfflineSnapshot {
+  id         String   @id @db.Uuid
+  deviceId   String   @map("device_id")
+  scheduleId String?  @map("schedule_id") @db.Uuid
+  roster     Json
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("offline_snapshots")
+}
+
+// H12: every event a reader queued while offline, with what the server did with
+// it. `outcome` is text + CHECK (pendiente, applied, por_revisar, aprobado,
+// corregido, descartado, informativo, invalido).
+model OfflineEvent {
+  deviceId       String    @map("device_id")
+  id             String    @db.Uuid
+  seq            Int
+  ts             DateTime  @db.Timestamptz()
+  type           String
+  slot           Int?
+  snapshotId     String?   @map("snapshot_id") @db.Uuid
+  batchId        String?   @map("batch_id") @db.Uuid
+  studentId      String?   @map("student_id") @db.Uuid
+  instanceId     String?   @map("instance_id") @db.Uuid
+  outcome        String
+  reviewReason   String?   @map("review_reason")
+  sessionId      String?   @map("session_id") @db.Uuid
+  alarmEventId   String?   @map("alarm_event_id") @db.Uuid
+  receivedAt     DateTime  @default(now()) @map("received_at") @db.Timestamptz()
+  resolvedBy     String?   @map("resolved_by") @db.Uuid
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz()
+  resolution     String?
+  resolutionNote String?   @map("resolution_note")
+  correctedTs    DateTime? @map("corrected_ts") @db.Timestamptz()
+
+  device     Device             @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  student    Student?           @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  instance   ScheduleInstance?  @relation(fields: [instanceId], references: [id], onDelete: SetNull)
+  session    AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  alarmEvent AlarmEvent?        @relation(fields: [alarmEventId], references: [id], onDelete: SetNull)
+  resolver   PanelUser?         @relation(fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@id([deviceId, id])
+  @@index([outcome, receivedAt])
+  @@index([studentId, ts])
+  @@map("offline_events")
+}
+
 model EventLog {
-  id        Int      @id @default(autoincrement())
-  type      String   @map("tipo")
-  detail    Json?    @map("detalle")
+  id        Int       @id @default(autoincrement())
+  type      String    @map("tipo")
+  detail    Json?     @map("detalle")
   // Who originated the event: the admin key is `system`, a device message
   // is `device` with its id.
   actorType ActorType @default(system) @map("actor_type")
   actorId   String?   @map("actor_id")
-  createdAt DateTime @default(now()) @map("fecha") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("fecha") @db.Timestamptz()
 
   @@index([createdAt])
   @@map("event_log")
@@ -407,9 +487,10 @@ model PanelUser {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  sessions      AuthSession[]
-  consents      Student[]
-  importBatches ImportBatch[]
+  sessions              AuthSession[]
+  consents              Student[]
+  importBatches         ImportBatch[]
+  resolvedOfflineEvents OfflineEvent[]
 
   @@map("panel_users")
 }

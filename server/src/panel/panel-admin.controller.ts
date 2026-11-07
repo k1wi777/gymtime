@@ -1,3 +1,4 @@
+import { ATTENDANCE_SOURCES } from '../attendance/dto/attendance.dto.js';
 import { applyDecorators, Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -107,12 +108,12 @@ export class PanelAdminController {
   @ApiOperation({
     summary: 'History of entries and exits (administrator)',
     description:
-      'Filters: date range of the entry, schedule, student, origin (`device` fingerprint or `manual`), status and a name/document search. Manual rows carry the reason and who registered them. The offline origin does not exist yet.',
+      'Filters: date range of the entry, schedule, student, origin (`device` fingerprint, `manual` or `offline`), status and a name/document search. Manual rows carry the reason and who registered them. The `offline` origin marks sessions reconciled from the device queue.',
   })
   @paged(
     query('scheduleId', { format: 'uuid' }),
     query('studentId', { format: 'uuid' }),
-    query('source', { enum: ['device', 'manual'] }),
+    query('source', { enum: ATTENDANCE_SOURCES }),
     query('status', { enum: ['abierta', 'cerrada', 'no_registrada'] }),
     query('search'),
     query('offset', { type: Number, minimum: 0 }),

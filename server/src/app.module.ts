@@ -14,6 +14,7 @@ import { DevicesModule } from './devices/devices.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { FingerprintsModule } from './fingerprints/fingerprints.module.js';
 import { HealthModule } from './health/health.module.js';
+import { OfflineModule } from './offline/offline.module.js';
 import { PanelModule } from './panel/panel.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { SchedulesModule } from './schedules/schedules.module.js';
@@ -39,6 +40,7 @@ import { UsersModule } from './users/users.module.js';
     SyncModule,
     AttendanceModule,
     AlarmModule,
+    OfflineModule,
     AdminModule,
     PanelModule,
     ReportsModule,

@@ -80,6 +80,7 @@ function pickSchedule(
   if (!chosen) return null;
   return {
     scheduleId: chosen.schedule.id,
+    instanceId: chosen.instance.id,
     startsAt: chosen.instance.startsAt,
     endsAt: chosen.instance.endsAt,
     entryOpensAt: chosen.window.opensAt,

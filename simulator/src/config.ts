@@ -12,6 +12,15 @@ export interface SimulatorConfig {
   token: string;
   fw: string;
   enroll: EnrollmentOptions;
+  /** Present only with `--offline`: offline mode (H12). */
+  offline?: OfflineOptions;
+}
+
+export interface OfflineOptions {
+  /** Seconds added to the device clock (`deviceTime` and every `ts`). */
+  clockOffsetSec: number;
+  /** File that keeps the queue and the local state across restarts. */
+  stateFile: string | null;
 }
 
 const wsUrl = z.string().refine((value) => {
@@ -43,6 +52,10 @@ const configSchema = z.object({
   enrollStepMs: nonNegativeInt,
   enrollFailReason: z.string().min(1, 'must not be empty'),
   templateBytes: positiveInt,
+  clockOffsetSec: z
+    .string()
+    .regex(/^-?\d{1,7}$/, 'must be an integer number of seconds')
+    .transform(Number),
 });
 
 const OPTIONS = {
@@ -57,6 +70,7 @@ const OPTIONS = {
     env: 'SIM_ENROLL_FAIL_REASON',
   },
   templateBytes: { flag: '--template-bytes', env: 'SIM_TEMPLATE_BYTES' },
+  clockOffsetSec: { flag: '--clock-offset-sec', env: 'SIM_CLOCK_OFFSET_SEC' },
 } as const;
 
 export const DEFAULT_URL = 'ws://localhost:3000/device';
@@ -70,7 +84,7 @@ export function loadConfig(
   env: NodeJS.ProcessEnv,
   argv: string[],
 ): SimulatorConfig {
-  let values: Record<string, string | undefined>;
+  let values: Record<string, string | boolean | undefined>;
   try {
     ({ values } = parseArgs({
       args: argv,
@@ -83,6 +97,9 @@ export function loadConfig(
         'enroll-step-ms': { type: 'string' },
         'enroll-fail-reason': { type: 'string' },
         'template-bytes': { type: 'string' },
+        offline: { type: 'boolean' },
+        'clock-offset-sec': { type: 'string' },
+        'state-file': { type: 'string' },
       },
       strict: true,
     }));
@@ -113,7 +130,17 @@ export function loadConfig(
       values['template-bytes'] ??
       env[OPTIONS.templateBytes.env] ??
       String(DEFAULT_ENROLLMENT.templateBytes),
+    clockOffsetSec:
+      values['clock-offset-sec'] ?? env[OPTIONS.clockOffsetSec.env] ?? '0',
   };
+  const offlineOn =
+    values['offline'] === true ||
+    ['1', 'true'].includes(env['SIM_OFFLINE'] ?? '');
+  const stateFileRaw = values['state-file'] ?? env['SIM_STATE_FILE'];
+  const stateFile =
+    typeof stateFileRaw === 'string' && stateFileRaw !== ''
+      ? stateFileRaw
+      : null;
 
   const result = configSchema.safeParse(candidate);
   if (result.success) {
@@ -122,10 +149,17 @@ export function loadConfig(
       enrollStepMs,
       enrollFailReason,
       templateBytes,
+      clockOffsetSec,
       ...rest
     } = result.data;
+    if (!offlineOn && (clockOffsetSec !== 0 || stateFile)) {
+      throw new ConfigError(
+        'Invalid configuration: --clock-offset-sec / --state-file need --offline (SIM_OFFLINE=1)',
+      );
+    }
     return {
       ...rest,
+      ...(offlineOn ? { offline: { clockOffsetSec, stateFile } } : {}),
       enroll: {
         mode: enrollMode,
         stepMs: enrollStepMs,

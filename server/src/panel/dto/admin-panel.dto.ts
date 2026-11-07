@@ -1,3 +1,5 @@
+import type { AttendanceSource } from '../../attendance/domain/attendance-session.js';
+import { ATTENDANCE_SOURCES } from '../../attendance/dto/attendance.dto.js';
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { StudentResponseDto } from '../../students/dto/student.dto.js';
@@ -32,7 +34,7 @@ export const attendanceHistoryQuerySchema = z.strictObject({
   to: instant.optional(),
   scheduleId: z.uuid().optional(),
   studentId: z.uuid().optional(),
-  source: z.enum(['device', 'manual']).optional(),
+  source: z.enum(ATTENDANCE_SOURCES).optional(),
   status: z.enum(['abierta', 'cerrada', 'no_registrada']).optional(),
   search: z.string().trim().min(1).max(100).optional(),
   limit: limit(200),
@@ -169,10 +171,10 @@ export class AttendanceHistoryItemDto {
   enteredAt: string;
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   exitedAt: string | null;
-  @ApiProperty({ enum: ['device', 'manual'] })
-  entrySource: 'device' | 'manual';
-  @ApiProperty({ enum: ['device', 'manual'], nullable: true })
-  exitSource: 'device' | 'manual' | null;
+  @ApiProperty({ enum: ATTENDANCE_SOURCES })
+  entrySource: AttendanceSource;
+  @ApiProperty({ enum: ATTENDANCE_SOURCES, nullable: true })
+  exitSource: AttendanceSource | null;
   @ApiProperty({ enum: ['abierta', 'cerrada', 'no_registrada'] })
   status: 'abierta' | 'cerrada' | 'no_registrada';
   @ApiProperty({ type: String, nullable: true })
@@ -285,6 +287,12 @@ export class AlarmHistoryItemDto {
   closedBy: 'all_exited' | 'button' | 'cli' | 'timeout' | null;
   @ApiProperty()
   closedSessions: number;
+  @ApiProperty({
+    enum: ['server', 'local'],
+    description:
+      'local = sounded by the reader itself while offline (history only)',
+  })
+  origin: 'server' | 'local';
   @ApiProperty({
     type: HistoryActorDto,
     nullable: true,

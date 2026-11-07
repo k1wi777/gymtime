@@ -433,6 +433,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/offline/clock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Capabilities and clock offset of each reader */
+        get: operations["OfflineController_clock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offline/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Offline events by state: pending, resolved or discarded */
+        get: operations["OfflineController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offline/review/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many offline events wait for a person */
+        get: operations["OfflineController_count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/offline/review/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, correct the hour or discard a pending offline event
+         * @description The reason is mandatory and goes to the audit trail with the user. Correcting is limited to the same day of the event.
+         */
+        post: operations["OfflineController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/panel/attendance/history": {
         parameters: {
             query?: never;
@@ -442,7 +513,7 @@ export interface paths {
         };
         /**
          * History of entries and exits (administrator)
-         * @description Filters: date range of the entry, schedule, student, origin (`device` fingerprint or `manual`), status and a name/document search. Manual rows carry the reason and who registered them. The offline origin does not exist yet.
+         * @description Filters: date range of the entry, schedule, student, origin (`device` fingerprint, `manual` or `offline`), status and a name/document search. Manual rows carry the reason and who registered them. The `offline` origin marks sessions reconciled from the device queue.
          */
         get: operations["PanelAdminController_attendanceHistory"];
         put?: never;
@@ -1307,6 +1378,11 @@ export interface components {
             endedAt: string | null;
             /** Format: uuid */
             id: string;
+            /**
+             * @description local = sounded by the reader itself while offline (history only)
+             * @enum {string}
+             */
+            origin: "server" | "local";
             schedule: components["schemas"]["HistoryScheduleDto"] | null;
             /** Format: date-time */
             scheduleStartsAt: string | null;
@@ -1335,6 +1411,8 @@ export interface components {
             byClosure: components["schemas"]["AlarmByClosureDto"];
             closed: number;
             closedSessions: number;
+            /** @description Alarms sounded by the reader itself while offline (not in the other counts) */
+            local: number;
             /** @description Still without an end */
             open: number;
             total: number;
@@ -1384,7 +1462,7 @@ export interface components {
             /** Format: uuid */
             sessionId: string;
             /** @enum {string} */
-            source: "device" | "manual";
+            source: "device" | "manual" | "offline";
             /** Format: uuid */
             studentId: string;
             studentName: string;
@@ -1409,11 +1487,11 @@ export interface components {
             /** @description Who registered the entry by hand (null when by fingerprint) */
             entryBy: components["schemas"]["HistoryActorDto"] | null;
             /** @enum {string} */
-            entrySource: "device" | "manual";
+            entrySource: "device" | "manual" | "offline";
             /** @description Who registered the exit by hand (null when by fingerprint) */
             exitBy: components["schemas"]["HistoryActorDto"] | null;
             /** @enum {string|null} */
-            exitSource: "device" | "manual" | null;
+            exitSource: "device" | "manual" | "offline" | null;
             /** Format: date-time */
             exitedAt: string | null;
             /** Format: uuid */
@@ -1596,6 +1674,36 @@ export interface components {
         DefaultRangeDto: {
             from: string;
             to: string;
+        };
+        DeviceClockDto: {
+            capabilities: string[];
+            /** Format: date-time */
+            clockCheckedAt: string | null;
+            /** @description Device clock minus server clock at the last hello, seconds */
+            clockOffsetSec: number | null;
+            clockThresholdSec: number;
+            /** @description |offset| above the threshold */
+            clockWarning: boolean;
+            deviceId: string;
+        };
+        DeviceClockSkewDataDto: {
+            deviceId: string;
+            /** @description Device clock minus server clock, in seconds */
+            offsetSec: number;
+            /** @description Configured threshold (CLOCK_OFFSET_WARN_SEC) */
+            thresholdSec: number;
+            /** @description True while |offsetSec| exceeds the threshold */
+            warning: boolean;
+        };
+        DeviceClockSkewEventDto: {
+            /** Format: date-time */
+            at: string;
+            data: components["schemas"]["DeviceClockSkewDataDto"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "device.clock_skew";
         };
         DeviceConnectedDataDto: {
             deviceId: string;
@@ -1838,6 +1946,20 @@ export interface components {
             /** Format: uuid */
             studentId: string;
         };
+        OfflineReviewDataDto: {
+            /** @description Offline events waiting for a person */
+            pending: number;
+        };
+        OfflineReviewEventDto: {
+            /** Format: date-time */
+            at: string;
+            data: components["schemas"]["OfflineReviewDataDto"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "offline.review";
+        };
         OpenSessionDto: {
             /** Format: date-time */
             enteredAt: string;
@@ -1939,7 +2061,7 @@ export interface components {
             /** @enum {string|null} */
             sessionStatus: "abierta" | "cerrada" | "no_registrada" | null;
             /** @enum {string|null} */
-            source: "device" | "manual" | null;
+            source: "device" | "manual" | "offline" | null;
             /** Format: uuid */
             studentId: string;
         };
@@ -2090,6 +2212,17 @@ export interface components {
         ResolveResponseDto: {
             occurrence: components["schemas"]["ResolvedOccurrenceDto"] | null;
         };
+        ResolveReviewDto: {
+            /** @enum {string} */
+            action: "aprobar" | "corregir" | "descartar";
+            /** @description Why, in the person words */
+            reason: string;
+            /**
+             * Format: date-time
+             * @description New instant (same Bogota day, not in the future); corregir
+             */
+            ts?: string;
+        };
         ResolvedOccurrenceDto: {
             /** Format: date-time */
             entryClosesAt: string;
@@ -2100,6 +2233,62 @@ export interface components {
             /** Format: uuid */
             scheduleId: string;
             scheduleName: string;
+        };
+        ReviewCountDto: {
+            /** @description Events waiting for a person */
+            pending: number;
+        };
+        ReviewItemDto: {
+            /** @description Actions valid for this event while it is pending */
+            actions: ("aprobar" | "corregir" | "descartar")[];
+            /** Format: date-time */
+            correctedTs: string | null;
+            deviceId: string;
+            /**
+             * Format: uuid
+             * @description Event id made by the device
+             */
+            id: string;
+            /** @enum {string} */
+            outcome: "pendiente" | "applied" | "por_revisar" | "aprobado" | "corregido" | "descartado" | "informativo" | "invalido";
+            /** Format: date-time */
+            receivedAt: string;
+            /** @enum {string|null} */
+            resolution: "aprobar" | "corregir" | "descartar" | null;
+            resolutionNote: string | null;
+            /** Format: date-time */
+            resolvedAt: string | null;
+            /** @enum {string|null} */
+            reviewReason: "EXIT_WITHOUT_ENTRY" | "DUPLICATE_ENTRY" | "OUTSIDE_WINDOW" | "NOT_IN_SCHEDULE" | "ALREADY_EXITED" | "STUDENT_INACTIVE" | "SESSION_ALREADY_CLOSED" | "OUT_OF_ORDER" | "TS_FUTURE" | "TS_TOO_OLD" | "UNKNOWN_SNAPSHOT" | "UNKNOWN_SLOT" | null;
+            schedule: components["schemas"]["ReviewScheduleDto"] | null;
+            /** Format: uuid */
+            sessionId: string | null;
+            slot: number | null;
+            student: components["schemas"]["ReviewStudentDto"] | null;
+            /**
+             * Format: date-time
+             * @description When it happened
+             */
+            ts: string;
+            /** @enum {string} */
+            type: "entry" | "exit" | "unknown" | "alarm";
+        };
+        ReviewPageDto: {
+            items: components["schemas"]["ReviewItemDto"][];
+            total: number;
+        };
+        ReviewScheduleDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            startsAt: string;
+        };
+        ReviewStudentDto: {
+            document: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         RevokedTokenDto: {
             deviceId: string;
@@ -2153,7 +2342,7 @@ export interface components {
             /** @enum {string|null} */
             sessionStatus: "abierta" | "cerrada" | "no_registrada" | null;
             /** @enum {string|null} */
-            source: "device" | "manual" | null;
+            source: "device" | "manual" | "offline" | null;
             /** @enum {string} */
             state: "attended" | "missing" | "expected";
             /** Format: uuid */
@@ -2243,9 +2432,9 @@ export interface components {
             /** Format: date-time */
             enteredAt: string;
             /** @enum {string} */
-            entrySource: "device" | "manual";
+            entrySource: "device" | "manual" | "offline";
             /** @enum {string|null} */
-            exitSource: "device" | "manual" | null;
+            exitSource: "device" | "manual" | "offline" | null;
             /** Format: date-time */
             exitedAt: string | null;
             /** Format: uuid */
@@ -3508,7 +3697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/event-stream": components["schemas"]["DeviceConnectedEventDto"] | components["schemas"]["DeviceDisconnectedEventDto"] | components["schemas"]["DeviceOfflineAlertEventDto"] | components["schemas"]["ScanEventDto"] | components["schemas"]["CommandEventDto"] | components["schemas"]["AlarmEventDto"] | components["schemas"]["AttendanceEventDto"] | components["schemas"]["EnrollmentEventDto"] | components["schemas"]["KeepaliveEventDto"];
+                    "text/event-stream": components["schemas"]["DeviceConnectedEventDto"] | components["schemas"]["DeviceDisconnectedEventDto"] | components["schemas"]["DeviceOfflineAlertEventDto"] | components["schemas"]["DeviceClockSkewEventDto"] | components["schemas"]["OfflineReviewEventDto"] | components["schemas"]["ScanEventDto"] | components["schemas"]["CommandEventDto"] | components["schemas"]["AlarmEventDto"] | components["schemas"]["AttendanceEventDto"] | components["schemas"]["EnrollmentEventDto"] | components["schemas"]["KeepaliveEventDto"];
                 };
             };
             /** @description No valid credential */
@@ -3666,6 +3855,211 @@ export interface operations {
             };
         };
     };
+    OfflineController_clock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceClockDto"][];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    OfflineController_list: {
+        parameters: {
+            query?: {
+                offset?: unknown;
+                limit?: unknown;
+                to?: unknown;
+                from?: unknown;
+                view?: "pending" | "resolved" | "discarded" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewPageDto"];
+                };
+            };
+            /** @description Invalid query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    OfflineController_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewCountDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    OfflineController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveReviewDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewItemDto"];
+                };
+            };
+            /** @description Invalid body or correction */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description No valid credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Role not allowed (FORBIDDEN_ROLE), anti-CSRF check failed (CSRF_REJECTED) or password change pending (PASSWORD_CHANGE_REQUIRED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description EVENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description ALREADY_RESOLVED, NOT_APPROVABLE, NOT_CORRECTABLE, NO_OCCURRENCE, SESSION_ALREADY_OPEN, NO_OPEN_SESSION, INCONSISTENT_TIME */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description STILL_CONFLICT: the corrected hour still conflicts */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     PanelAdminController_attendanceHistory: {
         parameters: {
             query?: {
@@ -3675,7 +4069,7 @@ export interface operations {
                 to?: unknown;
                 scheduleId?: unknown;
                 studentId?: unknown;
-                source?: "device" | "manual";
+                source?: "device" | "manual" | "offline";
                 status?: "abierta" | "cerrada" | "no_registrada";
                 search?: unknown;
                 offset?: number;

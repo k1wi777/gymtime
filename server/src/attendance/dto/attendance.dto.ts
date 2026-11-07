@@ -16,7 +16,7 @@ export const SESSION_STATUSES = [
   'cerrada',
   'no_registrada',
 ] as const;
-export const ATTENDANCE_SOURCES = ['device', 'manual'] as const;
+export const ATTENDANCE_SOURCES = ['device', 'manual', 'offline'] as const;
 
 export const manualAttendanceSchema = z.strictObject({
   studentId: z.uuid(),

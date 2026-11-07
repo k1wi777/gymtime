@@ -113,6 +113,17 @@ del lector (`docs/integracion_firmware.md`, sección 8) y, si hay clase en curso
 registrar manualmente las asistencias. El monitoreo **externo** (que avise si
 cae el servidor entero) es un pendiente del despliegue.
 
+### Cierre ordenado del servidor
+
+Al recibir `SIGTERM` (o `Ctrl+C`) el servidor cierra primero los WebSocket `/device` (código 1001) y los flujos SSE, y termina en pocos segundos aunque haya un lector conectado. Para comprobarlo a mano: arranque el servidor, conecte el simulador, envíe `kill -TERM <pid>` y verifique que el proceso sale en menos de 3 s con código 0. El lector se reconecta solo cuando el servidor vuelve.
+
+## 6.1 Modo sin conexión: reloj y pendientes
+
+- **Aviso de reloj** en la pantalla Dispositivo: el desfase `deviceTime - hora del servidor` superó `CLOCK_OFFSET_WARN_SEC` (30 s). No se corrigen las horas con él; ajuste la hora del lector (NTP/RTC).
+- **Por revisar** acumulado: lo resuelven asistente o administrador. El número también aparece en el menú.
+- Límites configurables: `OFFLINE_TS_FUTURE_TOLERANCE_SEC` (120), `OFFLINE_TS_MAX_AGE_HOURS` (72), `OFFLINE_SNAPSHOT_WAIT_SEC` (60), `OFFLINE_SNAPSHOT_RETENTION_DAYS` (14).
+- El contrato con el firmware está en [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md).
+
 ## 7. Supresión de datos personales (Ley 1581)
 
 ```bash

@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/auth/auth-provider';
 import { AlarmBanner } from '@/features/alarma/AlarmBanner';
 import { useDevices } from '@/features/dispositivo/use-devices';
+import { useReviewCount } from '@/features/offline/use-review-count';
 import { formatTime } from '@/lib/time';
 import { useLive } from '@/live/live-provider';
 import { visibleItems } from '@/lib/nav';
@@ -21,6 +22,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { state } = useLive();
   const { devices } = useDevices();
+  const pending = useReviewCount();
   const offline = devices.filter((device) => !device.online);
   const alerted = offline.filter((device) => device.offlineAlert);
   const waiting = offline.filter((device) => !device.offlineAlert);
@@ -43,6 +45,14 @@ export function Shell({ children }: { children: ReactNode }) {
               className={styles.link}
             >
               {item.label}
+              {item.href === '/por-revisar' && pending > 0 && (
+                <span
+                  className={styles.counter}
+                  aria-label={`${pending} por revisar`}
+                >
+                  {pending}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

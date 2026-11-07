@@ -127,4 +127,31 @@ describe('loadConfig', () => {
       expect(run).not.toThrow(/super-secret-token/);
     });
   });
+
+  it('offline mode is opt-in and carries offset and state file', () => {
+    const env = { SIM_DEVICE_TOKEN: 'tok-123456789012' };
+    expect(loadConfig(env, []).offline).toBeUndefined();
+    expect(
+      loadConfig(env, [
+        '--offline',
+        '--clock-offset-sec=-45',
+        '--state-file',
+        '/tmp/x.jsonl',
+      ]).offline,
+    ).toEqual({ clockOffsetSec: -45, stateFile: '/tmp/x.jsonl' });
+    expect(loadConfig({ ...env, SIM_OFFLINE: '1' }, []).offline).toEqual({
+      clockOffsetSec: 0,
+      stateFile: null,
+    });
+  });
+
+  it('refuses offset or state file without --offline', () => {
+    const env = { SIM_DEVICE_TOKEN: 'tok-123456789012' };
+    expect(() => loadConfig(env, ['--clock-offset-sec', '5'])).toThrow(
+      /need --offline/,
+    );
+    expect(() =>
+      loadConfig(env, ['--offline', '--clock-offset-sec', 'x']),
+    ).toThrow(/--clock-offset-sec/);
+  });
 });

@@ -447,6 +447,9 @@ export function buildSemester(
       endedAt: kind === 'open' ? null : endedAt,
       closedBy: kind === 'open' ? null : kind,
       closedSessions,
+      origin: 'server',
+      deviceId: null,
+      deviceEventId: null,
     });
   }
 

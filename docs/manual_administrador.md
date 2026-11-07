@@ -35,6 +35,7 @@ Cree cuentas, cambie nombre o rol, desactive y restablezca contraseñas. La **co
 ## Historial y auditoría
 
 - **Historial → Ingresos y egresos**: filtros por fecha, horario, origen (huella o manual), estado y estudiante. Los registros manuales muestran el motivo y quién los hizo.
+- **Historial → Sin conexión**: los eventos que el lector guardó sin conexión y no se aplicaron solos (por revisar, descartados, aprobados y corregidos), aparte de las sesiones. Las sesiones reconciliadas se ven en «Ingresos y egresos» con el origen **Sin conexión** (también como filtro). En **Alarmas** las que sonó el propio lector llevan la marca «Local (sin conexión)».
 - **Alarma y mensajes** y **Alarmas**: qué orden se envió al lector, quién y con qué resultado; cómo y cuándo terminó cada alarma.
 - **Auditoría**: quién hizo qué y cuándo (filtre por tipo, que busca por prefijo como `student.`, por usuario y por fecha). Nunca contiene huellas, contraseñas ni datos de contacto.
 
@@ -44,6 +45,7 @@ Al iniciar sesión, el administrador entra al **Resumen**: hoy, la semana (de lu
 
 Definiciones:
 
+- **Calidad de los datos** incluye, cuando hay registros sin conexión en el rango, cuatro filas aparte: sesiones con origen sin conexión, eventos reconciliados, por revisar y descartados. La resolución de los pendientes (**Por revisar**) la pueden hacer el asistente y el administrador.
 - **Obligación**: un estudiante asignado, con vigencia en el inicio de un horario ya terminado y que no cae en un día sin servicio.
 - **Asistió**: tiene una sesión en esa ocurrencia; una salida no registrada también cuenta como asistencia. **Cumplimiento** = asistencias / obligaciones (sin obligaciones se muestra «—»).
 - **Llegada tarde**: un minuto completo o más después del inicio, solo en entradas con huella.

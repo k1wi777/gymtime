@@ -1,4 +1,11 @@
-import { Controller, Get, Logger, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Logger,
+  Req,
+  Res,
+  type BeforeApplicationShutdown,
+} from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiOkResponse,
@@ -37,13 +44,23 @@ const EVENT_MODELS = Object.values(SSE_EVENT_DTOS);
 @ApiAuth()
 @ApiExtraModels(...EVENT_MODELS)
 @Controller('events')
-export class EventsController {
+export class EventsController implements BeforeApplicationShutdown {
   private readonly logger = new Logger(EventsController.name);
+  /** Closers of the streams that are open right now. */
+  private readonly open = new Set<() => void>();
 
   constructor(
     private readonly events: SystemEventsService,
     private readonly auth: AuthService,
   ) {}
+
+  /**
+   * An open stream keeps the HTTP server from closing, so on shutdown they all
+   * end first (the clients reconnect on their own to the next server).
+   */
+  beforeApplicationShutdown(): void {
+    for (const close of [...this.open]) close();
+  }
 
   @Get()
   @ApiOperation({ summary: 'Live system events (Server-Sent Events)' })
@@ -87,6 +104,7 @@ export class EventsController {
     const cleanup = (): void => {
       if (closed) return;
       closed = true;
+      this.open.delete(cleanup);
       clearInterval(keepalive);
       subscription?.unsubscribe();
       if (!res.writableEnded) res.end();
@@ -135,6 +153,7 @@ export class EventsController {
       }
     });
 
+    this.open.add(cleanup);
     req.on('close', cleanup);
   }
 }

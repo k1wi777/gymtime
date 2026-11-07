@@ -39,7 +39,28 @@ export interface AttendanceRepository {
   findOpenByStudent(studentId: string): Promise<AttendanceSession | null>;
   /** Instances where the student already has a closed session. */
   listClosedInstanceIds(studentId: string): Promise<string[]>;
+  /** Students with a `cerrada` session in this occurrence. */
+  listClosedStudentIds(instanceId: string): Promise<string[]>;
   countOpenByInstance(instanceId: string): Promise<number>;
+  /**
+   * Re-closes a session the server marked `no_registrada` with the exit the
+   * reader really recorded (an approved offline exit); null when it is not
+   * `no_registrada` anymore.
+   */
+  closeUnregistered(
+    id: string,
+    data: CloseAttendanceSession,
+  ): Promise<AttendanceSession | null>;
+  /**
+   * The session created (`entry`) or closed (`exit`) by an offline event at
+   * exactly this instant: how a replay finds the effect of an event whose
+   * outcome was never saved.
+   */
+  findOfflineSession(
+    studentId: string,
+    kind: 'entry' | 'exit',
+    at: Date,
+  ): Promise<AttendanceSession | null>;
   /**
    * Closes every open session of an occurrence as `no_registrada` without an
    * exit time, storing the reason; returns how many were closed.

@@ -32,6 +32,16 @@ export type SyncReason =
   | 'attendance'
   | 'erasure';
 
+/** What a finished sync left in the reader; extension point for the offline snapshot. */
+export interface SyncedEvent {
+  deviceId: string;
+  /** Slot -> student of the map just loaded. */
+  slots: ReadonlyArray<{ slot: number; studentId: string }>;
+  schedule: PlannedSchedule | null;
+}
+
+export type SyncedListener = (event: SyncedEvent) => Promise<void> | void;
+
 export type SyncFailure = 'PLAN_FAILED' | 'CHUNK_FAILED';
 
 export interface SyncResult {
@@ -65,6 +75,7 @@ export class SyncService {
   // A sync waiting for the running one; later requests merge into it.
   private readonly queued = new Map<string, Promise<SyncResult>>();
   private openSessions: OpenSessionsProvider = new EmptyOpenSessionsProvider();
+  private readonly syncedListeners: SyncedListener[] = [];
 
   constructor(
     private readonly planner: SyncPlanner,
@@ -83,6 +94,14 @@ export class SyncService {
    */
   setOpenSessionsProvider(provider: OpenSessionsProvider): void {
     this.openSessions = provider;
+  }
+
+  /**
+   * Registers a reaction to a sync that finished well. A failing listener is
+   * logged and never changes the result of the sync.
+   */
+  onSynced(listener: SyncedListener): void {
+    this.syncedListeners.push(listener);
   }
 
   /** Student whose template the last sync loaded into `slot` (any state), or null. */
@@ -247,7 +266,28 @@ export class SyncService {
       chunks: result.chunks,
       scheduleId: result.scheduleId,
     });
+    // Not awaited: a listener may wait for the reader (the snapshot's ack) and
+    // must not hold the device's next sync back.
+    void this.notifySynced({
+      deviceId,
+      slots: plan.slots.map((s) => ({ slot: s.slot, studentId: s.studentId })),
+      schedule: plan.schedule,
+    });
     return { ...result, status: 'ok' };
+  }
+
+  private async notifySynced(event: SyncedEvent): Promise<void> {
+    for (const listener of this.syncedListeners) {
+      try {
+        await listener(event);
+      } catch (error) {
+        this.logger.error({
+          event: 'synced_listener_failed',
+          deviceId: event.deviceId,
+          error: message(error),
+        });
+      }
+    }
   }
 
   /** Resends the very same message (same id) when the sender gave up on it. */

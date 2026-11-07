@@ -18,6 +18,9 @@ export class InMemoryDevicesRepository implements DevicesRepository {
       tokenRevokedAt: null,
       offlineSince: null,
       offlineAlertedAt: null,
+      capabilities: [],
+      clockOffsetSec: null,
+      clockCheckedAt: null,
     };
   }
 
@@ -25,7 +28,12 @@ export class InMemoryDevicesRepository implements DevicesRepository {
     if (!this.devices.has(id)) this.devices.set(id, this.blank(id));
   }
 
-  async upsertOnline(id: string, firmwareVersion: string, at: Date) {
+  async upsertOnline(
+    id: string,
+    firmwareVersion: string,
+    at: Date,
+    capabilities: string[] = [],
+  ) {
     const before = this.devices.get(id);
     this.devices.set(id, {
       ...(before ?? this.blank(id)),
@@ -34,8 +42,20 @@ export class InMemoryDevicesRepository implements DevicesRepository {
       firmwareVersion,
       offlineSince: null,
       offlineAlertedAt: null,
+      capabilities,
     });
     return { recovered: before?.offlineAlertedAt != null };
+  }
+
+  async setClock(id: string, offsetSec: number, at: Date) {
+    const device = this.devices.get(id);
+    if (device) {
+      this.devices.set(id, {
+        ...device,
+        clockOffsetSec: offsetSec,
+        clockCheckedAt: at,
+      });
+    }
   }
 
   async setOffline(id: string, at: Date) {

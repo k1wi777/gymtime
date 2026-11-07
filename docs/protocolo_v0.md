@@ -552,3 +552,123 @@ Ejemplo de `ack` negativo:
 - [ ] Envía `status` cada `heartbeatSec` segundos.
 - [ ] Al recibir `templates.sync`, borra las plantillas locales y carga las recibidas.
 - [ ] Reconecta y repite `hello` si cae la conexión.
+
+## 10. Extensión sin conexión (opcional, H12)
+
+> **Estado:** borrador de contrato. Los puntos marcados como «requiere confirmación» en `docs/modo_sin_conexion_firmware.md` no están aceptados hasta que el equipo de firmware los confirme por escrito. Toda la extensión es **aditiva**: un firmware que no declara `capabilities` se comporta exactamente como en las secciones 1 a 9.
+
+Un dispositivo que declara la capacidad `offline` puede decidir entrada y salida por su cuenta cuando no hay conexión, guardar los eventos en una cola con su hora original y enviarlos al reconectar. El servidor los reconcilia con esa hora; lo que no encaja queda «por revisar» en el panel.
+
+### `hello` ampliado
+
+Tres campos **opcionales** en el payload: `capabilities` (hoy solo `"offline"`), `deviceTime` (hora Unix del dispositivo, para medir el desfase del reloj) y `queued` (eventos que aún guarda en su cola). `hello.ok` **no cambia**.
+
+<!-- example: hello -->
+```json
+{
+  "v": 1,
+  "id": "00000103-1111-4222-8333-000000000103",
+  "type": "hello",
+  "ts": 1760000000,
+  "ref": null,
+  "payload": {
+    "deviceId": "esp32-gym-01",
+    "token": "token-secreto-del-dispositivo",
+    "fw": "1.1.0",
+    "capabilities": [
+      "offline"
+    ],
+    "deviceTime": 1760000012,
+    "queued": 37
+  }
+}
+```
+
+### `offline.snapshot` (servidor -> dispositivo)
+
+Lo recibe solo un dispositivo que declaró `offline`: al conectar, al terminar cada sincronización y cuando cambia el horario vigente (si `queued` > 0, tras el último lote o a los 60 s). Se confirma con `ack`. Lleva el horario con su ventana (`null` si no hay horario próximo: el dispositivo rechaza escaneos sin conexión), el roster `slot` -> nombre corto (ASCII, máximo 16 caracteres), los slots que están dentro (`open`), los que ya salieron en esta ocurrencia (`exited`) y los límites de cola y lote. Un roster nuevo reemplaza al anterior, pero los eventos pendientes se siguen resolviendo con el `snapshotId` con el que se decidieron.
+
+<!-- example: offline.snapshot -->
+```json
+{
+  "v": 1,
+  "id": "00000104-1111-4222-8333-000000000104",
+  "type": "offline.snapshot",
+  "ts": 1760000000,
+  "ref": null,
+  "payload": {
+    "snapshotId": "000000a0-1111-4222-8333-0000000000a0",
+    "generatedAt": 1760000000,
+    "schedule": {
+      "scheduleId": "11111111-1111-4111-8111-111111111111",
+      "start": 1760000400,
+      "end": 1760004000,
+      "entryOpensAt": 1760000100,
+      "entryClosesAt": 1760001200
+    },
+    "roster": [
+      {
+        "slot": 1,
+        "name": "Ana Gomez"
+      },
+      {
+        "slot": 2,
+        "name": "Luis Mora"
+      },
+      {
+        "slot": 3,
+        "name": "Eva Ruiz"
+      }
+    ],
+    "open": [
+      2
+    ],
+    "exited": [
+      3
+    ],
+    "limits": {
+      "queueMax": 500,
+      "batchMax": 50
+    }
+  }
+}
+```
+
+### `offline.events` (dispositivo -> servidor)
+
+Lote de 1 a 50 eventos (`batch` es el número del lote y `last` indica el último de la reconexión). Cada evento lleva `id` (UUID v4 creado en el dispositivo y reutilizado en cada reintento), `seq` (entero creciente persistido), `ts` (hora original), `snapshotId` (el snapshot con el que se decidió) y su tipo: `entry` y `exit` con `slot`; `unknown` (informativo); `alarm` con `endTs` (`null` si seguía sonando) y `endedBy` (`button`, `all_exited` o `timeout`), un único evento al terminar la alarma local, cuyo `ts` es el inicio. El `ack` es el existente: el dispositivo borra de su cola todo el lote solo cuando llega con `ok: true`. Un evento inválido no hace fallar el lote; los eventos repetidos (mismo `id`) no se reprocesan. Tamaño máximo de la trama: 64 KB.
+
+<!-- example: offline.events -->
+```json
+{
+  "v": 1,
+  "id": "00000107-1111-4222-8333-000000000107",
+  "type": "offline.events",
+  "ts": 1760000000,
+  "ref": null,
+  "payload": {
+    "batch": 1,
+    "last": true,
+    "events": [
+      {
+        "id": "00000203-1111-4222-8333-000000000203",
+        "seq": 3,
+        "ts": 1760000600,
+        "snapshotId": "000000a0-1111-4222-8333-0000000000a0",
+        "type": "unknown"
+      },
+      {
+        "id": "00000204-1111-4222-8333-000000000204",
+        "seq": 4,
+        "ts": 1760004000,
+        "snapshotId": "000000a0-1111-4222-8333-0000000000a0",
+        "type": "alarm",
+        "endTs": 1760004090,
+        "endedBy": "button"
+      }
+    ]
+  }
+}
+```
+
+Los vectores de prueba (válidos e inválidos) están en `docs/fixtures/offline/*.jsonl` y el servidor los verifica con los esquemas en cada ejecución de las pruebas.

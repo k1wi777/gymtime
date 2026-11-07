@@ -82,6 +82,9 @@ export function alarmEvent(over: Partial<AlarmEvent>): AlarmEvent {
     endedAt: null,
     closedBy: null,
     closedSessions: 0,
+    origin: 'server',
+    deviceId: null,
+    deviceEventId: null,
     ...over,
   };
 }

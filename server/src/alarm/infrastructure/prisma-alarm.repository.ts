@@ -3,8 +3,10 @@ import { PrismaService } from '../../database/prisma.service.js';
 import type {
   AlarmClosedBy,
   AlarmEvent,
+  AlarmOrigin,
   CloseAlarmEvent,
   NewAlarmEvent,
+  NewLocalAlarmEvent,
 } from '../domain/alarm-event.js';
 import type {
   AlarmHistoryFilter,
@@ -18,11 +20,15 @@ interface AlarmRow {
   endedAt: Date | null;
   closedBy: string | null;
   closedSessions: number;
+  origin: string;
+  deviceId: string | null;
+  deviceEventId: string | null;
 }
 
 const toDomain = (row: AlarmRow): AlarmEvent => ({
   ...row,
   closedBy: row.closedBy as AlarmClosedBy | null,
+  origin: row.origin as AlarmOrigin,
 });
 
 @Injectable()
@@ -34,9 +40,20 @@ export class PrismaAlarmRepository implements AlarmRepository {
     return toDomain(row);
   }
 
+  async createLocal(data: NewLocalAlarmEvent) {
+    const existing = await this.prisma.alarmEvent.findFirst({
+      where: { deviceId: data.deviceId, deviceEventId: data.deviceEventId },
+    });
+    if (existing) return { event: toDomain(existing), created: false };
+    const row = await this.prisma.alarmEvent.create({
+      data: { ...data, origin: 'local' },
+    });
+    return { event: toDomain(row), created: true };
+  }
+
   async findOpen(): Promise<AlarmEvent[]> {
     const rows = await this.prisma.alarmEvent.findMany({
-      where: { endedAt: null },
+      where: { endedAt: null, origin: 'server' },
       orderBy: [{ startedAt: 'asc' }, { id: 'asc' }],
     });
     return rows.map(toDomain);
@@ -44,7 +61,7 @@ export class PrismaAlarmRepository implements AlarmRepository {
 
   async findOpenByInstance(instanceId: string): Promise<AlarmEvent | null> {
     const row = await this.prisma.alarmEvent.findFirst({
-      where: { instanceId, endedAt: null },
+      where: { instanceId, endedAt: null, origin: 'server' },
       orderBy: { startedAt: 'asc' },
     });
     return row ? toDomain(row) : null;

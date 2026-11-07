@@ -6,6 +6,8 @@ export interface PlannedSlot {
 
 export interface PlannedSchedule {
   scheduleId: string;
+  /** The occurrence the schedule message describes. */
+  instanceId: string;
   startsAt: Date;
   endsAt: Date;
   entryOpensAt: Date;

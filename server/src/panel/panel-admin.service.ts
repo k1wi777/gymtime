@@ -1,3 +1,4 @@
+import type { AttendanceSource } from '../attendance/domain/attendance-session.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { AlarmService } from '../alarm/alarm.service.js';
 import { AttendanceService } from '../attendance/attendance.service.js';
@@ -37,7 +38,7 @@ export interface AttendanceHistoryQuery {
   to?: Date;
   scheduleId?: string;
   studentId?: string;
-  source?: 'device' | 'manual';
+  source?: AttendanceSource;
   status?: 'abierta' | 'cerrada' | 'no_registrada';
   search?: string;
   limit: number;
@@ -322,7 +323,9 @@ export class PanelAdminService {
           endedAt: event.endedAt?.toISOString() ?? null,
           closedBy: event.closedBy,
           closedSessions: event.closedSessions,
+          origin: event.origin,
           closedByActor:
+            event.origin === 'server' &&
             event.endedAt &&
             (event.closedBy === 'cli' || event.closedBy === 'button')
               ? closers(event.endedAt)

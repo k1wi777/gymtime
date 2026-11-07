@@ -64,6 +64,47 @@ export class InMemoryAttendanceRepository implements AttendanceRepository {
     ];
   }
 
+  async listClosedStudentIds(instanceId: string) {
+    return [
+      ...new Set(
+        [...this.rows.values()]
+          .filter((r) => r.instanceId === instanceId && r.status === 'cerrada')
+          .map((r) => r.studentId),
+      ),
+    ];
+  }
+
+  async closeUnregistered(id: string, data: CloseAttendanceSession) {
+    const current = this.rows.get(id);
+    if (current?.status !== 'no_registrada') return null;
+    const closed: AttendanceSession = {
+      ...current,
+      exitedAt: data.exitedAt,
+      exitSource: data.exitSource,
+      manualReason: data.manualReason ?? null,
+      status: 'cerrada',
+    };
+    this.rows.set(id, closed);
+    return { ...closed };
+  }
+
+  async findOfflineSession(
+    studentId: string,
+    kind: 'entry' | 'exit',
+    at: Date,
+  ) {
+    const row = [...this.rows.values()].find(
+      (r) =>
+        r.studentId === studentId &&
+        (kind === 'entry'
+          ? r.entrySource === 'offline' &&
+            r.enteredAt.getTime() === at.getTime()
+          : r.exitSource === 'offline' &&
+            r.exitedAt?.getTime() === at.getTime()),
+    );
+    return row ? { ...row } : null;
+  }
+
   async countOpenByInstance(instanceId: string) {
     return [...this.rows.values()].filter(
       (r) => r.instanceId === instanceId && r.status === 'abierta',

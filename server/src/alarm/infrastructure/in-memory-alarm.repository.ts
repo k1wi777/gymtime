@@ -3,6 +3,7 @@ import type {
   AlarmEvent,
   CloseAlarmEvent,
   NewAlarmEvent,
+  NewLocalAlarmEvent,
 } from '../domain/alarm-event.js';
 import type {
   AlarmHistoryFilter,
@@ -20,14 +21,34 @@ export class InMemoryAlarmRepository implements AlarmRepository {
       endedAt: null,
       closedBy: null,
       closedSessions: 0,
+      origin: 'server',
+      deviceId: null,
+      deviceEventId: null,
     };
     this.rows.set(event.id, event);
     return { ...event };
   }
 
+  async createLocal(data: NewLocalAlarmEvent) {
+    const existing = [...this.rows.values()].find(
+      (row) =>
+        row.deviceId === data.deviceId &&
+        row.deviceEventId === data.deviceEventId,
+    );
+    if (existing) return { event: { ...existing }, created: false };
+    const event: AlarmEvent = {
+      id: randomUUID(),
+      ...data,
+      closedSessions: 0,
+      origin: 'local',
+    };
+    this.rows.set(event.id, event);
+    return { event: { ...event }, created: true };
+  }
+
   async findOpen(): Promise<AlarmEvent[]> {
     return [...this.rows.values()]
-      .filter((event) => event.endedAt === null)
+      .filter((event) => event.endedAt === null && event.origin === 'server')
       .sort(
         (a, b) =>
           a.startedAt.getTime() - b.startedAt.getTime() ||
@@ -38,7 +59,10 @@ export class InMemoryAlarmRepository implements AlarmRepository {
 
   async findOpenByInstance(instanceId: string): Promise<AlarmEvent | null> {
     const event = [...this.rows.values()].find(
-      (row) => row.instanceId === instanceId && row.endedAt === null,
+      (row) =>
+        row.instanceId === instanceId &&
+        row.endedAt === null &&
+        row.origin === 'server',
     );
     return event ? { ...event } : null;
   }

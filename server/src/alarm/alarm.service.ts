@@ -114,6 +114,71 @@ export class AlarmService implements AlarmPort {
     await this.mutex.run('alarm', () => this.handleInstanceEnd(instance, at));
   }
 
+  /**
+   * Sessions left open in an occurrence that ended while the reader was cut
+   * off (reconciled offline entries). Within the automatic-close time the
+   * usual continuous alarm starts (idempotent: the open event is the marker);
+   * beyond it the sessions are closed as `no_registrada` with `timeout`,
+   * because `tick` only looks at `(now - timeout, now]` and would never see
+   * that occurrence again (R13).
+   */
+  async onLateOpenSessions(
+    instanceId: string,
+  ): Promise<'alarm' | 'closed' | 'none'> {
+    const occurrence = (await this.instances.getByIds([instanceId])).get(
+      instanceId,
+    );
+    const now = this.clock.now();
+    if (!occurrence || occurrence.instance.endsAt > now) return 'none';
+    if ((await this.attendance.countOpenByInstance(instanceId)) === 0) {
+      return 'none';
+    }
+    if (
+      now.getTime() - occurrence.instance.endsAt.getTime() <=
+      this.timeoutMs
+    ) {
+      await this.onInstanceEnded(occurrence.instance, now);
+      return 'alarm';
+    }
+    return this.mutex.run<'closed'>('alarm', async () => {
+      const closed = await this.attendance.markUnregisteredByInstance(
+        instanceId,
+        'timeout',
+      );
+      this.logger.log({
+        event: 'alarm_late_timeout',
+        instanceId,
+        sessionsClosed: closed,
+      });
+      return 'closed';
+    });
+  }
+
+  /**
+   * Stores an alarm the reader sounded while offline (R14). It is history
+   * only: it never turns the server's siren on or off nor counts as open. A
+   * reader that was still sounding when it lost power (`endTs` null) is
+   * recorded as ended by timeout at the usual time.
+   */
+  recordLocalAlarm(data: {
+    instanceId: string;
+    deviceId: string;
+    deviceEventId: string;
+    startedAt: Date;
+    endedAt: Date | null;
+    endedBy: 'button' | 'all_exited' | 'timeout';
+  }) {
+    return this.events.createLocal({
+      instanceId: data.instanceId,
+      startedAt: data.startedAt,
+      endedAt:
+        data.endedAt ?? new Date(data.startedAt.getTime() + this.timeoutMs),
+      closedBy: data.endedAt === null ? 'timeout' : data.endedBy,
+      deviceId: data.deviceId,
+      deviceEventId: data.deviceEventId,
+    });
+  }
+
   /** Last open session of an occurrence closed: silence and close (E8-3). */
   async onInstanceEmptied(instanceId: string): Promise<void> {
     await this.mutex.run('alarm', async () => {

@@ -267,6 +267,19 @@ Con el simulador desconectado, la orden queda en cola (`queued`) y llega al reco
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.
 
+### Modo sin conexión simulado
+
+Con `--offline` el simulador guarda el snapshot que envía el servidor y, si se corta la red, decide solo:
+
+```bash
+SIM_DEVICE_TOKEN=... npm --prefix simulator start -- --offline --state-file /tmp/sim-estado.jsonl
+sim> net off        # pierde la red
+sim> scan 3         # decide con el snapshot (entrada o salida local)
+sim> net on         # reconecta y envía la cola con su hora original
+```
+
+Las reglas y el formato están en [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md). Lo que no encaja queda en «Por revisar» del panel.
+
 ## 8. Problemas comunes
 
 Esta sección diagnostica los fallos más probables, primero en la conexión y después en la operación normal. Cada bloque sigue el mismo orden: **qué se ve**, **por qué**, **cómo confirmarlo** y **qué cambiar**. El contrato de cada mensaje sigue en el [protocolo](./protocolo_v0.md); aquí solo se interpreta.

@@ -6,6 +6,7 @@ export type ConsoleCommand =
   | { kind: 'button' }
   | { kind: 'disconnect' }
   | { kind: 'reconnect' }
+  | { kind: 'net'; online: boolean }
   | { kind: 'help' }
   | { kind: 'empty' }
   | { kind: 'invalid'; input: string; reason: string };
@@ -16,6 +17,7 @@ export const COMMAND_HELP = [
   '  button        send button.pressed',
   '  disconnect    close the socket and stop reconnecting',
   '  reconnect     connect again and resume automatic reconnection',
+  '  net off|on    (offline mode) lose / recover the network; scans are decided locally',
   '  help          show this help',
 ].join('\n');
 
@@ -53,6 +55,13 @@ export function parseCommand(input: string): ConsoleCommand {
       return noArgs('disconnect');
     case 'reconnect':
       return noArgs('reconnect');
+    case 'net': {
+      const arg = args[0]?.toLowerCase();
+      if (args.length !== 1 || (arg !== 'on' && arg !== 'off')) {
+        return invalid('usage: net off|on');
+      }
+      return { kind: 'net', online: arg === 'on' };
+    }
     case 'help':
       return noArgs('help');
     default:

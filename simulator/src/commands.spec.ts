@@ -8,7 +8,13 @@ describe('parseCommand', () => {
   });
 
   it('rejects out-of-range, non-numeric and malformed scans', () => {
-    for (const input of ['scan', 'scan 0', 'scan 163', 'scan abc', 'scan 2 3']) {
+    for (const input of [
+      'scan',
+      'scan 0',
+      'scan 163',
+      'scan abc',
+      'scan 2 3',
+    ]) {
       expect(parseCommand(input).kind).toBe('invalid');
     }
     expect(MAX_SLOT).toBe(162);
@@ -30,8 +36,22 @@ describe('parseCommand', () => {
     expect(parseCommand('button now').kind).toBe('invalid');
   });
 
+  it('parses net off|on', () => {
+    expect(parseCommand('net off')).toEqual({ kind: 'net', online: false });
+    expect(parseCommand('NET on')).toEqual({ kind: 'net', online: true });
+    expect(parseCommand('net').kind).toBe('invalid');
+    expect(parseCommand('net maybe').kind).toBe('invalid');
+  });
+
   it('documents every command in the help text', () => {
-    for (const word of ['scan', 'button', 'disconnect', 'reconnect', 'help']) {
+    for (const word of [
+      'scan',
+      'button',
+      'disconnect',
+      'reconnect',
+      'net',
+      'help',
+    ]) {
       expect(COMMAND_HELP).toContain(word);
     }
   });

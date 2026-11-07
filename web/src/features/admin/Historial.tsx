@@ -11,6 +11,7 @@ import { Badge } from '@/ui/Badge';
 import { SelectField, TextField } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
+import { ReviewTable } from '@/features/offline/PorRevisar';
 import { actorLabel } from './Auditoria';
 import { DateRange, dayRange } from './filters';
 import styles from './Admin.module.css';
@@ -20,6 +21,7 @@ const TABS = [
   ['asistencia', 'Ingresos y egresos'],
   ['ordenes', 'Alarma y mensajes'],
   ['alarmas', 'Alarmas'],
+  ['sinconexion', 'Sin conexión'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -113,7 +115,9 @@ function Attendance() {
               offset,
               ...dayRange(from, to),
               ...(scheduleId ? { scheduleId } : {}),
-              ...(source ? { source: source as 'device' | 'manual' } : {}),
+              ...(source
+                ? { source: source as 'device' | 'manual' | 'offline' }
+                : {}),
               ...(status
                 ? { status: status as keyof typeof STATUS_LABELS }
                 : {}),
@@ -161,6 +165,7 @@ function Attendance() {
             { value: '', label: 'Todos' },
             { value: 'device', label: SOURCE_LABELS.device },
             { value: 'manual', label: SOURCE_LABELS.manual },
+            { value: 'offline', label: SOURCE_LABELS.offline },
           ]}
         />
         <SelectField
@@ -224,7 +229,11 @@ function Attendance() {
                       {formatTime(row.enteredAt)}{' '}
                       <Badge
                         tone={
-                          row.entrySource === 'manual' ? 'warning' : 'neutral'
+                          row.entrySource === 'manual'
+                            ? 'warning'
+                            : row.entrySource === 'offline'
+                              ? 'info'
+                              : 'neutral'
                         }
                       >
                         {SOURCE_LABELS[row.entrySource]}
@@ -235,7 +244,11 @@ function Attendance() {
                       {row.exitSource && (
                         <Badge
                           tone={
-                            row.exitSource === 'manual' ? 'warning' : 'neutral'
+                            row.exitSource === 'manual'
+                              ? 'warning'
+                              : row.exitSource === 'offline'
+                                ? 'info'
+                                : 'neutral'
                           }
                         >
                           {SOURCE_LABELS[row.exitSource]}
@@ -441,7 +454,15 @@ function Alarms() {
                 {alarms.data.items.map((a: AlarmHistoryItem) => (
                   <tr key={a.id}>
                     <td>{formatDateTime(a.startedAt)}</td>
-                    <td>{a.schedule?.name ?? '—'}</td>
+                    <td>
+                      {a.schedule?.name ?? '—'}
+                      {a.origin === 'local' && (
+                        <>
+                          <br />
+                          <Badge tone="info">Local (sin conexión)</Badge>
+                        </>
+                      )}
+                    </td>
                     <td>
                       {a.endedAt ? formatDateTime(a.endedAt) : 'Sigue activa'}
                     </td>
@@ -476,6 +497,64 @@ function Alarms() {
   );
 }
 
+const REVIEW_VIEWS = [
+  { value: 'pending', label: 'Por revisar' },
+  { value: 'discarded', label: 'Descartados' },
+  { value: 'resolved', label: 'Aprobados y corregidos' },
+] as const;
+
+/** Events recorded without connection, apart from the sessions (they are not sessions). */
+function OfflineEvents() {
+  const [view, setView] = useState<'pending' | 'discarded' | 'resolved'>(
+    'pending',
+  );
+  const [offset, setOffset] = useState(0);
+  const events = useResource(
+    (signal) =>
+      call(
+        getApi().client.GET('/offline/review', {
+          params: { query: { view, limit: PAGE, offset } },
+          signal,
+        }),
+      ),
+    [view, offset],
+  );
+  return (
+    <div className="stack">
+      <div className={styles.filters}>
+        <SelectField
+          label="Estado"
+          value={view}
+          onChange={(value) => {
+            setView(value as typeof view);
+            setOffset(0);
+          }}
+          options={REVIEW_VIEWS}
+        />
+      </div>
+      {events.loading && !events.data && <Spinner />}
+      {events.error ? (
+        <Notice kind="error">{describeError(events.error)}</Notice>
+      ) : null}
+      {events.data && (
+        <>
+          <p className="muted">{events.data.total} registro(s)</p>
+          {events.data.items.length === 0 ? (
+            <p className="muted">No hay registros en este estado.</p>
+          ) : (
+            <ReviewTable items={events.data.items} />
+          )}
+          <Pager
+            offset={offset}
+            total={events.data.total}
+            onOffset={setOffset}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Historial() {
   const [tab, setTab] = useState<Tab>('asistencia');
   return (
@@ -499,6 +578,7 @@ export function Historial() {
         {tab === 'asistencia' && <Attendance />}
         {tab === 'ordenes' && <Orders />}
         {tab === 'alarmas' && <Alarms />}
+        {tab === 'sinconexion' && <OfflineEvents />}
       </div>
     </div>
   );

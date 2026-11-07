@@ -41,6 +41,7 @@ describe('shell (R10, R11, R19)', () => {
     expect(labels).toEqual([
       'Ahora',
       'Registro manual',
+      'Por revisar',
       'Enrolar huella',
       'Alarma y mensajes',
       'Dispositivo',

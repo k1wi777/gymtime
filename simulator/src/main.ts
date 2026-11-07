@@ -21,6 +21,11 @@ function main(): void {
   logger.state(
     `enrollment: mode ${config.enroll.mode}, ${config.enroll.stepMs} ms per step`,
   );
+  if (config.offline) {
+    logger.state(
+      `offline mode: clock offset ${config.offline.clockOffsetSec} s, state file ${config.offline.stateFile ?? '(memory)'}`,
+    );
+  }
   const client = new DeviceClient(config, logger);
 
   let shuttingDown = false;
@@ -57,6 +62,10 @@ function listen(client: DeviceClient, logger: Logger): void {
         break;
       case 'reconnect':
         client.reconnect();
+        break;
+      case 'net':
+        if (command.online) client.reconnect();
+        else client.disconnect();
         break;
       case 'help':
         logger.state(COMMAND_HELP);

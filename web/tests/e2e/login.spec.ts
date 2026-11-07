@@ -22,6 +22,7 @@ test.describe('login (R8, R9, R10)', () => {
     await expect(menu.getByRole('link')).toHaveText([
       'Ahora',
       'Registro manual',
+      'Por revisar',
       'Enrolar huella',
       'Alarma y mensajes',
       'Dispositivo',

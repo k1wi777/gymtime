@@ -1,3 +1,5 @@
+import type { AttendanceSource } from '../../attendance/domain/attendance-session.js';
+import { ATTENDANCE_SOURCES } from '../../attendance/dto/attendance.dto.js';
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { AlarmStatusDto } from '../../alarm/dto/alarm.dto.js';
@@ -37,8 +39,8 @@ export class PanelPersonDto {
   enteredAt: string | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   exitedAt: string | null;
-  @ApiProperty({ enum: ['device', 'manual'], nullable: true })
-  source: 'device' | 'manual' | null;
+  @ApiProperty({ enum: ATTENDANCE_SOURCES, nullable: true })
+  source: AttendanceSource | null;
   @ApiProperty({ enum: SESSION_STATUS_VALUES, nullable: true })
   sessionStatus: (typeof SESSION_STATUS_VALUES)[number] | null;
 }

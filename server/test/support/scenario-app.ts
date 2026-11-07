@@ -64,6 +64,15 @@ import { InMemoryStudentsRepository } from '../../src/students/infrastructure/in
 import { SLOTS_REPOSITORY } from '../../src/sync/domain/slots.repository.js';
 import { InMemorySlotsRepository } from '../../src/sync/infrastructure/in-memory-slots.repository.js';
 import { SyncService } from '../../src/sync/sync.service.js';
+import { OFFLINE_EVENTS_REPOSITORY } from '../../src/offline/domain/offline-events.repository.js';
+import { OFFLINE_SNAPSHOTS_REPOSITORY } from '../../src/offline/domain/offline-snapshots.repository.js';
+import { InMemoryOfflineEventsRepository } from '../../src/offline/infrastructure/in-memory-offline-events.repository.js';
+import { InMemoryOfflineSnapshotsRepository } from '../../src/offline/infrastructure/in-memory-offline-snapshots.repository.js';
+import {
+  OFFLINE_CONFIG,
+  defaultOfflineConfig,
+  type OfflineConfig,
+} from '../../src/offline/offline.config.js';
 
 export const DEVICE_ID = 'esp32-sim-01';
 export const BOGOTA_DATE = '2026-11-02';
@@ -107,6 +116,8 @@ export interface InMemoryRepositories {
   slots: InMemorySlotsRepository;
   attendance: InMemoryAttendanceRepository;
   alarm: InMemoryAlarmRepository;
+  offlineEvents: InMemoryOfflineEventsRepository;
+  offlineSnapshots: InMemoryOfflineSnapshotsRepository;
   eventLog: InMemoryEventLogRepository;
   users: InMemoryUsersRepository;
   sessions: InMemorySessionsRepository;
@@ -116,6 +127,7 @@ export interface InMemoryAppOptions {
   now?: Date;
   alarm?: Partial<AlarmConfig>;
   devices?: Partial<DevicesConfig>;
+  offline?: Partial<OfflineConfig>;
   /** Short by default so the expiry sweep of the enrollment does not lag. */
   enrollTimeoutSec?: number;
   /**
@@ -159,6 +171,8 @@ function createRepositories(): InMemoryRepositories {
     slots: new InMemorySlotsRepository(),
     attendance: new InMemoryAttendanceRepository(),
     alarm: new InMemoryAlarmRepository(),
+    offlineEvents: new InMemoryOfflineEventsRepository(),
+    offlineSnapshots: new InMemoryOfflineSnapshotsRepository(),
     eventLog: new InMemoryEventLogRepository(),
     users,
     sessions: new InMemorySessionsRepository(users),
@@ -209,6 +223,12 @@ export async function buildInMemoryApp(
     .useValue(repositories.attendance)
     .overrideProvider(ALARM_REPOSITORY)
     .useValue(repositories.alarm)
+    .overrideProvider(OFFLINE_EVENTS_REPOSITORY)
+    .useValue(repositories.offlineEvents)
+    .overrideProvider(OFFLINE_SNAPSHOTS_REPOSITORY)
+    .useValue(repositories.offlineSnapshots)
+    .overrideProvider(OFFLINE_CONFIG)
+    .useValue({ ...defaultOfflineConfig, ...options.offline })
     .overrideProvider(EVENT_LOG_REPOSITORY)
     .useValue(repositories.eventLog)
     .overrideProvider(USERS_REPOSITORY)
@@ -273,7 +293,9 @@ export async function buildInMemoryApp(
 export interface ScenarioApp extends InMemoryApp {
   deviceId: string;
   /** Starts the simulator and waits until the gateway accepts it. */
-  startDevice: () => Promise<DeviceClient>;
+  startDevice: (options?: {
+    offline?: { clockOffsetSec: number; stateFile: string | null };
+  }) => Promise<DeviceClient>;
   /** Closes the simulator without automatic reconnection. */
   stopDevice: () => Promise<void>;
   device: () => DeviceClient;
@@ -344,7 +366,11 @@ export async function startScenarioApp(
     return client;
   };
 
-  const startDevice = async (): Promise<DeviceClient> => {
+  const startDevice = async (
+    deviceOptions: {
+      offline?: { clockOffsetSec: number; stateFile: string | null };
+    } = {},
+  ): Promise<DeviceClient> => {
     client = new DeviceClient(
       {
         url: base.wsUrl,
@@ -357,8 +383,13 @@ export async function startScenarioApp(
           failReason: 'sim_fail',
           templateBytes: 512,
         },
+        ...(deviceOptions.offline ? { offline: deviceOptions.offline } : {}),
       },
       logger,
+      // Offline mode stamps the events with the controlled clock.
+      deviceOptions.offline
+        ? { now: () => base.clock.now().getTime() }
+        : undefined,
     );
     client.start();
     await vi.waitFor(() => expect(client?.state).toBe('online'));

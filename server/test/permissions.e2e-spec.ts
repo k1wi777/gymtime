@@ -42,6 +42,8 @@ interface Row {
 
 const MATRIX: Row[] = [
   { route: 'GET /health', access: 'public' },
+  // H12: browsers ask for it by themselves; it must not log a 404.
+  { route: 'GET /favicon.ico', access: 'public' },
   { route: 'POST /auth/login', access: 'public' },
   { route: 'POST /auth/logout', access: 'any', account: true },
   { route: 'GET /auth/me', access: 'any', account: true },
@@ -110,6 +112,12 @@ const MATRIX: Row[] = [
   { route: 'GET /audit', access: 'admin' },
   { route: 'GET /history/orders', access: 'admin' },
   { route: 'GET /history/alarms', access: 'admin' },
+  // H12: offline events waiting for a person; daily operation like the manual
+  // registrations, so the assistant resolves them too.
+  { route: 'GET /offline/review', access: 'any' },
+  { route: 'GET /offline/review/count', access: 'any' },
+  { route: 'POST /offline/review/:id/resolve', access: 'any' },
+  { route: 'GET /offline/clock', access: 'any' },
   // H10: reports hold personal data (absences, stay) and the CSV takes it out.
   { route: 'GET /reports/options', access: 'admin' },
   { route: 'GET /reports/summary', access: 'admin' },

@@ -105,7 +105,8 @@ export class MessageProcessor {
     session: Session,
     hello: Extract<DeviceMessage, { type: 'hello' }>,
   ): Promise<Action[]> {
-    const { deviceId, token, fw } = hello.payload;
+    const { deviceId, token, fw, capabilities, deviceTime, queued } =
+      hello.payload;
     if (!(await this.tokens.verify(deviceId, token))) {
       this.logger.warn({ event: 'auth_failed', deviceId, id: hello.id });
       return [
@@ -116,7 +117,11 @@ export class MessageProcessor {
     const actions: Action[] = [];
     // A repeated hello answers again without touching state (R7).
     if (!session.deviceId) {
-      await this.devices.markOnline(deviceId, fw);
+      await this.devices.markOnline(deviceId, fw, new Date(), {
+        capabilities,
+        deviceTime,
+        queued,
+      });
       this.logger.log({ event: 'auth_ok', deviceId, fw });
       actions.push({ kind: 'authenticated', deviceId, firmwareVersion: fw });
     }

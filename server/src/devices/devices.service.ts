@@ -1,5 +1,8 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { EventLogService } from '../common/audit/event-log.service.js';
+import { SystemEventsService } from '../common/events/system-events.service.js';
 import {
+  DEFAULT_CLOCK_WARN_SEC,
   DEVICES_CONFIG,
   defaultDevicesConfig,
   type DevicesConfig,
@@ -18,6 +21,32 @@ import {
   type DevicesRepository,
 } from './domain/devices.repository.js';
 
+/** Optional fields of `hello` (H12); a v0 reader sends none of them. */
+export interface HelloExtras {
+  capabilities?: string[];
+  /** Device clock, Unix seconds. */
+  deviceTime?: number;
+  /** Events still in the reader's offline queue. */
+  queued?: number;
+}
+
+/** What the current connection of a device declared in its `hello`. */
+export interface HelloInfo {
+  capabilities: string[];
+  queued: number;
+  at: Date;
+}
+
+/** Clock check and capabilities of a device, for the panel. */
+export interface DeviceClockStatus {
+  deviceId: string;
+  capabilities: string[];
+  clockOffsetSec: number | null;
+  clockCheckedAt: string | null;
+  clockWarning: boolean;
+  clockThresholdSec: number;
+}
+
 export type ConnectedListener = (deviceId: string) => Promise<void> | void;
 export type RecoveredListener = (deviceId: string) => Promise<void> | void;
 
@@ -26,6 +55,7 @@ export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
   private readonly connectedListeners: ConnectedListener[] = [];
   private readonly recoveredListeners: RecoveredListener[] = [];
+  private readonly hellos = new Map<string, HelloInfo>();
 
   constructor(
     @Inject(DEVICES_REPOSITORY) private readonly repository: DevicesRepository,
@@ -34,6 +64,8 @@ export class DevicesService {
     @Optional()
     @Inject(DEVICES_CONFIG)
     private readonly config: DevicesConfig = defaultDevicesConfig,
+    @Optional() private readonly eventLog?: EventLogService,
+    @Optional() private readonly systemEvents?: SystemEventsService,
   ) {}
 
   /**
@@ -75,12 +107,23 @@ export class DevicesService {
     deviceId: string,
     firmwareVersion: string,
     at: Date = new Date(),
+    hello: HelloExtras = {},
   ): Promise<void> {
+    const capabilities = hello.capabilities ?? [];
     const { recovered } = await this.repository.upsertOnline(
       deviceId,
       firmwareVersion,
       at,
+      capabilities,
     );
+    this.hellos.set(deviceId, {
+      capabilities,
+      queued: hello.queued ?? 0,
+      at,
+    });
+    if (hello.deviceTime !== undefined) {
+      await this.checkClock(deviceId, hello.deviceTime, at);
+    }
     if (!recovered) return;
     for (const listener of this.recoveredListeners) {
       try {
@@ -93,6 +136,61 @@ export class DevicesService {
         });
       }
     }
+  }
+
+  /** What the live connection of the device declared; undefined if none yet. */
+  helloInfo(deviceId: string): HelloInfo | undefined {
+    return this.hellos.get(deviceId);
+  }
+
+  /**
+   * Measures device time minus server time. It is only measured and warned
+   * about (never used to correct event times): the offset of a reconnection
+   * is not the one the reader had while it was cut off. Audited and published
+   * only when it crosses the threshold in either direction.
+   */
+  private async checkClock(
+    deviceId: string,
+    deviceTime: number,
+    at: Date,
+  ): Promise<void> {
+    const offsetSec = deviceTime - Math.floor(at.getTime() / 1000);
+    const threshold = this.clockThresholdSec;
+    const before = await this.repository.findById(deviceId);
+    const wasWarning =
+      before?.clockOffsetSec != null &&
+      Math.abs(before.clockOffsetSec) > threshold;
+    const warning = Math.abs(offsetSec) > threshold;
+    await this.repository.setClock(deviceId, offsetSec, at);
+    if (warning === wasWarning) return;
+    this.logger.warn({ event: 'clock_skew', deviceId, offsetSec, warning });
+    this.systemEvents?.emit('device.clock_skew', {
+      deviceId,
+      offsetSec,
+      thresholdSec: threshold,
+      warning,
+    });
+    await this.eventLog?.record('device.clock_skew', {
+      deviceId,
+      offsetSec,
+      thresholdSec: threshold,
+      warning,
+    });
+  }
+
+  /** Clock measurement of every device, for the panel's device screen. */
+  async listClockStatus(): Promise<DeviceClockStatus[]> {
+    const threshold = this.clockThresholdSec;
+    return (await this.repository.findAll()).map((device) => ({
+      deviceId: device.id,
+      capabilities: device.capabilities,
+      clockOffsetSec: device.clockOffsetSec,
+      clockCheckedAt: device.clockCheckedAt?.toISOString() ?? null,
+      clockWarning:
+        device.clockOffsetSec !== null &&
+        Math.abs(device.clockOffsetSec) > threshold,
+      clockThresholdSec: threshold,
+    }));
   }
 
   /** Current delivery status of commands by id (order history). */
@@ -132,6 +230,10 @@ export class DevicesService {
 
   claimOfflineAlert(deviceId: string, at: Date): Promise<boolean> {
     return this.repository.markAlerted(deviceId, at);
+  }
+
+  private get clockThresholdSec(): number {
+    return this.config.clockWarnSec ?? DEFAULT_CLOCK_WARN_SEC;
   }
 
   get offlineAlertMinutes(): number {

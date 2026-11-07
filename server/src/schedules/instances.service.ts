@@ -169,6 +169,42 @@ export class InstancesService {
     );
   }
 
+  /**
+   * The occurrence of the student's schedules, on the Bogota day of `at`, that
+   * best matches that instant: the one in progress, else the one starting
+   * nearest. Used to place an offline event a person approves; null when the
+   * student had no schedule that day.
+   */
+  async findForStudentOnDay(
+    studentId: string,
+    at: Date,
+  ): Promise<Occurrence | null> {
+    const schedules = await this.schedules.findByStudent(studentId, at);
+    if (schedules.length === 0) return null;
+    const date = toBogotaParts(at).date;
+    const from = fromBogota(date, '00:00');
+    const to = new Date(fromBogota(addDays(date, 1), '00:00').getTime() - 1);
+    const found = (
+      await this.instances.findInRange(
+        from,
+        to,
+        schedules.map((s) => s.id),
+      )
+    ).filter((instance) => instance.date === date);
+    const byId = new Map(schedules.map((s) => [s.id, s]));
+    const distance = (i: ScheduleInstance): number =>
+      at >= i.startsAt && at <= i.endsAt
+        ? 0
+        : Math.min(
+            Math.abs(at.getTime() - i.startsAt.getTime()),
+            Math.abs(at.getTime() - i.endsAt.getTime()),
+          );
+    const best = [...found].sort(
+      (a, b) => distance(a) - distance(b) || a.id.localeCompare(b.id),
+    )[0];
+    return best ? this.occurrence(best, byId.get(best.scheduleId)) : null;
+  }
+
   /** The occurrence of a schedule on a Bogota calendar date, or null. */
   async findOnDate(
     scheduleId: string,

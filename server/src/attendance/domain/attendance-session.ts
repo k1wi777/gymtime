@@ -2,7 +2,7 @@
 export type SessionStatus = 'abierta' | 'cerrada' | 'no_registrada';
 
 /** Where an entry or exit came from; matches the `attendance_source` enum. */
-export type AttendanceSource = 'device' | 'manual';
+export type AttendanceSource = 'device' | 'manual' | 'offline';
 
 export interface AttendanceSession {
   id: string;

@@ -17,6 +17,7 @@ const ADMIN: readonly PanelRole[] = ['admin'];
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/ahora', label: 'Ahora', roles: ALL },
   { href: '/registro', label: 'Registro manual', roles: ALL },
+  { href: '/por-revisar', label: 'Por revisar', roles: ALL },
   { href: '/enrolar', label: 'Enrolar huella', roles: ALL },
   { href: '/ordenes', label: 'Alarma y mensajes', roles: ALL },
   { href: '/dispositivo', label: 'Dispositivo', roles: ALL },

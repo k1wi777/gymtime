@@ -63,6 +63,16 @@ const SERVER_WORDED = new Set([
   'INVALID_CSV',
   'MAPPING_INCOMPLETE',
   'IMPORT_CONFLICT',
+  // Offline review (H12)
+  'NOT_APPROVABLE',
+  'NOT_CORRECTABLE',
+  'TS_REQUIRED',
+  'STILL_CONFLICT',
+  'INVALID_CORRECTION',
+  'ALREADY_RESOLVED',
+  'NO_OCCURRENCE',
+  'INCONSISTENT_TIME',
+  'EVENT_NOT_FOUND',
 ]);
 
 /** Text of a stable code (error or scan rejection), or undefined. */

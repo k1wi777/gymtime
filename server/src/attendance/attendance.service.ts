@@ -2,10 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
+import { toBogotaParts } from '../common/time/bogota.js';
 import { CLOCK, type Clock } from '../common/time/clock.js';
 import {
   InstancesService,
   type Occurrence,
+  type RelevantOccurrence,
 } from '../schedules/instances.service.js';
 import type { Student } from '../students/domain/student.js';
 import { StudentsService } from '../students/students.service.js';
@@ -150,15 +152,14 @@ export class AttendanceService {
           decision.kind === 'denied' ? decision.reason : 'SESSION_ALREADY_OPEN',
         );
       }
-      const session = await this.sessions.create({
-        studentId: student.id,
-        instanceId: decision.occurrence.instance.id,
-        enteredAt: at,
-        entrySource: 'manual',
-        manualReason: reason,
-      });
+      const session = await this.openSession(
+        student,
+        decision.occurrence.instance.id,
+        at,
+        'manual',
+        reason,
+      );
       await this.recordManual('entry', session);
-      this.publish('entry', 'manual', student, session);
       return session;
     });
   }
@@ -302,6 +303,169 @@ export class AttendanceService {
     return this.mutex.run(student.id, () => action(student));
   }
 
+  /**
+   * Runs `action` holding the student's lock, the one scans and manual
+   * registrations use, so a reconciliation never interleaves with them.
+   */
+  runExclusive<T>(studentId: string, action: () => Promise<T>): Promise<T> {
+    return this.mutex.run(studentId, action);
+  }
+
+  /**
+   * What the rules say about an offline event at its own instant `ts`: the
+   * same `decide()` as online with `at = ts`, the open session, and whether
+   * the server already closed the student's session of that occurrence as
+   * `no_registrada`. The caller holds the student's lock.
+   */
+  async offlineFacts(
+    student: Student,
+    kind: 'entry' | 'exit',
+    ts: Date,
+  ): Promise<{
+    decision: Decision | null;
+    openSession: AttendanceSession | null;
+    serverClosedSession: boolean;
+  }> {
+    if (kind === 'entry') {
+      const decision = await this.decide(student, ts);
+      const unregistered = await this.unregisteredBefore(student.id, ts);
+      const target =
+        decision.kind === 'entry' ? decision.occurrence.instance.id : null;
+      return {
+        decision,
+        openSession: null,
+        serverClosedSession: unregistered.some((s) => s.instanceId === target),
+      };
+    }
+    const [openSession, closed] = await Promise.all([
+      this.sessions.findOpenByStudent(student.id),
+      this.unregisteredOfDay(student.id, ts),
+    ]);
+    return {
+      decision: null,
+      openSession,
+      serverClosedSession: closed !== null,
+    };
+  }
+
+  /** Entry with the reader's own instant and `offline` as source (R8). */
+  applyOfflineEntry(
+    student: Student,
+    occurrence: RelevantOccurrence | Occurrence,
+    ts: Date,
+  ): Promise<AttendanceSession> {
+    return this.openSession(student, occurrence.instance.id, ts, 'offline');
+  }
+
+  /** Exit with the reader's own instant; null if the session is not open anymore. */
+  async applyOfflineExit(
+    student: Student,
+    sessionId: string,
+    ts: Date,
+  ): Promise<AttendanceSession | null> {
+    const closed = await this.sessions.close(sessionId, {
+      exitedAt: ts,
+      exitSource: 'offline',
+    });
+    if (closed) {
+      this.publish('exit', 'offline', student, closed);
+      await this.notifyAlarmIfEmpty(closed.instanceId);
+    }
+    return closed;
+  }
+
+  /**
+   * An exit a person approved over a session the server had closed as
+   * `no_registrada`: it becomes `cerrada` with the real exit (R13).
+   */
+  async reopenUnregisteredWithExit(
+    student: Student,
+    ts: Date,
+  ): Promise<AttendanceSession | null> {
+    const unregistered = await this.unregisteredOfDay(student.id, ts);
+    if (!unregistered) return null;
+    const closed = await this.sessions.closeUnregistered(unregistered.id, {
+      exitedAt: ts,
+      exitSource: 'offline',
+    });
+    if (closed) this.publish('exit', 'offline', student, closed);
+    return closed;
+  }
+
+  /** The student's open session, for the approval of an offline exit. */
+  findOpenSession(studentId: string): Promise<AttendanceSession | null> {
+    return this.sessions.findOpenByStudent(studentId);
+  }
+
+  /** The session an offline event already produced (replay after a crash). */
+  findOfflineEffect(
+    studentId: string,
+    kind: 'entry' | 'exit',
+    ts: Date,
+  ): Promise<AttendanceSession | null> {
+    return this.sessions.findOfflineSession(studentId, kind, ts);
+  }
+
+  /** Students who already left this occurrence, for the reader's snapshot. */
+  listClosedStudentIdsByInstance(instanceId: string): Promise<string[]> {
+    return this.sessions.listClosedStudentIds(instanceId);
+  }
+
+  /** Occurrence that best matches `ts` for a student (see InstancesService). */
+  occurrenceOnDay(studentId: string, ts: Date): Promise<Occurrence | null> {
+    return this.instances.findForStudentOnDay(studentId, ts);
+  }
+
+  /** `no_registrada` sessions entered at or before `ts`, newest first. */
+  private unregisteredBefore(
+    studentId: string,
+    ts: Date,
+  ): Promise<AttendanceSession[]> {
+    return this.sessions.list({
+      studentId,
+      status: 'no_registrada',
+      to: ts,
+      order: 'desc',
+      limit: 5,
+    });
+  }
+
+  /** The student's `no_registrada` session of the Bogota day of `ts`, if any. */
+  private async unregisteredOfDay(
+    studentId: string,
+    ts: Date,
+  ): Promise<AttendanceSession | null> {
+    const candidates = await this.unregisteredBefore(studentId, ts);
+    if (candidates.length === 0) return null;
+    const occurrences = await this.instances.getByIds(
+      candidates.map((s) => s.instanceId),
+    );
+    const day = toBogotaParts(ts).date;
+    return (
+      candidates.find(
+        (s) => occurrences.get(s.instanceId)?.instance.date === day,
+      ) ?? null
+    );
+  }
+
+  private async openSession(
+    student: Student,
+    instanceId: string,
+    at: Date,
+    source: AttendanceSource,
+    manualReason: string | null = null,
+  ): Promise<AttendanceSession> {
+    const created = await this.sessions.create({
+      studentId: student.id,
+      instanceId,
+      enteredAt: at,
+      entrySource: source,
+      manualReason,
+    });
+    this.publish('entry', source, student, created);
+    return created;
+  }
+
   private async decide(student: Student, at: Date): Promise<Decision> {
     const [activeOccurrences, openSession, closedInstanceIds] =
       await Promise.all([
@@ -326,14 +490,13 @@ export class AttendanceService {
     manualReason: string | null,
   ): Promise<void> {
     if (decision.kind === 'entry') {
-      const created = await this.sessions.create({
-        studentId: student.id,
-        instanceId: decision.occurrence.instance.id,
-        enteredAt: at,
-        entrySource: source,
+      await this.openSession(
+        student,
+        decision.occurrence.instance.id,
+        at,
+        source,
         manualReason,
-      });
-      this.publish('entry', source, student, created);
+      );
       return;
     }
     if (decision.kind === 'exit') {

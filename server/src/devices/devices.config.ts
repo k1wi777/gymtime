@@ -10,9 +10,13 @@ export interface DevicesConfig {
   heartbeatTimeoutMs: number;
   /** Minutes offline before the alert (0 = no alert). */
   offlineAlertMinutes: number;
+  /** |device clock - server clock| in seconds that raises the clock warning (H12). */
+  clockWarnSec?: number;
 }
 
 export const DEVICES_CONFIG = Symbol('DEVICES_CONFIG');
+
+export const DEFAULT_CLOCK_WARN_SEC = 30;
 
 export const defaultDevicesConfig: DevicesConfig = {
   helloTimeoutMs: 5000,
@@ -21,4 +25,5 @@ export const defaultDevicesConfig: DevicesConfig = {
   heartbeatSec: 30,
   heartbeatTimeoutMs: 30 * 2 * 1000,
   offlineAlertMinutes: 5,
+  clockWarnSec: DEFAULT_CLOCK_WARN_SEC,
 };

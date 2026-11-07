@@ -16,6 +16,9 @@ import { EnrollmentSimulator } from './enrollment-simulator.js';
 import type { Logger } from './logger.js';
 import { ReaderSimulator, describeSchedule } from './reader-simulator.js';
 import { Sender } from './sender.js';
+import { OfflineEngine, isSnapshot } from './offline-engine.js';
+import { OfflineQueue } from './offline-queue.js';
+import { OfflineSync } from './offline-sync.js';
 
 export type ClientState =
   'connecting' | 'authenticating' | 'online' | 'backoff';
@@ -81,6 +84,14 @@ export class DeviceClient {
   /** Set by `disconnect()`: close the socket and do not schedule a retry. */
   private manual = false;
   private currentState: ClientState = 'backoff';
+  /** Offline mode (H12); null without `--offline`: the v0 behaviour. */
+  private readonly offline: {
+    queue: OfflineQueue;
+    engine: OfflineEngine;
+    sync: OfflineSync;
+    offsetSec: number;
+  } | null;
+  private offlineTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly config: SimulatorConfig,
@@ -98,6 +109,7 @@ export class DeviceClient {
       options.ackTimeoutMs,
       options.maxResends,
     );
+    this.offline = config.offline ? this.createOffline(config.offline) : null;
     this.enrollment = new EnrollmentSimulator(
       (type, payload) => this.sendTracked({ type, payload } as FrameInput),
       config.enroll,
@@ -109,8 +121,73 @@ export class DeviceClient {
     return this.currentState;
   }
 
+  /** Events waiting in the offline queue (0 without offline mode). */
+  get queued(): number {
+    return this.offline?.queue.size ?? 0;
+  }
+
+  /** The offline parts, for tests and diagnostics (null without `--offline`). */
+  get offlineParts() {
+    return this.offline;
+  }
+
+  private createOffline(options: NonNullable<SimulatorConfig['offline']>) {
+    const queue = new OfflineQueue(options.stateFile);
+    const sync = new OfflineSync(queue, {
+      sendBatch: (payload) =>
+        this.sendTracked({ type: 'offline.events', payload }),
+      log: (text) => this.logger.state(text),
+      warn: (text) => this.logger.warn(text),
+    });
+    return {
+      queue,
+      engine: new OfflineEngine(queue),
+      sync,
+      offsetSec: options.clockOffsetSec,
+    };
+  }
+
+  /** Device clock in Unix seconds: real time plus the configured offset. */
+  private deviceNow(): number {
+    return Math.floor(this.now() / 1000) + (this.offline?.offsetSec ?? 0);
+  }
+
+  /** Decides a scan alone, with the last snapshot, when the link is down. */
+  private scanLocally(slot: number): void {
+    const { engine } = this.offline!;
+    const decision = engine.scan(slot, this.deviceNow());
+    switch (decision.result) {
+      case 'entry':
+      case 'exit':
+        this.logger.state(
+          `LOCAL ${decision.result.toUpperCase()} slot ${slot}: ${decision.name} (queued ${this.queued})`,
+        );
+        break;
+      case 'unknown':
+        this.logger.warn(`LOCAL unknown fingerprint slot ${slot} (queued)`);
+        break;
+      case 'reject':
+        this.logger.warn(
+          decision.reason === 'QUEUE_FULL'
+            ? `Cola llena: scan of slot ${slot} refused (${this.queued} queued)`
+            : `LOCAL scan of slot ${slot} refused: ${decision.reason}`,
+        );
+        break;
+    }
+  }
+
+  private runOfflineTick(): void {
+    if (!this.offline || this.currentState === 'online') return;
+    const line = this.offline.engine.tick(this.deviceNow());
+    if (line) this.logger.state(line);
+  }
+
   /** Simulates a matched fingerprint: the reader reports a slot. */
   scan(slot: number): void {
+    if (this.offline && this.currentState !== 'online') {
+      this.scanLocally(slot);
+      return;
+    }
     this.sendTracked({
       type: 'fingerprint.scan',
       payload: { slot, confidence: SCAN_CONFIDENCE },
@@ -119,6 +196,11 @@ export class DeviceClient {
 
   /** Simulates the reader's physical button. */
   pressButton(): void {
+    if (this.offline && this.currentState !== 'online') {
+      const line = this.offline.engine.button(this.deviceNow());
+      if (line) this.logger.state(line);
+      return;
+    }
     this.sendTracked({ type: 'button.pressed', payload: {} });
   }
 
@@ -153,12 +235,17 @@ export class DeviceClient {
 
   start(): void {
     this.stopped = false;
+    if (this.offline && !this.offlineTimer) {
+      this.offlineTimer = setInterval(() => this.runOfflineTick(), 1000);
+    }
     this.connect();
   }
 
   /** Closes the socket and stops reconnecting; resolves once it is closed. */
   async stop(): Promise<void> {
     this.stopped = true;
+    if (this.offlineTimer) clearInterval(this.offlineTimer);
+    this.offlineTimer = null;
     this.clearTimers();
     this.sender.clear();
     this.enrollment.stop();
@@ -198,6 +285,13 @@ export class DeviceClient {
         deviceId: this.config.deviceId,
         token: this.config.token,
         fw: this.config.fw,
+        ...(this.offline
+          ? {
+              capabilities: ['offline' as const],
+              deviceTime: this.deviceNow(),
+              queued: this.offline.queue.size,
+            }
+          : {}),
       },
     });
   }
@@ -207,6 +301,7 @@ export class DeviceClient {
     this.socket = null;
     this.clearTimers();
     this.sender.clear();
+    this.offline?.sync.reset();
     this.enrollment.stop();
     if (this.stopped) {
       this.logger.state(`disconnected (code ${code})`);
@@ -264,6 +359,10 @@ export class DeviceClient {
     );
     if (this.heartbeat) clearInterval(this.heartbeat);
     this.sendStatus();
+    if (this.offline) {
+      this.offline.engine.onReconnect();
+      this.offline.sync.start();
+    }
     this.heartbeat = setInterval(
       () => this.sendStatus(),
       message.payload.heartbeatSec * 1000,
@@ -272,6 +371,7 @@ export class DeviceClient {
 
   private onAck(message: Extract<ServerMessage, { type: 'ack' }>): void {
     this.sender.confirm(message.ref);
+    if (this.offline?.sync.onAck(message.ref, message.payload.ok)) return;
     if (message.payload.ok) return;
     if (message.payload.error === 'UNAUTHORIZED') {
       this.logger.warn('hello rejected: UNAUTHORIZED (wrong device token)');
@@ -322,7 +422,20 @@ export class DeviceClient {
       case 'display.message':
         this.logger.state(describeDisplayMessage(message.payload));
         break;
+      case 'offline.snapshot':
+        this.onSnapshot(message.payload);
+        break;
     }
+  }
+
+  /** Keeps the snapshot (roster, window, who is inside) for offline decisions. */
+  private onSnapshot(payload: unknown): void {
+    if (!this.offline || !isSnapshot(payload)) return;
+    this.offline.engine.onSnapshot(payload);
+    this.logger.state(
+      `snapshot ${payload.snapshotId}: ${payload.roster.length} in roster, ${payload.open.length} inside` +
+        (payload.schedule ? '' : ', no upcoming schedule'),
+    );
   }
 
   /** Shows the order; a numeric duration turns the siren off by itself. */
@@ -388,9 +501,10 @@ export class DeviceClient {
     this.write(this.build({ type: 'ack', payload, ref }).raw, false);
   }
 
-  private sendTracked(input: FrameInput): void {
+  private sendTracked(input: FrameInput): string {
     const { id, raw } = this.build(input);
     this.sender.send(id, raw);
+    return id;
   }
 
   /** Builds a frame and validates it so the simulator never emits bad traffic. */
@@ -400,7 +514,7 @@ export class DeviceClient {
       v: PROTOCOL_VERSION,
       id,
       type: input.type,
-      ts: Math.floor(this.now() / 1000),
+      ts: this.deviceNow(),
       ref: input.ref ?? null,
       payload: input.payload,
     };

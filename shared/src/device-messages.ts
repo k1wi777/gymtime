@@ -8,6 +8,7 @@ import {
   uuidSchema,
 } from './envelope.js';
 import { ackSchema } from './ack.js';
+import { helloExtensionShape, offlineEventsPayloadSchema } from './offline.js';
 
 export const ENROLL_STEPS = [
   'place_finger',
@@ -26,7 +27,13 @@ export const helloSchema = message(
     deviceId: nonEmptyStringSchema,
     token: nonEmptyStringSchema,
     fw: nonEmptyStringSchema,
+    ...helloExtensionShape,
   }),
+);
+
+export const offlineEventsSchema = message(
+  'offline.events',
+  offlineEventsPayloadSchema,
 );
 
 export const fingerprintScanSchema = message(
@@ -102,6 +109,7 @@ export const deviceMessageSchema = z.discriminatedUnion('type', [
   alarmStateSchema,
   buttonPressedSchema,
   statusSchema,
+  offlineEventsSchema,
   ackSchema,
 ]);
 

@@ -210,6 +210,36 @@ expect "devices start without own token, revocation or alert" "1" \
   "SELECT count(*) FROM devices WHERE token_hash IS NULL AND token_created_at IS NULL AND token_revoked_at IS NULL AND offline_since IS NULL AND offline_alerted_at IS NULL"
 expect "no student starts anonymised" "0" "SELECT count(*) FROM students WHERE anonymized_at IS NOT NULL"
 
+echo "== H12: offline mode =="
+expect "existing alarms keep their values and are server alarms" "1|1|0" \
+  "SELECT count(*) || '|' || count(*) FILTER (WHERE origin = 'server') || '|' || count(*) FILTER (WHERE device_id IS NOT NULL OR device_event_id IS NOT NULL) FROM alarm_events"
+expect "existing sessions keep their sources" "3|2|1" \
+  "SELECT count(*) || '|' || count(*) FILTER (WHERE origen_entrada = 'device') || '|' || count(*) FILTER (WHERE origen_entrada = 'manual') FROM attendance_sessions"
+expect "the existing device is a v0 reader without clock check" "{}|NULL|NULL" \
+  "SELECT capabilities::text || '|' || coalesce(clock_offset_sec::text, 'NULL') || '|' || coalesce(clock_checked_at::text, 'NULL') FROM devices WHERE id = 'esp32-1'"
+expect "offline tables start empty" "0|0" \
+  "SELECT (SELECT count(*) FROM offline_snapshots) || '|' || (SELECT count(*) FROM offline_events)"
+expect "the new attendance source is usable" "offline" \
+  "INSERT INTO attendance_sessions (student_id, instance_id, entrada, origen_entrada, estado) VALUES ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-0000000000b1', '2026-10-26 15:20+00', 'offline', 'abierta') RETURNING origen_entrada"
+sql -c "DELETE FROM attendance_sessions WHERE origen_entrada = 'offline'" >/dev/null
+sql -c "UPDATE devices SET capabilities = ARRAY['offline'] WHERE id = 'esp32-1'" >/dev/null
+sql -c "INSERT INTO offline_events (device_id, id, seq, ts, type, outcome) VALUES ('esp32-1', '00000000-0000-4000-8000-0000000000f1', 1, now(), 'entry', 'pendiente')" >/dev/null
+if sql -c "INSERT INTO offline_events (device_id, id, seq, ts, type, outcome) VALUES ('esp32-1', '00000000-0000-4000-8000-0000000000f1', 2, now(), 'entry', 'pendiente')" >/dev/null 2>&1; then
+  fail "an offline event with the same (device, id) was accepted"
+fi
+echo "ok   an offline event is unique per (device, id)"
+if sql -c "INSERT INTO offline_events (device_id, id, seq, ts, type, outcome) VALUES ('esp32-1', '00000000-0000-4000-8000-0000000000f2', 1, now(), 'entry', 'inventado')" >/dev/null 2>&1; then
+  fail "an unknown offline outcome was accepted"
+fi
+echo "ok   offline outcomes are a closed set (CHECK)"
+sql -c "INSERT INTO alarm_events (instance_id, inicio, fin, cerrada_por, origin, device_id, device_event_id) VALUES ('00000000-0000-4000-8000-0000000000b1', now(), now(), 'button', 'local', 'esp32-1', '00000000-0000-4000-8000-0000000000f3')" >/dev/null
+if sql -c "INSERT INTO alarm_events (instance_id, inicio, origin, device_id, device_event_id) VALUES ('00000000-0000-4000-8000-0000000000b1', now(), 'local', 'esp32-1', '00000000-0000-4000-8000-0000000000f3')" >/dev/null 2>&1; then
+  fail "a local alarm of the same reader event was stored twice"
+fi
+echo "ok   a local alarm is unique per reader event"
+sql -c "DELETE FROM alarm_events WHERE origin = 'local'; DELETE FROM offline_events" >/dev/null
+sql -c "UPDATE devices SET capabilities = '{}' WHERE id = 'esp32-1'" >/dev/null
+
 echo "== Constraints =="
 if sql -c "INSERT INTO schedule_students (schedule_id, student_id, valid_from) VALUES ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000001', now())" >/dev/null 2>&1; then
   fail "a second active assignment of the same pair was accepted"

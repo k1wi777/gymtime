@@ -54,3 +54,16 @@
   max-width: 78rem;
   margin: 0 auto;
 }
+
+.counter {
+  display: inline-block;
+  margin-left: 0.4rem;
+  min-width: 1.3rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--danger, #b3261e);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
