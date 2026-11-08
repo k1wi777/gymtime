@@ -1,43 +1,77 @@
+/* Fonts come from next/font in layout.tsx (variables on <body>). */
 :root {
   /*
-   * Palette PROVISIONAL (green and white of the Universidad de Cordoba).
-   * It is NOT the official brand color: no color code exists in the project
-   * yet. Every color of the panel goes through these tokens, so the day the
-   * university delivers its brand manual this block is the only place to edit.
+   * Palette of the approved design (institutional green of the Universidad de
+   * Cordoba). Every color of the panel goes through these tokens, so a change
+   * of brand is made in this block only.
    */
-  --bg: #f4f7f5;
+  --bg: #f7f5f4;
   --surface: #ffffff;
-  --text: #17231c;
-  --muted: #56655b;
-  --border: #d3ddd6;
-  --primary: #1b7a3d;
-  --primary-dark: #0f5a2b;
-  --primary-light: #e6f4ea;
-  --primary-mid: #3f9d5f;
+  --text: #222222;
+  --muted: #4d5a66;
+  --border: #e6e1dd;
+  --border-strong: #cfc9c5;
+  --primary: #2b5e2e;
+  --primary-dark: #1f4a22;
+  --primary-light: #eef4ec;
+  --primary-mid: #4e8c42;
   --primary-text: #ffffff;
+  --primary-gradient-end: #234f27;
+  --hero-start: #2f6a33;
+  --accent: #f89f32;
+  --accent-text: #3d2400;
+  --live: #67bd50;
+  --live-soft: #9bd68a;
+  --row-hover: #f6f9f5;
+  --pill-border: #dfe8dd;
+  --canvas-soft: #fbf9f6;
+  --canvas-soft-border: #ece6de;
+  --disabled-bg: #e6e1dd;
+  --disabled-text: #6b6660;
   /* Highlight of the peaks in the charts: amber, with pattern and label too. */
   --peak: #b45309;
   --danger: #b3261e;
   --danger-bg: #fdecea;
-  --success: #1b6e3c;
-  --success-bg: #e6f4ea;
-  --warning: #8a5a00;
-  --warning-bg: #fff4d6;
-  /* Informational notices stay slate blue so they differ from success (green). */
-  --info: #1d4e6e;
-  --info-bg: #e6eff5;
-  --shadow-card: 0 1px 3px rgba(15, 90, 43, 0.12);
+  --success: #2f6a1f;
+  --success-bg: #e6f4e1;
+  --warning: #7a4100;
+  --warning-bg: #fdecd3;
+  /* Informational notices stay blue so they differ from success (green). */
+  --info: #0a6a8e;
+  --info-bg: #dff4fc;
+  /* Avatar pairs (background / initials), rotated by student. */
+  --av1-bg: #fde6ee;
+  --av1-fg: #9b1a45;
+  --av2-bg: #ebe6f5;
+  --av2-fg: #4a3a80;
+  --av3-bg: #dff4fc;
+  --av3-fg: #0a6a8e;
+  --av4-bg: #dcf5f2;
+  --av4-fg: #0b6f67;
+  --av5-bg: #e6f4e1;
+  --av5-fg: #3a7a26;
+  --av6-bg: #fdecd3;
+  --av6-fg: #8a4b00;
+  /* Accent colors of the metric cards (top bar and soft circle). */
+  --m1: #16baaf;
+  --m1-soft: #dcf5f2;
+  --m2: #08afe6;
+  --m2-soft: #dff4fc;
+  --m3: #6752a0;
+  --m3-soft: #ebe6f5;
+  --m4: var(--accent);
+  --m4-soft: #fdecd3;
+  --shadow-card:
+    0 1px 2px rgba(31, 74, 34, 0.05), 0 14px 28px -20px rgba(31, 74, 34, 0.25);
+  --shadow-btn: 0 8px 16px -10px rgba(31, 74, 34, 0.8);
   --transition: 150ms ease;
-  --radius: 8px;
-  --focus: 0 0 0 3px rgba(27, 122, 61, 0.35);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
+  --radius: 12px;
+  --radius-card: 18px;
+  --focus: 0 0 0 3px rgba(78, 140, 66, 0.45);
+  --font-heading: var(--font-slab), 'Roboto Slab', Georgia, serif;
+  --font-body: var(--font-sans), 'Open Sans', system-ui, sans-serif;
+  --font-code: var(--font-mono), 'Roboto Mono', monospace;
+  font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
   line-height: 1.45;
@@ -50,21 +84,24 @@
 body {
   margin: 0;
   min-height: 100vh;
+  font-family: var(--font-body);
 }
 
 h1,
 h2,
 h3 {
+  font-family: var(--font-heading);
+  font-weight: 500;
   line-height: 1.2;
   margin: 0 0 0.5rem;
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 
 h2 {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
 }
 
 a {
@@ -95,16 +132,16 @@ textarea {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.9rem;
+  min-height: 44px;
+  padding: 0.5rem 1.4rem;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
+  font-weight: 500;
   cursor: pointer;
-}
-
-.btn {
   transition:
     background-color var(--transition),
     border-color var(--transition),
@@ -117,7 +154,9 @@ textarea {
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  background: var(--disabled-bg);
+  border-color: var(--disabled-bg);
+  color: var(--disabled-text);
   cursor: not-allowed;
 }
 
@@ -125,6 +164,12 @@ textarea {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+}
+
+.btn-primary:disabled {
+  box-shadow: none;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -136,13 +181,20 @@ textarea {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 16px -10px rgba(179, 38, 30, 0.8);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #8f1d17;
+  border-color: #8f1d17;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
+  border-radius: var(--radius-card);
+  padding: 1.5rem 1.75rem;
   box-shadow: var(--shadow-card);
 }
 

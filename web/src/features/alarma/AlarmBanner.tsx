@@ -7,6 +7,7 @@ import { useLiveEvents, useResync } from '@/live/live-provider';
 import { ALARM_REASON_LABELS } from '@/lib/labels';
 import { useResource } from '@/lib/use-resource';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import styles from './AlarmBanner.module.css';
 
@@ -62,7 +63,8 @@ export function AlarmBanner() {
     <>
       {alarm?.on && (
         <div className={styles.banner} role="alert">
-          <div>
+          <Icon name="campana" size={28} strokeWidth={1.8} />
+          <div className={styles.text}>
             <strong className={styles.title}>ALARMA SONANDO</strong>
             <div>
               {ALARM_REASON_LABELS[alarm.reason ?? 'MANUAL'] ?? 'Alarma'}

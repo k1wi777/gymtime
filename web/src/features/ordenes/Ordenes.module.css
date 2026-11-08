@@ -1,0 +1,151 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  align-items: stretch;
+}
+
+.alarm {
+  flex: 1 1 340px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #ffffff 0%, #f1f6ef 100%);
+  border-color: #e0e8dd;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.alarmHead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.bell {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 20px;
+  background: #eceae8;
+  color: #6b747c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bellOn {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.state {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+
+.stateReason {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.alarmText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #3f4d45;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.big {
+  height: 50px;
+  padding: 0 26px;
+  font-size: 15px;
+}
+
+.message {
+  flex: 1.4 1 440px;
+  min-width: 0;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.message h2 {
+  margin: 0;
+}
+
+.lcd {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 6px;
+  border-radius: 14px;
+  background: #2a2f2b;
+  box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.6);
+}
+
+.screen {
+  padding: 16px 22px;
+  border-radius: 9px;
+  background: #aee6a1;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.lcdLine {
+  font-family: var(--font-code);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  line-height: 1.55;
+  color: #17361a;
+  white-space: pre;
+}
+
+.lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.line {
+  flex: 1 1 220px;
+}
+
+.recent {
+  padding: 26px 28px;
+}
+
+.recentIntro {
+  margin: 0 0 14px;
+}
+
+@media (max-width: 600px) {
+  .lcdLine {
+    font-size: 16px;
+  }
+}

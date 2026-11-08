@@ -71,3 +71,14 @@ export function formatCountdown(totalSeconds: number): string {
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
+
+const longDayFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: TIME_ZONE,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
+/** `lunes 2 de noviembre` */
+export const formatLongDay = (value: string | Date): string =>
+  longDayFormat.format(toDate(value)).replace(',', '');

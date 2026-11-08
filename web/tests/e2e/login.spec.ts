@@ -69,7 +69,7 @@ test.describe('login (R8, R9, R10)', () => {
     await page.goto('/horarios');
     await expect(page).toHaveURL(/\/login\?next=%2Fhorarios/);
     await page.getByLabel('Usuario').fill('ana');
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page).toHaveURL(/\/horarios$/);
     await expect(page.getByRole('heading', { name: 'Horarios' })).toBeVisible();
@@ -128,7 +128,7 @@ test.describe('login (R8, R9, R10)', () => {
       page.getByText('Su sesión expiró. Inicie sesión de nuevo.'),
     ).toBeVisible();
     await page.getByLabel('Usuario').fill('ana');
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page).toHaveURL(/\/(ahora|dispositivo)$/);
   });
@@ -154,7 +154,7 @@ test.describe('login (R8, R9, R10)', () => {
         status: 403,
         contentType: 'application/json',
         headers: {
-          'access-control-allow-origin': 'http://localhost:3000',
+          'access-control-allow-origin': `http://localhost:${process.env.E2E_PANEL_PORT ?? '3000'}`,
           'access-control-allow-credentials': 'true',
         },
         body: JSON.stringify({

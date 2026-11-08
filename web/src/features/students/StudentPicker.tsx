@@ -2,6 +2,8 @@
 
 import { useId, useMemo, useState } from 'react';
 import type { Student } from '@/api/types';
+import { Icon } from '@/ui/icons';
+import styles from './StudentPicker.module.css';
 
 const normalize = (text: string): string =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -36,22 +38,26 @@ export function StudentPicker({
   }, [students, query]);
 
   return (
-    <div className="stack" style={{ gap: '0.4rem' }}>
-      <label htmlFor={`${id}-search`}>
-        <strong>{label}</strong>
+    <div className={styles.picker}>
+      <label htmlFor={`${id}-search`} className={styles.label}>
+        {label}
       </label>
-      <input
-        id={`${id}-search`}
-        type="search"
-        placeholder="Buscar por nombre o documento"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        style={{
-          padding: '0.5rem 0.65rem',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-        }}
-      />
+      <div className={styles.search}>
+        <Icon
+          name="buscar"
+          size={18}
+          strokeWidth={2}
+          className={styles.glass}
+        />
+        <input
+          id={`${id}-search`}
+          type="search"
+          placeholder="Buscar por nombre o documento"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className={styles.input}
+        />
+      </div>
       <select
         id={`${id}-list`}
         aria-label={`${label}: resultados`}
@@ -61,11 +67,7 @@ export function StudentPicker({
         aria-describedby={error ? `${id}-error` : undefined}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
-        style={{
-          padding: '0.3rem',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-        }}
+        className={styles.list}
       >
         {matches.map((student) => (
           <option key={student.id} value={student.id}>
@@ -75,16 +77,12 @@ export function StudentPicker({
         ))}
       </select>
       {matches.length === 0 && (
-        <p className="muted" style={{ margin: 0 }}>
+        <p className={`muted ${styles.note}`}>
           Ningún estudiante coincide con la búsqueda.
         </p>
       )}
       {error && (
-        <p
-          id={`${id}-error`}
-          role="alert"
-          style={{ margin: 0, color: 'var(--danger)', fontSize: '0.85rem' }}
-        >
+        <p id={`${id}-error`} role="alert" className={styles.error}>
           {error}
         </p>
       )}

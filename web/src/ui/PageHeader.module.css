@@ -1,0 +1,41 @@
+.header {
+  padding: 36px 0 22px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title {
+  margin: 6px 0 12px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 38px;
+  line-height: 1.1;
+}
+
+.lead {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 660px;
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 30px;
+  }
+}

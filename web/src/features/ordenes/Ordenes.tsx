@@ -18,9 +18,12 @@ import { useLiveEvents, useResync } from '@/live/live-provider';
 import { Badge, type BadgeTone } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { SubmitButton, TextField, useForm } from '@/ui/Form';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { ALARM_REASON_LABELS } from '@/lib/labels';
 import { DataTable, type Column } from '@/ui/DataTable';
+import styles from './Ordenes.module.css';
 
 const STATUS_TONE: Record<CommandEntry['status'], BadgeTone> = {
   pending: 'neutral',
@@ -67,29 +70,40 @@ function AlarmControls() {
 
   const alarm = status.data;
   return (
-    <section className="card stack" aria-label="Alarma">
-      <h2>Alarma</h2>
-      <p>
-        Estado:{' '}
-        {alarm ? (
-          alarm.on ? (
-            <Badge tone="danger">
-              Sonando ·{' '}
+    <section className={`card ${styles.alarm}`} aria-label="Alarma">
+      <div className={styles.alarmHead}>
+        <div
+          role="img"
+          aria-label={alarm?.on ? 'Alarma sonando' : 'Alarma apagada'}
+          className={`${styles.bell} ${alarm?.on ? styles.bellOn : ''}`}
+        >
+          <Icon name="campana" size={44} strokeWidth={1.6} />
+        </div>
+        <div>
+          <div className={styles.kicker}>Estado</div>
+          <div
+            className={styles.state}
+            style={alarm?.on ? { color: 'var(--danger)' } : undefined}
+          >
+            {alarm ? (alarm.on ? 'Sonando' : 'Apagada') : '…'}
+          </div>
+          {alarm?.on && (
+            <div className={styles.stateReason}>
               {ALARM_REASON_LABELS[alarm.reason ?? 'MANUAL'] ?? 'Alarma'}
-            </Badge>
-          ) : (
-            <Badge tone="success">Apagada</Badge>
-          )
-        ) : (
-          '…'
-        )}
+            </div>
+          )}
+        </div>
+      </div>
+      <p className={styles.alarmText}>
+        Suena sola cuando termina un horario y todavía hay personas adentro.
+        También puede encenderla o apagarla usted.
       </p>
       {failure && <Notice kind="error">{failure}</Notice>}
       {note && <Notice kind="success">{note}</Notice>}
-      <div className="row">
+      <div className={styles.buttons}>
         <button
           type="button"
-          className="btn btn-primary"
+          className={`btn btn-danger ${styles.big}`}
           disabled={busy}
           onClick={() =>
             void run(
@@ -102,7 +116,7 @@ function AlarmControls() {
         </button>
         <button
           type="button"
-          className="btn"
+          className={`btn ${styles.big}`}
           disabled={busy}
           onClick={() =>
             void run(
@@ -115,7 +129,7 @@ function AlarmControls() {
         </button>
         <button
           type="button"
-          className="btn btn-danger"
+          className={`btn btn-primary ${styles.big}`}
           disabled={busy || !alarm?.on}
           onClick={() => setConfirmOff(true)}
         >
@@ -178,34 +192,52 @@ function MessageForm() {
     },
   });
   const lines = ['line1', 'line2'] as const;
+  const previewLine = (value: string) =>
+    value.slice(0, DISPLAY_LINE_MAX).padEnd(DISPLAY_LINE_MAX, ' ');
   return (
     <form
-      className="card stack"
+      className={`card ${styles.message}`}
       onSubmit={form.submit}
       noValidate
       aria-label="Mensaje en pantalla"
     >
       <h2>Mensaje en la pantalla del lector</h2>
-      <p className="muted">
-        {DISPLAY_LINES} líneas. {displayLineHelp}
-      </p>
+      <div
+        role="img"
+        aria-label={`Vista previa de la pantalla de ${DISPLAY_LINES} líneas de ${DISPLAY_LINE_MAX} caracteres`}
+        className={styles.lcd}
+      >
+        <div className={styles.screen}>
+          {lines.map((key) => (
+            <div key={key} className={styles.lcdLine}>
+              {previewLine(form.values[key])}
+            </div>
+          ))}
+        </div>
+      </div>
       {failure && <Notice kind="error">{failure}</Notice>}
       {note && (
         <Notice kind={note.startsWith('El lector no') ? 'warning' : 'success'}>
           {note}
         </Notice>
       )}
-      {lines.map((key, index) => (
-        <TextField
-          key={key}
-          label={`Línea ${index + 1}${index === 0 ? ' (obligatoria)' : ''}`}
-          value={form.values[key]}
-          onChange={(value) => form.setValue(key, value)}
-          onBlur={() => form.blur(key)}
-          error={form.errors[key]}
-          help={`${form.values[key].length}/${DISPLAY_LINE_MAX} caracteres`}
-        />
-      ))}
+      <div className={styles.lines}>
+        {lines.map((key, index) => (
+          <div key={key} className={styles.line}>
+            <TextField
+              label={`Línea ${index + 1}${index === 0 ? ' (obligatoria)' : ''}`}
+              value={form.values[key]}
+              onChange={(value) => form.setValue(key, value)}
+              onBlur={() => form.blur(key)}
+              error={form.errors[key]}
+              help={`${form.values[key].length}/${DISPLAY_LINE_MAX} caracteres`}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        {DISPLAY_LINES} líneas. {displayLineHelp}
+      </p>
       <div>
         <SubmitButton busy={form.submitting}>Enviar mensaje</SubmitButton>
       </div>
@@ -237,26 +269,34 @@ export function Ordenes() {
     { key: 'attempts', header: 'Intentos', render: (c) => c.attempts },
   ];
   return (
-    <div className="stack">
-      <h1>Alarma y mensajes</h1>
-      <div className="grid-3">
-        <AlarmControls />
-        <MessageForm />
+    <>
+      <PageHeader
+        eyebrow="Asistente · Control del lector"
+        title="Alarma y mensajes"
+      />
+      <div className={styles.body}>
+        <div className={styles.top}>
+          <AlarmControls />
+          <MessageForm />
+        </div>
+        <section
+          className={`card ${styles.recent}`}
+          aria-label="Órdenes recientes"
+        >
+          <h2>Órdenes recientes</h2>
+          <p className={`muted ${styles.recentIntro}`}>
+            Estado de cada orden según informa el lector (se muestran las
+            últimas desde que abrió el panel).
+          </p>
+          <DataTable
+            caption="Órdenes recientes"
+            columns={columns}
+            rows={rows}
+            rowKey={(c) => c.commandId}
+            emptyMessage="Todavía no hay órdenes."
+          />
+        </section>
       </div>
-      <section className="stack" aria-label="Órdenes recientes">
-        <h2>Órdenes recientes</h2>
-        <p className="muted">
-          Estado de cada orden según informa el lector (se muestran las últimas
-          desde que abrió el panel).
-        </p>
-        <DataTable
-          caption="Órdenes recientes"
-          columns={columns}
-          rows={rows}
-          rowKey={(c) => c.commandId}
-          emptyMessage="Todavía no hay órdenes."
-        />
-      </section>
-    </div>
+    </>
   );
 }

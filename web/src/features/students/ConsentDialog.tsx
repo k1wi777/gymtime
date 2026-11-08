@@ -6,6 +6,7 @@ import { describeError } from '@/api/errors';
 import type { ConsentText, Student } from '@/api/types';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Notice } from '@/ui/Notice';
+import styles from './ConsentDialog.module.css';
 
 interface Props {
   /** The student whose consent is recorded; `null` keeps the dialog closed. */
@@ -75,10 +76,8 @@ function ConsentDialogBody({ student, onClose, onRecorded }: Props) {
       {failure && <Notice kind="error">{failure}</Notice>}
       {text && (
         <>
-          <p>{text.text}</p>
-          <label
-            style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}
-          >
+          <p className={styles.text}>{text.text}</p>
+          <label className={styles.accept}>
             <input
               type="checkbox"
               checked={accepted}

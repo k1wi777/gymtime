@@ -62,6 +62,36 @@ describe('Por revisar (R15, R16)', () => {
     ).toBeTruthy();
   });
 
+  it('shows the approved and discarded events read-only in tabs', async () => {
+    const user = userEvent.setup();
+    const views: string[] = [];
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /offline/review': (request: Request) => {
+        const view = new URL(request.url).searchParams.get('view') ?? '';
+        views.push(view);
+        return json(
+          view === 'pending'
+            ? page([item()])
+            : page([
+                item({
+                  outcome: 'descartado',
+                  student: { id: 's2', name: 'Ana Ruiz', document: '333' },
+                }),
+              ]),
+        );
+      },
+    });
+    app(<PorRevisar />);
+    expect(await screen.findByText('Luis Mora')).toBeTruthy();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    await user.click(screen.getByRole('tab', { name: /Descartados/ }));
+    expect(await screen.findByText(/Ana Ruiz/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Resolver/ })).toBeNull();
+    expect(views).toContain('discarded');
+    expect(views).toContain('resolved');
+  });
+
   it('requires a reason and sends the chosen action', async () => {
     const user = userEvent.setup();
     const resolve = vi.fn(() => json(item({ outcome: 'descartado' })));

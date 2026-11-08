@@ -5,7 +5,7 @@ import {
   type Page,
 } from '@playwright/test';
 
-export const CONTROL = 'http://127.0.0.1:3002';
+export const CONTROL = `http://127.0.0.1:${process.env.E2E_CONTROL_PORT ?? '3002'}`;
 export const PASSWORD = 'Clave-de-prueba-1';
 
 export interface World {
@@ -36,7 +36,7 @@ export const test = base.extend<{ world: World }>({
 export async function login(page: Page, username = 'ana', password = PASSWORD) {
   await page.goto('/login');
   await page.getByLabel('Usuario').fill(username);
-  await page.getByLabel('Contraseña').fill(password);
+  await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
 }
 

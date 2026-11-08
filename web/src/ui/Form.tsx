@@ -53,6 +53,8 @@ interface TextFieldProps {
   maxLength?: number;
   name?: string;
   disabled?: boolean;
+  /** Control drawn over the end of the input (for example show/hide). */
+  trailing?: ReactNode;
 }
 
 export function TextField({
@@ -67,26 +69,37 @@ export function TextField({
   maxLength,
   name,
   disabled,
+  trailing,
 }: TextFieldProps) {
   const id = useId();
+  const input = (
+    <input
+      id={id}
+      name={name}
+      type={type}
+      value={value}
+      autoComplete={autoComplete}
+      maxLength={maxLength}
+      disabled={disabled}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={describedBy(id, error, help)}
+      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+        onChange(event.target.value)
+      }
+      onBlur={onBlur}
+      className={styles.input}
+    />
+  );
   return (
     <FieldFrame id={id} label={label} error={error} help={help}>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        value={value}
-        autoComplete={autoComplete}
-        maxLength={maxLength}
-        disabled={disabled}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(id, error, help)}
-        onChange={(event: ChangeEvent<HTMLInputElement>) =>
-          onChange(event.target.value)
-        }
-        onBlur={onBlur}
-        className={styles.input}
-      />
+      {trailing ? (
+        <div className={styles.control}>
+          {input}
+          {trailing}
+        </div>
+      ) : (
+        input
+      )}
     </FieldFrame>
   );
 }

@@ -421,8 +421,7 @@ describe('manual registration (R16)', () => {
         ),
     });
     app(<Registro />);
-    await screen.findByLabelText('Operación');
-    await user.selectOptions(screen.getByLabelText('Operación'), 'exit');
+    await user.click(await screen.findByRole('radio', { name: 'Salida' }));
     await user.selectOptions(
       screen.getByLabelText('Estudiante: resultados'),
       'a',

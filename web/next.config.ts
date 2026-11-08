@@ -26,6 +26,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   // Self-contained server for the Docker image (web/Dockerfile).
   output: 'standalone',
+  // Lets the browser tests build elsewhere without touching a running `next dev`.
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   headers() {
     return Promise.resolve([{ source: '/:path*', headers: securityHeaders }]);
   },

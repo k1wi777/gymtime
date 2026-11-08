@@ -1,0 +1,144 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid #e0dcd9;
+}
+
+.tab {
+  padding: 10px 2px 12px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #7a7570;
+  cursor: pointer;
+}
+
+.tabActive {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+
+.tabCount {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  overflow: hidden;
+}
+
+.stamp {
+  flex: 0 0 150px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border-right: 1px dashed rgba(0, 0, 0, 0.18);
+}
+
+.stampEntry {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.stampExit {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.stampOther {
+  background: #eceae8;
+  color: var(--muted);
+}
+
+.stampType {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stampTime {
+  font-family: var(--font-heading);
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.stampDate {
+  font-size: 13px;
+}
+
+.main {
+  flex: 1 1 360px;
+  min-width: 0;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.name {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.reason {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #5a3c00;
+}
+
+.reasonIcon {
+  flex: none;
+  margin-top: 2px;
+  color: #c77a00;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}

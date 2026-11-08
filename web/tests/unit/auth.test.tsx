@@ -15,6 +15,44 @@ describe('login (R9)', () => {
     nav.pathname = '/login';
   });
 
+  it('shows the institutional layout with the color strip (only here) (R1, R2)', () => {
+    installFakeApi();
+    const { container } = wrap(<LoginPage />);
+    expect(
+      screen.getByRole('heading', { name: 'Iniciar sesión' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('img', {
+        name: 'Universidad de Córdoba, Montería, Colombia',
+      }),
+    ).toBeTruthy();
+    const strip = container.querySelector(
+      'img[src="/brand/barra-de-colores3.png"]',
+    );
+    expect(strip?.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      container.querySelectorAll('img[src*="barra-de-colores"]'),
+    ).toHaveLength(1);
+  });
+
+  it('shows and hides the password without changing its value', async () => {
+    const user = userEvent.setup();
+    installFakeApi();
+    wrap(<LoginPage />);
+    const input = screen.getByLabelText('Contraseña') as HTMLInputElement;
+    await user.type(input, 'secreta');
+    expect(input.type).toBe('password');
+    await user.click(
+      screen.getByRole('button', { name: 'Mostrar contraseña' }),
+    );
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('secreta');
+    await user.click(
+      screen.getByRole('button', { name: 'Ocultar contraseña' }),
+    );
+    expect(input.type).toBe('password');
+  });
+
   it('validates before sending and never reveals which field was wrong', async () => {
     const user = userEvent.setup();
     const fake = installFakeApi();
@@ -221,8 +259,20 @@ describe('password change (R9)', () => {
 
 describe('roles (R10)', () => {
   const items: NavItem[] = [
-    { href: '/ahora', label: 'Ahora', roles: ['asistente', 'admin'] },
-    { href: '/usuarios', label: 'Usuarios', roles: ['admin'] },
+    {
+      href: '/ahora',
+      label: 'Ahora',
+      roles: ['asistente', 'admin'],
+      icon: 'ahora',
+      group: 'Operación',
+    },
+    {
+      href: '/usuarios',
+      label: 'Usuarios',
+      roles: ['admin'],
+      icon: 'usuarios',
+      group: 'Administración',
+    },
   ];
 
   it('the assistant does not see administrator sections in the menu', () => {

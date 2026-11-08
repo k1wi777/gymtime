@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import type { Student } from '@/api/types';
 import { useResync } from '@/live/live-provider';
 import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/ui/Badge';
 import { DataTable, type Column, type SelectFilter } from '@/ui/DataTable';
+import { Icon } from '@/ui/icons';
+import { PageHeader } from '@/ui/PageHeader';
 import { EnrollPanel } from './EnrollPanel';
+import styles from './Enrolar.module.css';
 
 export function Enrolar() {
   const students = useResource(
@@ -94,37 +97,92 @@ export function Enrolar() {
     },
   ];
 
+  const current = !selected ? 1 : !selected.consented ? 2 : 3;
+  const STEPS = ['Elegir estudiante', 'Consentimiento', 'Poner la huella'];
+
   return (
-    <div className="stack">
-      <h1>Enrolar huella</h1>
-      <p className="muted">
-        Elija al estudiante y pídale que ponga el dedo en el lector cuando el
-        panel lo indique.
-      </p>
-      {selected && (
-        <EnrollPanel
-          key={selected.id}
-          student={selected}
-          hasFingerprint={withFingerprint.has(selected.id)}
-          onStudentChanged={students.reload}
-          onEnrollmentChanged={(isRunning) => {
-            setRunning(isRunning);
-            if (!isRunning) fingerprints.reload();
-          }}
-        />
-      )}
-      <DataTable
-        caption="Estudiantes"
-        columns={columns}
-        rows={students.data}
-        rowKey={(s) => s.id}
-        loading={students.loading}
-        error={students.error}
-        onRetry={students.reload}
-        searchText={(s) => `${s.name} ${s.document}`}
-        selects={selects}
-        emptyMessage="No hay estudiantes que coincidan."
+    <>
+      <PageHeader
+        eyebrow="Asistente · Huellas"
+        title="Enrolar huella"
+        lead="Elija al estudiante y pídale que ponga el dedo en el lector cuando el panel lo indique."
       />
-    </div>
+      <div className={styles.body}>
+        <ol aria-label="Pasos" className={styles.stepper}>
+          {STEPS.map((label, index) => {
+            const number = index + 1;
+            const state =
+              number < current
+                ? 'Done'
+                : number === current
+                  ? 'Current'
+                  : 'Next';
+            return (
+              <Fragment key={label}>
+                {index > 0 && (
+                  <li
+                    aria-hidden="true"
+                    className={`${styles.bar} ${number <= current ? styles.barDone : ''}`}
+                  />
+                )}
+                <li
+                  className={styles.step}
+                  aria-current={number === current ? 'step' : undefined}
+                >
+                  <span
+                    className={`${styles.bullet} ${styles[`bullet${state}`]}`}
+                  >
+                    {state === 'Done' ? (
+                      <Icon name="check" size={14} strokeWidth={2.8} />
+                    ) : (
+                      number
+                    )}
+                  </span>
+                  <span className={styles[`stepLabel${state}`]}>{label}</span>
+                </li>
+              </Fragment>
+            );
+          })}
+        </ol>
+        {selected && (
+          <div>
+            <button
+              type="button"
+              className="btn"
+              disabled={running}
+              onClick={() => setSelectedId(null)}
+            >
+              Cambiar estudiante
+            </button>
+          </div>
+        )}
+        {selected && (
+          <EnrollPanel
+            key={selected.id}
+            student={selected}
+            hasFingerprint={withFingerprint.has(selected.id)}
+            onStudentChanged={students.reload}
+            onEnrollmentChanged={(isRunning) => {
+              setRunning(isRunning);
+              if (!isRunning) fingerprints.reload();
+            }}
+          />
+        )}
+        <div className={`card ${styles.tableCard}`}>
+          <DataTable
+            caption="Estudiantes"
+            columns={columns}
+            rows={students.data}
+            rowKey={(s) => s.id}
+            loading={students.loading}
+            error={students.error}
+            onRetry={students.reload}
+            searchText={(s) => `${s.name} ${s.document}`}
+            selects={selects}
+            emptyMessage="No hay estudiantes que coincidan."
+          />
+        </div>
+      </div>
+    </>
   );
 }

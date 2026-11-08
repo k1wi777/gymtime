@@ -12,7 +12,9 @@ import {
   failureLabel,
 } from '@/lib/labels';
 import { ConsentDialog } from '@/features/students/ConsentDialog';
+import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import styles from './Enrolar.module.css';
 
@@ -120,87 +122,141 @@ export function EnrollPanel({
     : -1;
 
   return (
-    <section className="card stack" aria-label={`Enrolar a ${student.name}`}>
-      <h2>Enrolar a {student.name}</h2>
-      <p className="muted">Documento {student.document}</p>
-      {failure && (
-        <Notice kind="error" onDismiss={() => setFailure(null)}>
-          {failure}
-        </Notice>
-      )}
-
-      {!student.consented && (
-        <Notice
-          kind="warning"
-          title="Falta el consentimiento"
-          actions={
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setConsentOpen(true)}
-            >
-              Registrar consentimiento…
-            </button>
-          }
-        >
-          No se puede enrolar la huella sin el consentimiento del estudiante.
-        </Notice>
-      )}
-
-      {hasFingerprint && !enrollment && (
-        <Notice kind="info">
-          Este estudiante ya tiene una huella: enrolar de nuevo la reemplaza.
-        </Notice>
-      )}
-
-      {!enrollment && (
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!student.consented || busy || !student.active}
-            onClick={() => void start()}
+    <div className={styles.cols}>
+      <section
+        className={`card ${styles.student}`}
+        aria-label={`Enrolar a ${student.name}`}
+      >
+        <div className={styles.studentHead}>
+          <Avatar name={student.name} id={student.id} size={64} fontSize={22} />
+          <div className={styles.studentWho}>
+            <h2 className={styles.studentName}>{student.name}</h2>
+            <div className={styles.studentDoc}>
+              Documento {student.document}
+            </div>
+          </div>
+          <span
+            className={
+              student.consented
+                ? `${styles.chip} ${styles.chipOk}`
+                : styles.chip
+            }
           >
-            Iniciar enrolamiento
-          </button>
+            <Icon
+              name={student.consented ? 'check' : 'alertaCirculo'}
+              size={13}
+              strokeWidth={2.2}
+            />
+            {student.consented
+              ? 'Consentimiento registrado'
+              : 'Sin consentimiento'}
+          </span>
         </div>
-      )}
+        <div className={styles.studentBody}>
+          {failure && (
+            <Notice kind="error" onDismiss={() => setFailure(null)}>
+              {failure}
+            </Notice>
+          )}
 
-      {enrollment && (
-        <div className="stack" aria-live="polite">
-          <div className="row">
-            <strong>Estado:</strong>
-            <Badge
-              tone={
-                enrollment.status === 'done'
-                  ? 'success'
-                  : isFinal(enrollment.status)
-                    ? 'danger'
-                    : 'info'
+          {!student.consented && (
+            <Notice
+              kind="warning"
+              title="Falta el consentimiento"
+              actions={
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setConsentOpen(true)}
+                >
+                  Registrar consentimiento…
+                </button>
               }
             >
-              {ENROLL_STATUS_LABELS[enrollment.status] ?? enrollment.status}
-            </Badge>
-          </div>
-          {!isFinal(enrollment.status) && (
-            <>
-              <p className={styles.instruction} data-testid="enroll-step">
-                {enrollment.step
-                  ? enrollStepLabel(enrollment.step)
-                  : 'Esperando al lector…'}
+              No se puede enrolar la huella sin el consentimiento del
+              estudiante.
+            </Notice>
+          )}
+
+          {hasFingerprint && !enrollment && (
+            <Notice kind="info">
+              Este estudiante ya tiene una huella: enrolar de nuevo la
+              reemplaza.
+            </Notice>
+          )}
+
+          {running && (
+            <p className="muted" style={{ margin: 0 }}>
+              Mientras dure el enrolamiento el lector no registra asistencia.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className={styles.reader} aria-label="Lector">
+        <div role="img" aria-label="Huella" className={styles.readerIcon}>
+          <Icon name="huella" size={88} strokeWidth={1.4} />
+        </div>
+
+        {!enrollment && (
+          <>
+            <div>
+              <h2 className={styles.readerTitle}>Lector en espera</h2>
+              <p className={styles.readerText}>
+                El estudiante pondrá el dedo, lo retirará y lo pondrá de nuevo.
+                Mientras dura, el lector no registra asistencia.
               </p>
-              <ol className={styles.steps}>
-                {ENROLL_STEPS.map((step, index) => (
-                  <li
-                    key={step}
-                    aria-current={index === stepIndex ? 'step' : undefined}
-                    className={index < stepIndex ? styles.done : undefined}
-                  >
-                    {enrollStepLabel(step)}
-                  </li>
-                ))}
-              </ol>
-              <div>
+            </div>
+            <button
+              type="button"
+              className={`btn btn-primary ${styles.readerButton}`}
+              disabled={!student.consented || busy || !student.active}
+              onClick={() => void start()}
+            >
+              Iniciar enrolamiento
+            </button>
+            {!student.consented && (
+              <div className={styles.readerNote}>
+                Requiere consentimiento registrado.
+              </div>
+            )}
+          </>
+        )}
+
+        {enrollment && (
+          <div className={styles.live} aria-live="polite">
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <strong>Estado:</strong>
+              <Badge
+                tone={
+                  enrollment.status === 'done'
+                    ? 'success'
+                    : isFinal(enrollment.status)
+                      ? 'danger'
+                      : 'info'
+                }
+              >
+                {ENROLL_STATUS_LABELS[enrollment.status] ?? enrollment.status}
+              </Badge>
+            </div>
+            {!isFinal(enrollment.status) && (
+              <>
+                <p className={styles.instruction} data-testid="enroll-step">
+                  {enrollment.step
+                    ? enrollStepLabel(enrollment.step)
+                    : 'Esperando al lector…'}
+                </p>
+                <ol className={styles.steps}>
+                  {ENROLL_STEPS.map((step, index) => (
+                    <li
+                      key={step}
+                      aria-current={index === stepIndex ? 'step' : undefined}
+                      className={index < stepIndex ? styles.done : undefined}
+                    >
+                      {enrollStepLabel(step)}
+                    </li>
+                  ))}
+                </ol>
                 <button
                   type="button"
                   className="btn"
@@ -209,32 +265,38 @@ export function EnrollPanel({
                 >
                   Cancelar enrolamiento
                 </button>
+              </>
+            )}
+            {enrollment.status === 'done' && (
+              <div className={styles.wide}>
+                <Notice kind="success" title="Huella registrada">
+                  {student.name} ya puede marcar con su huella en los horarios a
+                  los que esté asignado. Se cargará en el lector antes del
+                  próximo horario.
+                </Notice>
               </div>
-            </>
-          )}
-          {enrollment.status === 'done' && (
-            <Notice kind="success" title="Huella registrada">
-              {student.name} ya puede marcar con su huella en los horarios a los
-              que esté asignado. Se cargará en el lector antes del próximo
-              horario.
-            </Notice>
-          )}
-          {enrollment.status === 'failed' && (
-            <Notice kind="error" title="El enrolamiento falló">
-              {failureLabel(enrollment.failureReason)}
-            </Notice>
-          )}
-          {enrollment.status === 'expired' && (
-            <Notice kind="warning" title="Se acabó el tiempo">
-              El lector no recibió la huella a tiempo. Puede intentarlo de
-              nuevo.
-            </Notice>
-          )}
-          {enrollment.status === 'cancelled' && (
-            <Notice kind="info" title="Enrolamiento cancelado" />
-          )}
-          {isFinal(enrollment.status) && (
-            <div>
+            )}
+            {enrollment.status === 'failed' && (
+              <div className={styles.wide}>
+                <Notice kind="error" title="El enrolamiento falló">
+                  {failureLabel(enrollment.failureReason)}
+                </Notice>
+              </div>
+            )}
+            {enrollment.status === 'expired' && (
+              <div className={styles.wide}>
+                <Notice kind="warning" title="Se acabó el tiempo">
+                  El lector no recibió la huella a tiempo. Puede intentarlo de
+                  nuevo.
+                </Notice>
+              </div>
+            )}
+            {enrollment.status === 'cancelled' && (
+              <div className={styles.wide}>
+                <Notice kind="info" title="Enrolamiento cancelado" />
+              </div>
+            )}
+            {isFinal(enrollment.status) && (
               <button
                 type="button"
                 className="btn"
@@ -242,15 +304,10 @@ export function EnrollPanel({
               >
                 {enrollment.status === 'done' ? 'Listo' : 'Intentar de nuevo'}
               </button>
-            </div>
-          )}
-        </div>
-      )}
-      {running && (
-        <p className="muted">
-          Mientras dure el enrolamiento el lector no registra asistencia.
-        </p>
-      )}
+            )}
+          </div>
+        )}
+      </section>
 
       <ConsentDialog
         student={consentOpen ? student : null}
@@ -260,6 +317,6 @@ export function EnrollPanel({
           onStudentChanged();
         }}
       />
-    </section>
+    </div>
   );
 }

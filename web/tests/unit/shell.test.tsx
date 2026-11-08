@@ -48,12 +48,50 @@ describe('shell (R10, R11, R19)', () => {
       'Horarios',
     ]);
     expect(screen.getByText('contenido')).toBeTruthy();
-    expect(screen.getByText('(asistente)')).toBeTruthy();
+    expect(screen.getByText('Asistente')).toBeTruthy();
     expect(
       within(menu)
         .getByRole('link', { name: 'Ahora' })
         .getAttribute('aria-current'),
     ).toBe('page');
+  });
+
+  it('groups the menu, draws the fingerprint and bell icons and keeps the color strip out of the panel (R2, R7, R13)', async () => {
+    installFakeApi({ ...base, 'GET /auth/me': account() });
+    const { container } = panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    expect(
+      within(menu)
+        .getAllByText(/^(Operación|Control|Administración)$/)
+        .map((t) => t.textContent),
+    ).toEqual(['Operación', 'Control']);
+    const icon = (name: string) =>
+      within(menu).getByRole('link', { name }).querySelector('svg');
+    expect(icon('Enrolar huella')?.getAttribute('aria-hidden')).toBe('true');
+    expect(icon('Enrolar huella')?.querySelectorAll('path')).toHaveLength(8);
+    expect(icon('Alarma y mensajes')?.querySelectorAll('path')).toHaveLength(4);
+    for (const link of within(menu).getAllByRole('link')) {
+      expect(link.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    }
+    expect(container.innerHTML).not.toContain('barra-de-colores');
+    expect(container.querySelector('aside img[alt=""]')).not.toBeNull();
+  });
+
+  it('shows the administrator entries under «Administración» next to the assistant ones (R13)', async () => {
+    installFakeApi({
+      ...base,
+      'GET /auth/me': account({ role: 'admin', name: 'Jefe Admin' }),
+    });
+    panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    expect(
+      within(menu)
+        .getAllByText(/^(Operación|Control|Administración)$/)
+        .map((t) => t.textContent),
+    ).toEqual(['Operación', 'Control', 'Administración']);
+    expect(within(menu).getAllByRole('link')).toHaveLength(15);
+    expect(screen.getByText('Administrador')).toBeTruthy();
+    expect(screen.getByText('JA')).toBeTruthy();
   });
 
   it('renders nothing of the panel until the session is confirmed', async () => {

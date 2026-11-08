@@ -1,0 +1,30 @@
+.text {
+  max-height: 150px;
+  overflow: auto;
+  margin: 0;
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: var(--canvas-soft);
+  border: 1px solid var(--canvas-soft-border);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  line-height: 1.75;
+  color: #2c332d;
+}
+
+.accept {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.accept input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--primary);
+}

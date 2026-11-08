@@ -1,69 +1,283 @@
 .layout {
-  min-height: 100vh;
-}
-
-.header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  background: var(--surface);
-  border-bottom: 3px solid var(--primary);
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.aside {
+  flex: 0 0 256px;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow: hidden auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 26px 0 22px 16px;
+  background: linear-gradient(
+    180deg,
+    var(--primary) 0%,
+    var(--primary-gradient-end) 100%
+  );
+  color: #ffffff;
+}
+
+.watermark {
+  position: absolute;
+  right: -70px;
+  bottom: -30px;
+  height: 360px;
+  width: auto;
+  opacity: 0.07;
+  pointer-events: none;
 }
 
 .brand {
-  font-size: 1.1rem;
-  color: var(--primary-dark);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 16px;
+}
+
+.sealBox {
+  flex: none;
+  width: 44px;
+  height: 64px;
+  border-radius: 10px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal {
+  display: block;
+  height: 52px;
+  width: auto;
+}
+
+.brandText {
+  line-height: 1.2;
+}
+
+.brandName {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.brandSub {
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 .nav {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  flex: 1;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.groupTitle {
+  padding: 0 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 
 .link {
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  margin-bottom: 2px;
+  border-radius: 24px 0 0 24px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
   text-decoration: none;
-  color: var(--text);
   transition: background-color var(--transition);
 }
 
 .link:hover {
-  background: var(--primary-light);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .link[aria-current='page'] {
-  background: var(--primary-light);
-  color: var(--primary-dark);
+  background: var(--bg);
+  color: var(--primary);
   font-weight: 600;
 }
 
-.user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.link:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85);
 }
 
-.main {
-  padding: 1rem;
-  max-width: 78rem;
-  margin: 0 auto;
+.label {
+  flex: 1;
 }
 
 .counter {
-  display: inline-block;
-  margin-left: 0.4rem;
-  min-width: 1.3rem;
-  padding: 0 0.35rem;
-  border-radius: 999px;
-  background: var(--danger, #b3261e);
-  color: #fff;
-  font-size: 0.8rem;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px;
   font-weight: 600;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user {
+  position: relative;
+  margin-top: auto;
+  margin-right: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.whoText {
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.role {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.userActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.signOut {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.signOut:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.signOut:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+.content {
+  flex: 999 1 640px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  padding: 0 44px 40px;
+}
+
+/* Banner and notices of the shell: each one keeps a gap above it. */
+.alerts > :not(dialog) {
+  margin-top: 16px;
+}
+
+.alerts {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Administrator screens bring their own title: give it the header's air. */
+.page > :global(.stack) > :first-child {
+  margin-top: 36px;
+}
+
+.page > :global(.stack) {
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .aside {
+    position: relative;
+    flex: 1 1 100%;
+    height: auto;
+    gap: 18px;
+    padding: 18px 16px;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+  }
+
+  .groupTitle {
+    padding: 0 6px 0 0;
+    flex: 0 0 100%;
+  }
+
+  .link {
+    border-radius: 24px;
+    margin-bottom: 0;
+    padding: 9px 14px;
+  }
+
+  .user {
+    margin-right: 0;
+  }
+
+  .main {
+    padding: 0 18px 32px;
+  }
 }

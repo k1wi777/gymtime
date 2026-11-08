@@ -5,12 +5,14 @@
 }
 
 .field label {
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .input {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
+  min-height: 46px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
@@ -31,4 +33,14 @@
   margin: 0;
   font-size: 0.85rem;
   color: var(--danger);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+}
+
+.control {
+  position: relative;
 }

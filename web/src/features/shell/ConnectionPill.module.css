@@ -1,0 +1,25 @@
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--pill-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--live);
+  box-shadow: 0 0 0 4px rgba(103, 189, 80, 0.25);
+}
+
+.off {
+  background: var(--muted);
+  box-shadow: 0 0 0 4px rgba(77, 90, 102, 0.2);
+}

@@ -17,7 +17,10 @@
 }
 
 .table th {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -39,8 +42,8 @@
 }
 
 .input {
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);

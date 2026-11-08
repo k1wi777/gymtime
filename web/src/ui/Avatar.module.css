@@ -1,0 +1,34 @@
+.avatar {
+  flex: none;
+  border-radius: 50%;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.t1 {
+  background: var(--av1-bg);
+  color: var(--av1-fg);
+}
+.t2 {
+  background: var(--av2-bg);
+  color: var(--av2-fg);
+}
+.t3 {
+  background: var(--av3-bg);
+  color: var(--av3-fg);
+}
+.t4 {
+  background: var(--av4-bg);
+  color: var(--av4-fg);
+}
+.t5 {
+  background: var(--av5-bg);
+  color: var(--av5-fg);
+}
+.t6 {
+  background: var(--av6-bg);
+  color: var(--av6-fg);
+}
