@@ -5,6 +5,10 @@
 
 Guía corta del panel web de GymTime para el asistente del gimnasio. Todas las horas se muestran en hora de Bogotá.
 
+## Menú lateral
+
+El menú agrupa las pantallas en **Operación** (Ahora, Registro manual, Por revisar, Enrolar huella) y **Control** (Alarma y mensajes, Dispositivo, Horarios). Los títulos de grupo son fijos. El número rojo junto a «Por revisar» indica cuántos eventos esperan decisión.
+
 ## Entrar y salir
 
 1. Abra el panel (por defecto `http://localhost:3000`) e inicie sesión con su usuario y contraseña.
@@ -59,7 +63,11 @@ El **motivo** de la decisión es obligatorio y queda en la auditoría con su usu
 
 ## Dispositivo y horarios
 
-**Dispositivo** indica si el lector está conectado y cuándo respondió por última vez. Si el reloj del lector se desvía más de 30 segundos del servidor aparece un aviso: avise al equipo técnico, porque los registros hechos sin conexión usan la hora del lector. **Horarios** lista los horarios y sus asistentes (solo consulta; los cambios los hace el administrador).
+**Dispositivo** indica si el lector está conectado y cuándo respondió por última vez. Si el reloj del lector se desvía más de 30 segundos del servidor aparece un aviso: avise al equipo técnico, porque los registros hechos sin conexión usan la hora del lector. **Horarios** es solo de consulta (los cambios los hace el administrador) y tiene tres partes:
+
+- **Hoy**: los horarios de hoy.
+- **Semana**: la semana completa, sin acciones.
+- **Quiénes asistieron**: elija el **Horario** en dos pasos (primero el día de la semana, luego la hora) y la **Fecha** en el calendario (por defecto, hoy). La lista aparece al elegir el horario.
 
 ## Qué hacer si el panel dice «Desconectado»
 

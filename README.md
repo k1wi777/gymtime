@@ -2,7 +2,48 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`, más el panel `web/` (Next.js, fuera de los workspaces).
 
-**Estado:** iteración 2 completa: panel web (asistente y administrador), periodos y horarios recurrentes, importación de estudiantes, reportes y exportación CSV, producción (HTTPS, tokens por lector, respaldos, supresión de datos) y modo sin conexión con revisión de conflictos (H6-H12), más el cierre de la iteración (escenarios B1-B17, prueba de carga, rechazo de claves de ejemplo en producción y datos de muestra). Pendiente de hardware, y por tanto sin probar: el modo sin conexión con el ESP32 real (ventana de 72 h) y el estado de periféricos (iteración 3). Decisiones del usuario: [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md); estado del firmware en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** iteración 2 completa: panel web (asistente y administrador), periodos y horarios recurrentes, importación de estudiantes, reportes y exportación CSV, producción (HTTPS, tokens por lector, respaldos, supresión de datos) y modo sin conexión con revisión de conflictos (H6-H12), más el cierre de la iteración (escenarios B1-B17, prueba de carga, rechazo de claves de ejemplo en producción y datos de muestra). El panel se rediseñó: barra lateral con grupos desplegables (administrador), formularios de alta y edición en ventanas modales, selectores de fecha y de rango con calendario, selector de horario en dos pasos (día y hora), pastillas de filtro por día y vista semanal en la gestión de horarios. Pendiente de hardware, y por tanto sin probar: el modo sin conexión con el ESP32 real (ventana de 72 h) y el estado de periféricos (iteración 3). Decisiones del usuario: [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md); estado del firmware en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+
+## Inicio rápido
+
+Requisitos: Node 24.7 o superior (`.nvmrc`), npm y Docker con Compose. Tres recetas, de menos a más; los detalles de cada variable están en «Puesta en marcha» y «Panel web».
+
+**1. Normal (PostgreSQL + API + panel).**
+
+```bash
+nvm use
+npm install
+cp .env.example .env         # reemplaza DEVICE_TOKEN, ADMIN_API_KEY y ENCRYPTION_KEY
+                             # (openssl rand -base64 32) y define FIRST_ADMIN_USERNAME / FIRST_ADMIN_PASSWORD
+                             # (mín. 10 caracteres); añade PORT=3001 (CORS_ORIGINS ya apunta a http://localhost:3000)
+docker compose up -d         # PostgreSQL
+npm run migrate
+npm run install:web
+cp web/.env.example web/.env.local
+npm run dev:server           # API en http://localhost:3001
+npm run dev:web              # panel en http://localhost:3000 (en otra terminal)
+```
+
+Abre `http://localhost:3000` e inicia sesión con el administrador que definiste en `FIRST_ADMIN_*`.
+
+**2. Local simulando todo (sin hardware).** Haz la receta 1 y, con la API en marcha, en otras terminales:
+
+```bash
+npm run seed:dev             # datos de muestra; pide confirmación (o usa -- --confirm gymtime)
+SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator   # lector simulado
+# en el prompt sim>: scan <slot> pone una huella y button pulsa el botón físico
+```
+
+Luego entra al panel con las cuentas de desarrollo de abajo y mira «Ahora» mientras escaneas desde el simulador.
+
+**3. Cuentas de desarrollo.** Las crea `npm run seed:dev`:
+
+| Usuario | Rol | Contraseña |
+|---|---|---|
+| `admin.demo` | administrador | `Demo-Admin-2026` |
+| `asistente.demo` | asistente | `Demo-Asistente-2026` |
+
+Son públicas y valen únicamente en bases locales de desarrollo: nunca las crees en un servidor real (en producción el servidor rechaza contraseñas que empiecen por `demo-`). Detalle de los datos de muestra: [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md). Manuales de uso: [`docs/manual_administrador.md`](docs/manual_administrador.md) y [`docs/manual_asistente.md`](docs/manual_asistente.md).
 
 ## Estructura
 
@@ -58,7 +99,7 @@ npm run dev:web              # panel en http://localhost:3000
 
 - `NEXT_PUBLIC_API_URL` (en `web/.env.local`) es la URL de la API; se incrusta en el build y nunca debe contener secretos.
 - Primer acceso: crea el administrador con `FIRST_ADMIN_USERNAME`/`FIRST_ADMIN_PASSWORD` (ver arriba) e inicia sesión en `http://localhost:3000`.
-- Manual de uso para el asistente: [`docs/manual_asistente.md`](docs/manual_asistente.md).
+- Manuales de uso: [`docs/manual_asistente.md`](docs/manual_asistente.md) y [`docs/manual_administrador.md`](docs/manual_administrador.md). Receta paso a paso en «Inicio rápido».
 - Los tipos de la API se generan de `server/openapi.json` (`npm --prefix web run gen:api`); si cambias los DTO del servidor, regenera con `npm --prefix server run openapi:export` y luego `gen:api`.
 - Pruebas del panel: `npm --prefix web test` (componentes, sin navegador) y `npm --prefix web run test:e2e` (Playwright con el Chrome del sistema contra un servidor en memoria; lento).
 
