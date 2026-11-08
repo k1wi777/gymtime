@@ -605,6 +605,94 @@ describe('students (R12, R13, R16, R17)', () => {
     expect(fake.calls('GET /panel/students').length).toBeGreaterThan(1);
   });
 
+  it('edits a student in a modal, which closes and refreshes the list', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('PATCH /students/st1', () => json(row({ name: 'Ana Pérez' })));
+    app(<Estudiantes />);
+    await user.click(
+      await screen.findByRole('button', { name: 'Editar a Ana Gómez' }),
+    );
+    const modal = screen.getByRole('dialog', { name: 'Editar Ana Gómez' });
+    expect(
+      (within(modal).getByLabelText('Nombre *') as HTMLInputElement).value,
+    ).toBe('Ana Gómez');
+    expect(
+      (within(modal).getByLabelText('Documento *') as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    const name = within(modal).getByLabelText('Nombre *');
+    await user.clear(name);
+    await user.type(name, 'Ana Pérez');
+    await user.click(
+      within(modal).getByRole('button', { name: 'Guardar cambios' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Editar Ana Gómez' }),
+      ).toBeNull(),
+    );
+    const patches = fake.calls('PATCH /students/st1');
+    expect(patches).toHaveLength(1);
+    expect(fake.calls('GET /panel/students').length).toBeGreaterThan(1);
+  });
+
+  it('keeps the edit modal open and shows the error when saving fails', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('PATCH /students/st1', () =>
+      json({ statusCode: 404, code: 'STUDENT_NOT_FOUND', message: 'x' }, 404),
+    );
+    app(<Estudiantes />);
+    await user.click(
+      await screen.findByRole('button', { name: 'Editar a Ana Gómez' }),
+    );
+    const modal = screen.getByRole('dialog', { name: 'Editar Ana Gómez' });
+    await user.type(within(modal).getByLabelText('Nombre *'), 'X');
+    await user.click(
+      within(modal).getByRole('button', { name: 'Guardar cambios' }),
+    );
+    expect(
+      await within(modal).findByText('El estudiante no existe.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: 'Editar Ana Gómez' }),
+    ).toBeTruthy();
+  });
+
+  it('asks before discarding unsaved edits and closes freely without changes', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    app(<Estudiantes />);
+    const open = await screen.findByRole('button', {
+      name: 'Editar a Ana Gómez',
+    });
+    await user.click(open);
+    let modal = screen.getByRole('dialog', { name: 'Editar Ana Gómez' });
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Editar Ana Gómez' }),
+    ).toBeNull();
+
+    await user.click(open);
+    modal = screen.getByRole('dialog', { name: 'Editar Ana Gómez' });
+    await user.type(within(modal).getByLabelText('Nombre *'), 'X');
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByText('¿Descartar los cambios?')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Editar Ana Gómez' }),
+    ).toBeTruthy();
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Descartar cambios' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Editar Ana Gómez' }),
+      ).toBeNull(),
+    );
+    expect(fake.calls('PATCH /students/st1')).toHaveLength(0);
+  });
+
   it('erases personal data only after typing the document (H11)', async () => {
     const user = userEvent.setup();
     const fake = setup();

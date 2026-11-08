@@ -13,7 +13,6 @@ import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
 import { FormModal } from '@/ui/FormModal';
-import { useInModal } from '@/ui/Modal';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
@@ -59,7 +58,6 @@ function StudentForm({
 }) {
   const creating = student === null;
   const formId = useId();
-  const inModal = useInModal();
   const [failure, setFailure] = useState<string | null>(null);
   const initial: Values = Object.fromEntries(
     fields.map((f) => {
@@ -106,16 +104,11 @@ function StudentForm({
   return (
     <form
       id={formId}
-      className={inModal ? 'stack' : `card ${styles.formCard}`}
+      className="stack"
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
     >
-      {!inModal && (
-        <h2 className={styles.formTitle}>
-          {creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
-        </h2>
-      )}
       {failure && <Notice kind="error">{failure}</Notice>}
       {fields.map((field) => (
         <TextField
@@ -154,6 +147,7 @@ export function Estudiantes() {
   const [mode, setMode] = useState<
     'none' | 'new' | 'import' | { edit: Student }
   >('none');
+  const editing = typeof mode === 'object' ? mode.edit : null;
   const [consentFor, setConsentFor] = useState<Student | null>(null);
   const [toDeactivate, setToDeactivate] = useState<Student | null>(null);
   const [toErase, setToErase] = useState<PanelStudent | null>(null);
@@ -278,7 +272,7 @@ export function Estudiantes() {
         title="Estudiantes"
         {...(lead ? { lead } : {})}
         aside={
-          (mode === 'none' || mode === 'new') && fields.data ? (
+          mode !== 'import' && fields.data ? (
             <div className={styles.headActions}>
               <button
                 type="button"
@@ -327,18 +321,24 @@ export function Estudiantes() {
             />
           )}
         </FormModal>
-        {typeof mode === 'object' && fields.data && (
-          <StudentForm
-            key={mode.edit.id}
-            fields={fields.data}
-            student={mode.edit}
-            onCancel={() => setMode('none')}
-            onSaved={() => {
-              setMode('none');
-              students.reload();
-            }}
-          />
-        )}
+        <FormModal
+          open={editing !== null && !!fields.data}
+          title={editing ? `Editar ${editing.name}` : ''}
+          onClose={() => setMode('none')}
+        >
+          {fields.data && editing && (
+            <StudentForm
+              key={editing.id}
+              fields={fields.data}
+              student={editing}
+              onCancel={() => setMode('none')}
+              onSaved={() => {
+                setMode('none');
+                students.reload();
+              }}
+            />
+          )}
+        </FormModal>
         {mode === 'import' && fields.data && (
           <ImportWizard
             fields={fields.data}

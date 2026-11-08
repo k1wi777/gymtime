@@ -110,6 +110,26 @@ test.describe('modales y filtro por día', () => {
     await expect(opener).toBeFocused();
   });
 
+  test('editar un estudiante abre una modal con foco y Escape devuelve el foco', async ({
+    page,
+    world,
+  }) => {
+    const student = Object.values(world.students)[0]!;
+    await loginAndWait(page, 'boss');
+    await openMenu(page, 'Estudiantes');
+    const opener = page.getByRole('button', {
+      name: `Editar a ${student.name}`,
+    });
+    await opener.click();
+    const modal = page.getByRole('dialog', { name: `Editar ${student.name}` });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByLabel('Nombre *')).toHaveValue(student.name);
+    expect(await focusInside(modal)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    await expect(opener).toBeFocused();
+  });
+
   test('un selector abierto en la modal queda por encima y Escape lo cierra primero', async ({
     page,
     world,
