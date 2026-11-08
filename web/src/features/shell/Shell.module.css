@@ -49,8 +49,9 @@
   flex: none;
   width: 44px;
   height: 64px;
-  border-radius: 10px;
-  background: #ffffff;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fdfdfd;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,7 +59,7 @@
 
 .seal {
   display: block;
-  height: 52px;
+  height: 56px;
   width: auto;
 }
 
