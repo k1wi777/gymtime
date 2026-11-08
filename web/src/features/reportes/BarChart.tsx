@@ -25,6 +25,8 @@ interface Props {
   /** Header of the value column of the equivalent table. */
   valueHeader: string;
   labelHeader: string;
+  /** Fill of the regular bars: a different color for each chart. */
+  color?: string;
   /** Fixed size, tests only. */
   width?: number;
 }
@@ -37,32 +39,52 @@ export function BarChart({
   ariaLabel,
   valueHeader,
   labelHeader,
+  color = 'var(--chart-1)',
   width,
 }: Props) {
   const [showTable, setShowTable] = useState(false);
   const tableId = useId();
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={`card ${styles.chartCard}`} aria-label={title}>
       <header className={styles.cardHeader}>
         <div>
-          <h3>{title}</h3>
-          <p className="muted">{subtitle}</p>
+          <h2 className={styles.cardTitle}>{title}</h2>
+          <p className={styles.cardSub}>{subtitle}</p>
         </div>
         <button
           type="button"
-          className="btn"
+          className="btn btn-s"
           aria-expanded={showTable}
           aria-controls={tableId}
           onClick={() => setShowTable((value) => !value)}
         >
-          {showTable ? 'Ocultar la tabla' : 'Ver datos como tabla'}
+          {showTable ? 'Ocultar tabla' : 'Ver tabla'}
         </button>
       </header>
       <RechartsBar
         data={data}
         ariaLabel={ariaLabel}
+        color={color}
         {...(width === undefined ? {} : { width })}
       />
+      <div className={styles.legend}>
+        <span className={styles.legendItem}>
+          <span
+            aria-hidden="true"
+            className={styles.swatch}
+            style={{ background: color }}
+          />
+          {valueHeader}
+        </span>
+        <span className={styles.legendItem}>
+          <span
+            aria-hidden="true"
+            className={styles.swatch}
+            style={{ background: 'var(--accent)' }}
+          />
+          Pico
+        </span>
+      </div>
       {/* Always in the DOM; the stylesheet shows it by default on narrow screens. */}
       <div
         id={tableId}

@@ -8,11 +8,15 @@ import { useAuth } from '@/auth/auth-provider';
 import { formatDateTime } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import type { FieldErrors } from '@/lib/validators';
+import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
+import { BoardCard } from './BoardCard';
 import styles from './Admin.module.css';
 
 const ROLE_LABELS = { admin: 'Administrador', asistente: 'Asistente' } as const;
@@ -98,12 +102,14 @@ function UserForm({
   });
   return (
     <form
-      className="card stack"
+      className={`card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo usuario' : `Editar ${user.name}`}
     >
-      <h2>{creating ? 'Nuevo usuario' : `Editar ${user.name}`}</h2>
+      <h2 className={styles.formTitle}>
+        {creating ? 'Nuevo usuario' : `Editar ${user.name}`}
+      </h2>
       {failure && <Notice kind="error">{failure}</Notice>}
       <TextField
         label="Nombre"
@@ -191,142 +197,224 @@ export function Usuarios() {
     });
 
   return (
-    <div className="stack">
-      <h1>Usuarios del panel</h1>
-      {failure && (
-        <Notice kind="error" onDismiss={() => setFailure(null)}>
-          {failure}
-        </Notice>
-      )}
-      {mode === 'none' && (
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setMode('new')}
-          >
-            Nuevo usuario
-          </button>
-        </div>
-      )}
-      {mode === 'new' && (
-        <UserForm
-          user={null}
-          onCancel={() => setMode('none')}
-          onSaved={(password) => {
-            setMode('none');
-            setTemporary(password);
-            users.reload();
-          }}
-        />
-      )}
-      {typeof mode === 'object' && (
-        <UserForm
-          key={mode.edit.id}
-          user={mode.edit}
-          onCancel={() => setMode('none')}
-          onSaved={() => {
-            setMode('none');
-            users.reload();
-          }}
-        />
-      )}
-      {users.loading && !users.data && <Spinner />}
-      {users.error ? (
-        <Notice kind="error">{describeError(users.error)}</Notice>
-      ) : null}
-      {users.data && (
-        <div className={styles.scroll}>
-          <table className={styles.table}>
-            <caption className="visually-hidden">Usuarios del panel</caption>
-            <thead>
-              <tr>
-                <th scope="col">Nombre</th>
-                <th scope="col">Usuario</th>
-                <th scope="col">Rol</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Último ingreso</th>
-                <th scope="col">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.data.map((user) => {
-                const self = user.id === account?.id;
-                return (
-                  <tr key={user.id}>
-                    <td>
-                      {user.name} {self && <Badge tone="info">Usted</Badge>}
-                    </td>
-                    <td>{user.username}</td>
-                    <td>{ROLE_LABELS[user.role]}</td>
-                    <td>
-                      <Badge tone={user.active ? 'success' : 'neutral'}>
-                        {user.active ? 'Activo' : 'Inactivo'}
-                      </Badge>{' '}
-                      {user.mustChangePassword && (
-                        <Badge tone="warning">Debe cambiar la contraseña</Badge>
-                      )}
-                    </td>
-                    <td>
-                      {user.lastLoginAt
-                        ? formatDateTime(user.lastLoginAt)
-                        : '—'}
-                    </td>
-                    <td>
-                      <div className="row">
-                        <button
-                          type="button"
-                          className="btn"
-                          aria-label={`Editar a ${user.name}`}
-                          onClick={() => setMode({ edit: user })}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="btn"
-                          aria-label={`Restablecer contraseña de ${user.name}`}
-                          onClick={() => setPending({ kind: 'reset', user })}
-                        >
-                          Restablecer contraseña
-                        </button>
-                        {user.active ? (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            aria-label={`Desactivar a ${user.name}`}
-                            disabled={self}
-                            title={
-                              self
-                                ? 'No puede desactivar su propia cuenta'
-                                : undefined
-                            }
-                            onClick={() =>
-                              setPending({ kind: 'deactivate', user })
-                            }
-                          >
-                            Desactivar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn"
-                            aria-label={`Activar a ${user.name}`}
-                            disabled={busy}
-                            onClick={() => void activate(user)}
-                          >
-                            Activar
-                          </button>
-                        )}
-                      </div>
-                    </td>
+    <div>
+      <PageHeader
+        crumb="Usuarios del panel"
+        title="Usuarios del panel"
+        lead="Quién puede entrar al panel y con qué rol."
+        aside={
+          mode === 'none' ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setMode('new')}
+            >
+              <Icon name="mas" size={17} strokeWidth={2} />
+              Nuevo usuario
+            </button>
+          ) : undefined
+        }
+      />
+      <div className={styles.main}>
+        {failure && (
+          <Notice kind="error" onDismiss={() => setFailure(null)}>
+            {failure}
+          </Notice>
+        )}
+        {mode === 'new' && (
+          <UserForm
+            user={null}
+            onCancel={() => setMode('none')}
+            onSaved={(password) => {
+              setMode('none');
+              setTemporary(password);
+              users.reload();
+            }}
+          />
+        )}
+        {typeof mode === 'object' && (
+          <UserForm
+            key={mode.edit.id}
+            user={mode.edit}
+            onCancel={() => setMode('none')}
+            onSaved={() => {
+              setMode('none');
+              users.reload();
+            }}
+          />
+        )}
+        {users.loading && !users.data && <Spinner />}
+        {users.error ? (
+          <Notice kind="error">{describeError(users.error)}</Notice>
+        ) : null}
+        <div className={styles.split}>
+          {users.data && (
+            <div className={styles.splitMain}>
+              <BoardCard label="Usuarios" minWidth={720} tight>
+                <caption className="visually-hidden">
+                  Usuarios del panel
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Usuario</th>
+                    <th scope="col">Rol</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Último ingreso</th>
+                    <th scope="col">Acciones</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className={styles.roomy}>
+                  {users.data.map((user) => {
+                    const self = user.id === account?.id;
+                    return (
+                      <tr key={user.id}>
+                        <td>
+                          <div className={styles.person}>
+                            <Avatar
+                              name={user.name}
+                              id={user.id}
+                              size={38}
+                              fontSize={14}
+                            />
+                            <div>
+                              <div className={styles.strong}>{user.name}</div>
+                              {self && (
+                                <Badge tone="info" size="xs">
+                                  Usted
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={styles.username}>
+                            {user.username}
+                          </span>
+                        </td>
+                        <td>
+                          <Badge
+                            tone={user.role === 'admin' ? 'success' : 'neutral'}
+                          >
+                            {ROLE_LABELS[user.role]}
+                          </Badge>
+                        </td>
+                        <td>
+                          <span
+                            className={
+                              user.active
+                                ? styles.state
+                                : `${styles.state} ${styles.stateOff}`
+                            }
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={styles.stateDot}
+                            />
+                            {user.active ? 'Activo' : 'Inactivo'}
+                          </span>{' '}
+                          {user.mustChangePassword && (
+                            <Badge tone="warning">
+                              Debe cambiar la contraseña
+                            </Badge>
+                          )}
+                        </td>
+                        <td className={styles.time}>
+                          {user.lastLoginAt
+                            ? formatDateTime(user.lastLoginAt)
+                            : '—'}
+                        </td>
+                        <td>
+                          <div className={styles.wrapActions}>
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Editar a ${user.name}`}
+                              onClick={() => setMode({ edit: user })}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Restablecer contraseña de ${user.name}`}
+                              onClick={() =>
+                                setPending({ kind: 'reset', user })
+                              }
+                            >
+                              Restablecer contraseña
+                            </button>
+                            {user.active ? (
+                              <button
+                                type="button"
+                                className="btn btn-s btn-outline-danger"
+                                aria-label={`Desactivar a ${user.name}`}
+                                disabled={self}
+                                title={
+                                  self
+                                    ? 'No puede desactivar su propia cuenta'
+                                    : undefined
+                                }
+                                onClick={() =>
+                                  setPending({ kind: 'deactivate', user })
+                                }
+                              >
+                                Desactivar
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn btn-s"
+                                aria-label={`Activar a ${user.name}`}
+                                disabled={busy}
+                                onClick={() => void activate(user)}
+                              >
+                                Activar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </BoardCard>
+            </div>
+          )}
+
+          <aside aria-label="Roles" className={styles.roles}>
+            <section className={`card ${styles.roleCard}`}>
+              <h2 className={styles.roleTitle}>Qué puede hacer cada rol</h2>
+              <div className={styles.role}>
+                <Badge tone="success">Administrador</Badge>
+                <p className={styles.roleText}>
+                  Todo lo del asistente, más periodos, horarios, estudiantes,
+                  reportes, auditoría y usuarios.
+                </p>
+              </div>
+              <div className={styles.role}>
+                <Badge>Asistente</Badge>
+                <p className={styles.roleText}>
+                  Operación diaria: quién está dentro, registros manuales,
+                  enrolar huellas, alarma y mensajes.
+                </p>
+              </div>
+            </section>
+            <section className={`card ${styles.sessionCard}`}>
+              <span aria-hidden="true" className={styles.sessionIcon}>
+                <Icon name="ahora" size={20} />
+              </span>
+              <div>
+                <h2 className={styles.sessionTitle}>Sesión del panel</h2>
+                <p className={styles.roleText}>
+                  Se cierra tras un tiempo sin actividad o al alcanzar la
+                  duración máxima de la sesión.
+                </p>
+              </div>
+            </section>
+          </aside>
         </div>
-      )}
+      </div>
 
       <ConfirmDialog
         open={pending !== null}

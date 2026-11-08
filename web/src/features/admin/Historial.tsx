@@ -10,9 +10,11 @@ import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/ui/Badge';
 import { SelectField, TextField } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
 import { ReviewTable } from '@/features/offline/PorRevisar';
 import { actorLabel } from './Auditoria';
+import { BoardCard } from './BoardCard';
 import { DateRange, dayRange } from './filters';
 import styles from './Admin.module.css';
 
@@ -59,10 +61,10 @@ function Pager({
   const page = Math.floor(offset / PAGE) + 1;
   if (pages <= 1) return null;
   return (
-    <nav className="row" aria-label="Paginación">
+    <nav className={styles.pager} aria-label="Paginación">
       <button
         type="button"
-        className="btn"
+        className="btn btn-s"
         disabled={offset === 0}
         onClick={() => onOffset(Math.max(0, offset - PAGE))}
       >
@@ -73,7 +75,7 @@ function Pager({
       </span>
       <button
         type="button"
-        className="btn"
+        className="btn btn-s"
         disabled={page >= pages}
         onClick={() => onOffset(offset + PAGE)}
       >
@@ -83,7 +85,35 @@ function Pager({
   );
 }
 
-function Attendance() {
+const plural = (n: number, one: string, many: string): string =>
+  `${n} ${n === 1 ? one : many}`;
+
+/** Origin tag: color only for «Manual»; the other origins stay neutral. */
+function Origin({ source }: { source: keyof typeof SOURCE_LABELS }) {
+  return (
+    <Badge tone={source === 'manual' ? 'warning' : 'neutral'} size="sm">
+      {SOURCE_LABELS[source]}
+    </Badge>
+  );
+}
+
+const STATUS_TONES = {
+  abierta: 'success',
+  cerrada: 'soft',
+  no_registrada: 'warning',
+} as const;
+
+/** Reports its total to the page header (the line under the title). */
+function useReportTotal(
+  total: number | undefined,
+  onTotal: (total: number | null) => void,
+) {
+  useEffect(() => {
+    onTotal(total ?? null);
+  }, [total, onTotal]);
+}
+
+function Attendance({ onTotal }: { onTotal: (total: number | null) => void }) {
   const schedules = useResource(
     (signal) => call(getApi().client.GET('/schedules', { signal })),
     [],
@@ -129,6 +159,7 @@ function Attendance() {
       ),
     [from, to, scheduleId, source, status, debounced, offset],
   );
+  useReportTotal(history.data?.total, onTotal);
   const reset =
     <T,>(set: (value: T) => void) =>
     (value: T) => {
@@ -137,157 +168,152 @@ function Attendance() {
     };
 
   return (
-    <div className="stack">
-      <div className={styles.filters}>
+    <>
+      <section className={`card ${styles.filterCard}`} aria-label="Filtros">
         <DateRange
           from={from}
           to={to}
           onFrom={reset(setFrom)}
           onTo={reset(setTo)}
         />
-        <SelectField
-          label="Horario"
-          value={scheduleId}
-          onChange={reset(setScheduleId)}
-          options={[
-            { value: '', label: 'Todos' },
-            ...(schedules.data ?? []).map((s) => ({
-              value: s.id,
-              label: s.name,
-            })),
-          ]}
-        />
-        <SelectField
-          label="Origen"
-          value={source}
-          onChange={reset(setSource)}
-          options={[
-            { value: '', label: 'Todos' },
-            { value: 'device', label: SOURCE_LABELS.device },
-            { value: 'manual', label: SOURCE_LABELS.manual },
-            { value: 'offline', label: SOURCE_LABELS.offline },
-          ]}
-        />
-        <SelectField
-          label="Estado"
-          value={status}
-          onChange={reset(setStatus)}
-          options={[
-            { value: '', label: 'Todos' },
-            ...Object.entries(STATUS_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            })),
-          ]}
-        />
-        <TextField
-          label="Estudiante"
-          type="search"
-          value={search}
-          onChange={setSearch}
-          help="Nombre o documento"
-        />
-      </div>
+        <div className={styles.grow160}>
+          <SelectField
+            label="Horario"
+            value={scheduleId}
+            onChange={reset(setScheduleId)}
+            options={[
+              { value: '', label: 'Todos' },
+              ...(schedules.data ?? []).map((s) => ({
+                value: s.id,
+                label: s.name,
+              })),
+            ]}
+          />
+        </div>
+        <div className={styles.dateField}>
+          <SelectField
+            label="Origen"
+            value={source}
+            onChange={reset(setSource)}
+            options={[
+              { value: '', label: 'Todos' },
+              { value: 'device', label: SOURCE_LABELS.device },
+              { value: 'manual', label: SOURCE_LABELS.manual },
+              { value: 'offline', label: SOURCE_LABELS.offline },
+            ]}
+          />
+        </div>
+        <div className={styles.dateField}>
+          <SelectField
+            label="Estado"
+            value={status}
+            onChange={reset(setStatus)}
+            options={[
+              { value: '', label: 'Todos' },
+              ...Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+          />
+        </div>
+        <div className={styles.grow200}>
+          <TextField
+            label="Estudiante"
+            type="search"
+            value={search}
+            onChange={setSearch}
+            help="Nombre o documento"
+          />
+        </div>
+      </section>
       {history.loading && !history.data && <Spinner />}
       {history.error ? (
         <Notice kind="error">{describeError(history.error)}</Notice>
       ) : null}
       {history.data && (
-        <>
-          <p className="muted">{history.data.total} registro(s)</p>
-          <div className={styles.scroll}>
-            <table className={styles.table}>
-              <caption className="visually-hidden">
-                Historial de ingresos y egresos
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Sesión</th>
-                  <th scope="col">Estudiante</th>
-                  <th scope="col">Entrada</th>
-                  <th scope="col">Salida</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Motivo y responsable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.data.items.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      {row.schedule.name}
-                      <br />
-                      <span className="muted">
-                        {formatDateTime(row.startsAt)}
-                      </span>
-                    </td>
-                    <td>
-                      {row.student.name}
-                      <br />
-                      <span className="muted">{row.student.document}</span>
-                    </td>
-                    <td>
-                      {formatTime(row.enteredAt)}{' '}
-                      <Badge
-                        tone={
-                          row.entrySource === 'manual'
-                            ? 'warning'
-                            : row.entrySource === 'offline'
-                              ? 'info'
-                              : 'neutral'
-                        }
-                      >
-                        {SOURCE_LABELS[row.entrySource]}
-                      </Badge>
-                    </td>
-                    <td>
-                      {row.exitedAt ? formatTime(row.exitedAt) : '—'}{' '}
-                      {row.exitSource && (
-                        <Badge
-                          tone={
-                            row.exitSource === 'manual'
-                              ? 'warning'
-                              : row.exitSource === 'offline'
-                                ? 'info'
-                                : 'neutral'
-                          }
-                        >
-                          {SOURCE_LABELS[row.exitSource]}
-                        </Badge>
-                      )}
-                    </td>
-                    <td>{STATUS_LABELS[row.status]}</td>
-                    <td>
-                      {row.manualReason ? (
-                        <>
-                          {row.manualReason}
-                          <br />
-                          <span className="muted">
-                            {[row.entryBy, row.exitBy]
-                              .filter((a) => a !== null)
-                              .map(actorLabel)
-                              .join(' / ')}
-                          </span>
-                        </>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {history.data.items.length === 0 && (
-            <p className="muted">No hay registros con esos filtros.</p>
-          )}
-          <Pager
-            offset={offset}
-            total={history.data.total}
-            onOffset={setOffset}
-          />
-        </>
+        <BoardCard
+          label="Registros"
+          minWidth={940}
+          footer={
+            <>
+              {history.data.items.length === 0 && (
+                <p className={`muted ${styles.empty}`}>
+                  No hay registros con esos filtros.
+                </p>
+              )}
+              <Pager
+                offset={offset}
+                total={history.data.total}
+                onOffset={setOffset}
+              />
+            </>
+          }
+        >
+          <caption className="visually-hidden">
+            Historial de ingresos y egresos
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Sesión</th>
+              <th scope="col">Estudiante</th>
+              <th scope="col">Entrada</th>
+              <th scope="col">Salida</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Motivo y responsable</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.data.items.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <div className={styles.strong}>{row.schedule.name}</div>
+                  <div className={styles.sub}>
+                    {formatDateTime(row.startsAt)}
+                  </div>
+                </td>
+                <td>
+                  <div className={styles.strong}>{row.student.name}</div>
+                  <div className={styles.sub}>{row.student.document}</div>
+                </td>
+                <td className={styles.nowrap}>
+                  <span className={styles.strong}>
+                    {formatTime(row.enteredAt)}
+                  </span>{' '}
+                  <Origin source={row.entrySource} />
+                </td>
+                <td className={styles.nowrap}>
+                  <span className={styles.strong}>
+                    {row.exitedAt ? formatTime(row.exitedAt) : '—'}
+                  </span>{' '}
+                  {row.exitSource && <Origin source={row.exitSource} />}
+                </td>
+                <td>
+                  <Badge tone={STATUS_TONES[row.status]}>
+                    {STATUS_LABELS[row.status]}
+                  </Badge>
+                </td>
+                <td className={styles.reasonCell}>
+                  {row.manualReason ? (
+                    <>
+                      {row.manualReason}
+                      <div className={styles.sub}>
+                        {[row.entryBy, row.exitBy]
+                          .filter((a) => a !== null)
+                          .map(actorLabel)
+                          .join(' / ')}
+                      </div>
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </BoardCard>
       )}
-    </div>
+    </>
   );
 }
 
@@ -336,71 +362,79 @@ function Orders() {
   };
 
   return (
-    <div className="stack">
-      <div className={styles.filters}>
+    <>
+      <section className={`card ${styles.filterCard}`} aria-label="Filtros">
         <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
-      </div>
+      </section>
       {first.loading && !first.data && <Spinner />}
       {first.error ? (
         <Notice kind="error">{describeError(first.error)}</Notice>
       ) : null}
       {failure && <Notice kind="error">{failure}</Notice>}
       {first.data && (
-        <>
-          <div className={styles.scroll}>
-            <table className={styles.table}>
-              <caption className="visually-hidden">
-                Órdenes enviadas al lector
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Orden</th>
-                  <th scope="col">Responsable</th>
-                  <th scope="col">Resultado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{formatDateTime(item.createdAt)}</td>
-                    <td>
-                      {ORDER_LABELS[item.type] ?? item.type}
-                      {item.text && (
-                        <>
-                          <br />
-                          <span className="muted">{item.text}</span>
-                        </>
-                      )}
-                    </td>
-                    <td>{actorLabel(item.actor)}</td>
-                    <td>
-                      {item.status ?? '—'}
-                      {item.sessionsClosed !== null &&
-                        ` · ${item.sessionsClosed} sesiones cerradas`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {items.length === 0 && (
-            <p className="muted">No hay órdenes en ese rango.</p>
-          )}
-          {next !== null && (
-            <div>
-              <button type="button" className="btn" onClick={() => void more()}>
-                Cargar más antiguas
-              </button>
-            </div>
-          )}
-        </>
+        <BoardCard
+          label="Órdenes"
+          minWidth={720}
+          footer={
+            <>
+              {items.length === 0 && (
+                <p className={`muted ${styles.empty}`}>
+                  No hay órdenes en ese rango.
+                </p>
+              )}
+              {next !== null && (
+                <div className={styles.more}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => void more()}
+                  >
+                    Cargar más antiguas
+                  </button>
+                </div>
+              )}
+            </>
+          }
+        >
+          <caption className="visually-hidden">
+            Órdenes enviadas al lector
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Orden</th>
+              <th scope="col">Responsable</th>
+              <th scope="col">Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td className={styles.nowrap}>
+                  {formatDateTime(item.createdAt)}
+                </td>
+                <td>
+                  <span className={styles.strong}>
+                    {ORDER_LABELS[item.type] ?? item.type}
+                  </span>
+                  {item.text && <div className={styles.sub}>{item.text}</div>}
+                </td>
+                <td>{actorLabel(item.actor)}</td>
+                <td>
+                  {item.status ?? '—'}
+                  {item.sessionsClosed !== null &&
+                    ` · ${item.sessionsClosed} sesiones cerradas`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </BoardCard>
       )}
-    </div>
+    </>
   );
 }
 
-function Alarms() {
+function Alarms({ onTotal }: { onTotal: (total: number | null) => void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [offset, setOffset] = useState(0);
@@ -414,9 +448,10 @@ function Alarms() {
       ),
     [from, to, offset],
   );
+  useReportTotal(alarms.data?.total, onTotal);
   return (
-    <div className="stack">
-      <div className={styles.filters}>
+    <>
+      <section className={`card ${styles.filterCard}`} aria-label="Filtros">
         <DateRange
           from={from}
           to={to}
@@ -429,71 +464,74 @@ function Alarms() {
             setOffset(0);
           }}
         />
-      </div>
+      </section>
       {alarms.loading && !alarms.data && <Spinner />}
       {alarms.error ? (
         <Notice kind="error">{describeError(alarms.error)}</Notice>
       ) : null}
       {alarms.data && (
-        <>
-          <div className={styles.scroll}>
-            <table className={styles.table}>
-              <caption className="visually-hidden">
-                Historial de alarmas
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Inicio</th>
-                  <th scope="col">Horario</th>
-                  <th scope="col">Fin</th>
-                  <th scope="col">Cierre</th>
-                  <th scope="col">Sesiones cerradas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alarms.data.items.map((a: AlarmHistoryItem) => (
-                  <tr key={a.id}>
-                    <td>{formatDateTime(a.startedAt)}</td>
-                    <td>
-                      {a.schedule?.name ?? '—'}
-                      {a.origin === 'local' && (
-                        <>
-                          <br />
-                          <Badge tone="info">Local (sin conexión)</Badge>
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {a.endedAt ? formatDateTime(a.endedAt) : 'Sigue activa'}
-                    </td>
-                    <td>
-                      {a.closedBy ? CLOSED_BY_LABELS[a.closedBy] : '—'}
-                      {a.closedByActor && (
-                        <>
-                          <br />
-                          <span className="muted">
-                            {actorLabel(a.closedByActor)}
-                          </span>
-                        </>
-                      )}
-                    </td>
-                    <td>{a.closedSessions}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {alarms.data.items.length === 0 && (
-            <p className="muted">No hay alarmas en ese rango.</p>
-          )}
-          <Pager
-            offset={offset}
-            total={alarms.data.total}
-            onOffset={setOffset}
-          />
-        </>
+        <BoardCard
+          label="Alarmas"
+          minWidth={720}
+          footer={
+            <>
+              {alarms.data.items.length === 0 && (
+                <p className={`muted ${styles.empty}`}>
+                  No hay alarmas en ese rango.
+                </p>
+              )}
+              <Pager
+                offset={offset}
+                total={alarms.data.total}
+                onOffset={setOffset}
+              />
+            </>
+          }
+        >
+          <caption className="visually-hidden">Historial de alarmas</caption>
+          <thead>
+            <tr>
+              <th scope="col">Inicio</th>
+              <th scope="col">Horario</th>
+              <th scope="col">Fin</th>
+              <th scope="col">Cierre</th>
+              <th scope="col">Sesiones cerradas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {alarms.data.items.map((a: AlarmHistoryItem) => (
+              <tr key={a.id}>
+                <td className={styles.nowrap}>{formatDateTime(a.startedAt)}</td>
+                <td>
+                  <span className={styles.strong}>
+                    {a.schedule?.name ?? '—'}
+                  </span>
+                  {a.origin === 'local' && (
+                    <div>
+                      <Badge tone="info" size="sm">
+                        Local (sin conexión)
+                      </Badge>
+                    </div>
+                  )}
+                </td>
+                <td className={styles.nowrap}>
+                  {a.endedAt ? formatDateTime(a.endedAt) : 'Sigue activa'}
+                </td>
+                <td>
+                  {a.closedBy ? CLOSED_BY_LABELS[a.closedBy] : '—'}
+                  {a.closedByActor && (
+                    <div className={styles.sub}>
+                      {actorLabel(a.closedByActor)}
+                    </div>
+                  )}
+                </td>
+                <td>{a.closedSessions}</td>
+              </tr>
+            ))}
+          </tbody>
+        </BoardCard>
       )}
-    </div>
+    </>
   );
 }
 
@@ -504,7 +542,11 @@ const REVIEW_VIEWS = [
 ] as const;
 
 /** Events recorded without connection, apart from the sessions (they are not sessions). */
-function OfflineEvents() {
+function OfflineEvents({
+  onTotal,
+}: {
+  onTotal: (total: number | null) => void;
+}) {
   const [view, setView] = useState<'pending' | 'discarded' | 'resolved'>(
     'pending',
   );
@@ -519,28 +561,35 @@ function OfflineEvents() {
       ),
     [view, offset],
   );
+  useReportTotal(events.data?.total, onTotal);
   return (
-    <div className="stack">
-      <div className={styles.filters}>
-        <SelectField
-          label="Estado"
-          value={view}
-          onChange={(value) => {
-            setView(value as typeof view);
-            setOffset(0);
-          }}
-          options={REVIEW_VIEWS}
-        />
-      </div>
+    <>
+      <section className={`card ${styles.filterCard}`} aria-label="Filtros">
+        <div className={styles.grow200}>
+          <SelectField
+            label="Estado"
+            value={view}
+            onChange={(value) => {
+              setView(value as typeof view);
+              setOffset(0);
+            }}
+            options={REVIEW_VIEWS}
+          />
+        </div>
+      </section>
       {events.loading && !events.data && <Spinner />}
       {events.error ? (
         <Notice kind="error">{describeError(events.error)}</Notice>
       ) : null}
       {events.data && (
-        <>
-          <p className="muted">{events.data.total} registro(s)</p>
+        <section
+          className={`card ${styles.tableCard}`}
+          aria-label="Registros sin conexión"
+        >
           {events.data.items.length === 0 ? (
-            <p className="muted">No hay registros en este estado.</p>
+            <p className={`muted ${styles.emptyOnly}`}>
+              No hay registros en este estado.
+            </p>
           ) : (
             <ReviewTable items={events.data.items} />
           )}
@@ -549,36 +598,53 @@ function OfflineEvents() {
             total={events.data.total}
             onOffset={setOffset}
           />
-        </>
+        </section>
       )}
-    </div>
+    </>
   );
 }
 
 export function Historial() {
   const [tab, setTab] = useState<Tab>('asistencia');
+  const [total, setTotal] = useState<number | null>(null);
+  const pick = (id: Tab) => {
+    setTotal(null);
+    setTab(id);
+  };
   return (
-    <div className="stack">
-      <h1>Historial</h1>
-      <div className="row" role="tablist" aria-label="Tipo de historial">
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={`btn ${tab === id ? 'btn-primary' : ''}`}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel">
-        {tab === 'asistencia' && <Attendance />}
-        {tab === 'ordenes' && <Orders />}
-        {tab === 'alarmas' && <Alarms />}
-        {tab === 'sinconexion' && <OfflineEvents />}
+    <div>
+      <PageHeader
+        crumb="Historial"
+        title="Historial"
+        {...(total !== null
+          ? { lead: plural(total, 'registro', 'registros') }
+          : {})}
+      />
+      <div className={styles.main}>
+        <div
+          className={styles.pills}
+          role="tablist"
+          aria-label="Tipo de historial"
+        >
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={styles.pill}
+              onClick={() => pick(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel" className={styles.panel}>
+          {tab === 'asistencia' && <Attendance onTotal={setTotal} />}
+          {tab === 'ordenes' && <Orders />}
+          {tab === 'alarmas' && <Alarms onTotal={setTotal} />}
+          {tab === 'sinconexion' && <OfflineEvents onTotal={setTotal} />}
+        </div>
       </div>
     </div>
   );

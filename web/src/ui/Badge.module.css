@@ -31,3 +31,49 @@
   background: var(--info-bg);
   color: var(--info);
 }
+
+.soft {
+  background: #eef5ec;
+  color: var(--primary-dark);
+}
+
+.mint {
+  background: #eaf2e8;
+  color: var(--primary-dark);
+}
+
+/* Pills of the administrator boards: 4px 11px, 12px, own pairs of colors. */
+:global([data-area='admin']) .badge {
+  padding: 4px 11px;
+  font-size: 12px;
+}
+
+:global([data-area='admin']) .neutral {
+  background: #eceae8;
+  color: #3d4650;
+}
+
+:global([data-area='admin']) .success {
+  background: #e4f1e0;
+  color: var(--primary-dark);
+}
+
+:global([data-area='admin']) .danger {
+  background: #fdecec;
+  color: #8a1c1c;
+}
+
+:global([data-area='admin']) .info {
+  background: #dff0fa;
+  color: #0b4a68;
+}
+
+:global([data-area='admin']) .sm {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+:global([data-area='admin']) .xs {
+  padding: 2px 9px;
+  font-size: 11px;
+}

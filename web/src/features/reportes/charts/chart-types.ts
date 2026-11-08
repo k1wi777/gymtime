@@ -15,6 +15,8 @@ export interface BarChartProps {
   /** Fixed size for tests; in the browser the chart fills its container. */
   width?: number;
   height?: number;
+  /** Fill of the regular bars (a color per chart); the peak is the accent. */
+  color?: string;
 }
 
-export const CHART_HEIGHT = 280;
+export const CHART_HEIGHT = 214;

@@ -31,35 +31,39 @@ export function DateRange({
   const bad = (value: string) => value !== '' && !DAY.test(value);
   return (
     <>
-      <TextField
-        label="Desde"
-        value={from}
-        onChange={onFrom}
-        help="AAAA-MM-DD"
-        error={bad(from) ? 'Use AAAA-MM-DD.' : undefined}
-        maxLength={10}
-      />
-      <TextField
-        label="Hasta"
-        value={to}
-        onChange={onTo}
-        help="AAAA-MM-DD"
-        error={bad(to) ? 'Use AAAA-MM-DD.' : undefined}
-        maxLength={10}
-      />
+      <div className={styles.dateField}>
+        <TextField
+          label="Desde"
+          value={from}
+          onChange={onFrom}
+          help="AAAA-MM-DD"
+          error={bad(from) ? 'Use AAAA-MM-DD.' : undefined}
+          maxLength={10}
+        />
+      </div>
+      <div className={styles.dateField}>
+        <TextField
+          label="Hasta"
+          value={to}
+          onChange={onTo}
+          help="AAAA-MM-DD"
+          error={bad(to) ? 'Use AAAA-MM-DD.' : undefined}
+          maxLength={10}
+        />
+      </div>
     </>
   );
 }
 
-/** Detail of an audit event as plain key/value text (never HTML). */
+/** Detail of an audit event as key/value tags of plain text (never HTML). */
 export function Detail({ detail }: { detail: AuditItem['detail'] }) {
   if (!detail || Object.keys(detail).length === 0) {
-    return <span className="muted">—</span>;
+    return <span className={styles.none}>—</span>;
   }
   return (
-    <dl className={styles.kv}>
+    <dl className={styles.tags}>
       {Object.entries(detail).map(([key, value]) => (
-        <div key={key} style={{ display: 'contents' }}>
+        <div key={key} className={styles.tag}>
           <dt>{key}</dt>
           <dd>{typeof value === 'string' ? value : JSON.stringify(value)}</dd>
         </div>

@@ -1,0 +1,223 @@
+.main {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.periodSelect {
+  max-width: 460px;
+}
+
+.formCard {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 20px;
+}
+
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+
+.card {
+  flex: 1 1 420px;
+  min-width: 0;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* With the students panel open the card takes the whole row. */
+.cardOpen {
+  flex-basis: 100%;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dayBadge {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #eaf2e8;
+  color: var(--primary-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+}
+
+.dayAbbr {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.dayStart {
+  font-family: var(--font-heading);
+  font-size: 18px;
+}
+
+.cardTitleBox {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 20px;
+}
+
+.cardRange {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.weekCard {
+  padding: 24px 26px 28px;
+}
+
+.weekHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.weekTitle {
+  margin: 0;
+  font-size: 22px;
+}
+
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.weekLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.weekScroll {
+  overflow-x: auto;
+}
+
+/* Seven columns: the gap of the boards is the spacing between cells. */
+.week {
+  min-width: 776px;
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 8px 0;
+}
+
+.dayHead {
+  padding: 0 0 8px;
+  text-align: left;
+  font-weight: normal;
+  vertical-align: top;
+}
+
+.dayBox {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid #eeeae6;
+}
+
+.dayName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dayDate {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.today .dayBox {
+  background: #eaf2e8;
+  border-color: var(--primary-mid);
+}
+
+.today .dayName {
+  color: var(--primary-dark);
+}
+
+.closed .dayBox {
+  background: var(--warning-bg);
+}
+
+.dayBody {
+  min-height: 124px;
+  height: 124px;
+  padding: 6px;
+  border: 1px dashed #ddd8d4;
+  border-radius: 12px;
+  vertical-align: top;
+}
+
+.closedBody {
+  background: var(--warning-bg);
+}
+
+.slot {
+  /* Contains the visually-hidden name so it never widens the page. */
+  position: relative;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #e8f1e5;
+  border-left: 4px solid var(--primary-mid);
+}
+
+.slot + .slot {
+  margin-top: 6px;
+}
+
+.slotHour {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.slotCount {
+  font-size: 12px;
+  color: #3f4d45;
+  margin-top: 2px;
+}

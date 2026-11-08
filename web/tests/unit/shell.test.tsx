@@ -77,21 +77,174 @@ describe('shell (R10, R11, R19)', () => {
     expect(container.querySelector('aside img[alt=""]')).not.toBeNull();
   });
 
-  it('shows the administrator entries under «Administración» next to the assistant ones (R13)', async () => {
+  it('shows the administrator groups as buttons, with only the group of the current route open (R2, R3)', async () => {
+    nav.pathname = '/admin/resumen';
     installFakeApi({
       ...base,
       'GET /auth/me': account({ role: 'admin', name: 'Jefe Admin' }),
     });
     panel();
     const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    const toggles = within(menu).getAllByRole('button');
+    expect(toggles.map((t) => t.textContent)).toEqual([
+      'Operación',
+      'Control',
+      'Administración',
+    ]);
+    expect(toggles.map((t) => t.getAttribute('aria-expanded'))).toEqual([
+      'false',
+      'false',
+      'true',
+    ]);
+    // Closed groups hide their links from the tab order and the a11y tree.
+    expect(within(menu).getAllByRole('link')).toHaveLength(8);
     expect(
       within(menu)
-        .getAllByText(/^(Operación|Control|Administración)$/)
-        .map((t) => t.textContent),
-    ).toEqual(['Operación', 'Control', 'Administración']);
-    expect(within(menu).getAllByRole('link')).toHaveLength(15);
+        .getByRole('link', { name: 'Resumen' })
+        .getAttribute('aria-current'),
+    ).toBe('page');
     expect(screen.getByText('Administrador')).toBeTruthy();
     expect(screen.getByText('JA')).toBeTruthy();
+  });
+
+  it('opens and closes a group with the mouse and the keyboard without changing the route (R3)', async () => {
+    const user = userEvent.setup();
+    nav.pathname = '/admin/resumen';
+    installFakeApi({ ...base, 'GET /auth/me': account({ role: 'admin' }) });
+    panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    const control = within(menu).getByRole('button', { name: 'Control' });
+    expect(
+      within(menu).queryByRole('link', { name: 'Dispositivo' }),
+    ).toBeNull();
+    await user.click(control);
+    expect(control.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      within(menu).getByRole('link', { name: 'Dispositivo' }),
+    ).toBeTruthy();
+    expect(within(menu).getAllByRole('link')).toHaveLength(11);
+    control.focus();
+    await user.keyboard('{Enter}');
+    expect(control.getAttribute('aria-expanded')).toBe('false');
+    await user.keyboard(' ');
+    expect(control.getAttribute('aria-expanded')).toBe('true');
+    // The group of the current page can be closed too, and the route stays.
+    await user.click(
+      within(menu).getByRole('button', { name: 'Administración' }),
+    );
+    expect(within(menu).queryByRole('link', { name: 'Resumen' })).toBeNull();
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('shows the «Por revisar» counter in the header of a closed «Operación» and never twice (R4)', async () => {
+    const user = userEvent.setup();
+    nav.pathname = '/admin/resumen';
+    installFakeApi({
+      ...base,
+      'GET /auth/me': account({ role: 'admin' }),
+      'GET /offline/review/count': { pending: 3 },
+    });
+    panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    const counter = await within(menu).findByLabelText('3 por revisar');
+    expect(counter.closest('button')?.textContent).toContain('Operación');
+    expect(within(menu).getAllByLabelText('3 por revisar')).toHaveLength(1);
+    await user.click(within(menu).getByRole('button', { name: /Operación/ }));
+    const link = within(menu).getByRole('link', { name: /Por revisar/ });
+    expect(within(link).getByLabelText('3 por revisar')).toBeTruthy();
+    expect(within(menu).getAllByLabelText('3 por revisar')).toHaveLength(1);
+  });
+
+  it('keeps the assistant groups static, without buttons or arrows (R2)', async () => {
+    installFakeApi({ ...base, 'GET /auth/me': account() });
+    panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    expect(within(menu).queryAllByRole('button')).toHaveLength(0);
+    expect(within(menu).getAllByRole('link')).toHaveLength(7);
+  });
+
+  it('forces the group of the current route open when navigating (R3)', async () => {
+    const user = userEvent.setup();
+    nav.pathname = '/admin/resumen';
+    installFakeApi({ ...base, 'GET /auth/me': account({ role: 'admin' }) });
+    const view = panel();
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    await user.click(
+      within(menu).getByRole('button', { name: 'Administración' }),
+    );
+    expect(within(menu).queryByRole('link', { name: 'Resumen' })).toBeNull();
+    nav.pathname = '/admin/usuarios';
+    view.rerender(
+      <AuthProvider>
+        <RequireAuth>
+          <LiveProvider>
+            <Shell>
+              <p>contenido</p>
+            </Shell>
+          </LiveProvider>
+        </RequireAuth>
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(
+        within(menu)
+          .getByRole('link', { name: 'Usuarios' })
+          .getAttribute('aria-current'),
+      ).toBe('page'),
+    );
+  });
+
+  it('keeps the active group closed across re-renders of the same route (R3)', async () => {
+    const user = userEvent.setup();
+    nav.pathname = '/admin/resumen';
+    installFakeApi({ ...base, 'GET /auth/me': account({ role: 'admin' }) });
+    const tree = (
+      <AuthProvider>
+        <RequireAuth>
+          <LiveProvider>
+            <Shell>
+              <p>contenido</p>
+            </Shell>
+          </LiveProvider>
+        </RequireAuth>
+      </AuthProvider>
+    );
+    const view = render(tree);
+    const menu = await screen.findByRole('navigation', { name: 'Secciones' });
+    const toggle = within(menu).getByRole('button', { name: 'Administración' });
+    expect(within(menu).getByRole('link', { name: 'Resumen' })).toBeTruthy();
+    await user.click(toggle);
+    expect(within(menu).queryByRole('link', { name: 'Resumen' })).toBeNull();
+    view.rerender(tree);
+    view.rerender(
+      <AuthProvider>
+        <RequireAuth>
+          <LiveProvider>
+            <Shell>
+              <p>otro</p>
+            </Shell>
+          </LiveProvider>
+        </RequireAuth>
+      </AuthProvider>,
+    );
+    await screen.findByText('otro');
+    expect(within(menu).queryByRole('link', { name: 'Resumen' })).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('marks only the administrator screens for the admin styles (R7)', async () => {
+    nav.pathname = '/admin/resumen';
+    installFakeApi({ ...base, 'GET /auth/me': account({ role: 'admin' }) });
+    const { container, unmount } = panel();
+    await screen.findByText('contenido');
+    expect(container.querySelector('[data-area="admin"]')).not.toBeNull();
+    unmount();
+    nav.pathname = '/ahora';
+    installFakeApi({ ...base, 'GET /auth/me': account() });
+    const assistant = panel();
+    await screen.findByText('contenido');
+    expect(assistant.container.querySelector('[data-area="admin"]')).toBeNull();
   });
 
   it('renders nothing of the panel until the session is confirmed', async () => {

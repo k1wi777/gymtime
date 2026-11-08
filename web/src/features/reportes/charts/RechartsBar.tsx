@@ -7,7 +7,6 @@
 import {
   Bar,
   BarChart as RechartsBarChart,
-  CartesianGrid,
   Rectangle,
   ResponsiveContainer,
   Tooltip,
@@ -20,11 +19,8 @@ import { CHART_HEIGHT, type BarChartProps, type BarDatum } from './chart-types';
 import styles from './Chart.module.css';
 
 /** With more bars than this, only the big ones and the peaks get a number. */
-const LABEL_ALL_UP_TO = 12;
+const LABEL_ALL_UP_TO = 24;
 const LABEL_SHARE = 0.25;
-
-const GRADIENT = 'gt-bar-gradient';
-const PATTERN = 'gt-peak-pattern';
 
 interface LabelProps {
   x?: number | string;
@@ -50,13 +46,15 @@ export default function RechartsBar({
   ariaLabel,
   width,
   height = CHART_HEIGHT,
+  color = 'var(--chart-1)',
 }: BarChartProps) {
   const rows = [...data];
   const max = Math.max(1, ...rows.map((d) => d.value));
   const showValue = (d: BarDatum) =>
-    rows.length <= LABEL_ALL_UP_TO || d.peak || d.value >= max * LABEL_SHARE;
+    d.value > 0 &&
+    (rows.length <= LABEL_ALL_UP_TO || d.peak || d.value >= max * LABEL_SHARE);
 
-  /** Value above each bar; peaks also say "Pico" (never only color). */
+  /** Value above each bar; the peak one takes its own darker amber. */
   const renderLabel = ({ x, y, width: w, index }: LabelProps) => {
     const datum = index === undefined ? undefined : rows[index];
     if (!datum || !showValue(datum)) return null;
@@ -68,7 +66,6 @@ export default function RechartsBar({
         textAnchor="middle"
         className={datum.peak ? styles.peakLabel : styles.valueLabel}
       >
-        {datum.peak ? <tspan>Pico </tspan> : null}
         {formatInt(datum.value)}
       </text>
     );
@@ -79,9 +76,7 @@ export default function RechartsBar({
     return (
       <Rectangle
         {...props}
-        fill={datum?.peak ? `url(#${PATTERN})` : `url(#${GRADIENT})`}
-        stroke={datum?.peak ? 'var(--peak)' : 'var(--primary)'}
-        strokeWidth={datum?.peak ? 2 : 0}
+        fill={datum?.peak ? 'var(--accent)' : color}
         className={styles.bar}
       />
     );
@@ -92,41 +87,18 @@ export default function RechartsBar({
       data={rows}
       width={width}
       height={width === undefined ? undefined : height}
-      margin={{ top: 24, right: 24, bottom: 4, left: 0 }}
+      margin={{ top: 22, right: 4, bottom: 0, left: 4 }}
       accessibilityLayer
     >
-      <defs>
-        <linearGradient id={GRADIENT} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary-mid)" />
-          <stop offset="100%" stopColor="var(--primary)" />
-        </linearGradient>
-        <pattern
-          id={PATTERN}
-          width="8"
-          height="8"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(45)"
-        >
-          <rect width="8" height="8" fill="var(--surface)" />
-          <rect width="4" height="8" fill="var(--peak)" />
-        </pattern>
-      </defs>
-      <CartesianGrid vertical={false} stroke="var(--border)" />
       <XAxis
         dataKey="label"
         tickLine={false}
-        axisLine={{ stroke: 'var(--border)' }}
-        tick={{ fontSize: 12, fill: 'var(--muted)' }}
+        axisLine={{ stroke: 'var(--chart-axis)' }}
+        tick={{ fontSize: 11, fill: 'var(--muted)' }}
         interval="preserveStartEnd"
       />
-      <YAxis
-        allowDecimals={false}
-        tickLine={false}
-        axisLine={false}
-        width={36}
-        tick={{ fontSize: 12, fill: 'var(--muted)' }}
-        tickFormatter={(value: number) => formatInt(value)}
-      />
+      {/* No visible axis (the values sit over the bars); it only fixes the scale. */}
+      <YAxis hide domain={[0, 'dataMax']} />
       <Tooltip
         content={<TooltipBody />}
         cursor={{ fill: 'var(--primary-light)', opacity: 0.6 }}
@@ -135,7 +107,8 @@ export default function RechartsBar({
       <Bar
         dataKey="value"
         shape={shape}
-        radius={[4, 4, 0, 0]}
+        radius={[6, 6, 0, 0]}
+        maxBarSize={38}
         isAnimationActive={false}
         label={renderLabel}
       />

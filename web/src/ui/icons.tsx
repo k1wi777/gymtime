@@ -50,22 +50,35 @@ const PATHS = {
   buscar: ['M20 20l-4-4'],
   alertaCirculo: ['M12 8v5M12 17v.01'],
   alertaTriangulo: ['M12 3l10 18H2L12 3z', 'M12 10v4M12 17.5v.01'],
-  // own: administrator menu
-  resumen: ['M4 4h7v9H4z', 'M13 4h7v5h-7z', 'M13 11h7v9h-7z', 'M4 15h7v5H4z'],
-  reportes: ['M4 20V10M10 20V4M16 20v-8M22 20H2'],
-  periodos: ['M5 4h14v16H5z', 'M9 9h6M9 13h6M9 17h3'],
-  gestionHorarios: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 7v5h4'],
+  // administrator menu (paths of the approved boards)
+  resumen: ['M3 3h7v9H3zM14 3h7v5h-7z', 'M14 12h7v9h-7zM3 16h7v5H3z'],
+  reportes: ['M4 20V10M10 20V4M16 20v-7', 'M2 20h20'],
+  periodos: ['M3 12h18', 'M7 8l-4 4 4 4M17 8l4 4-4 4'],
+  gestionHorarios: [
+    'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0',
+    'M14 4v4M8 10v4M16 16v4',
+  ],
   estudiantes: [
     'M16 20v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1',
-    'M20 20v-1a4 4 0 0 0-3-3.87',
-    'M16 4.13a4 4 0 0 1 0 7.75',
+    'M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM20 20v-1a4 4 0 0 0-3-3.9M16 4.1a3.5 3.5 0 0 1 0 6.8',
   ],
-  historial: ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5', 'M12 8v4l3 2'],
+  historial: ['M3 12a9 9 0 1 0 3-6.7L3 8', 'M3 3v5h5M12 7v5l3 2'],
   auditoria: [
-    'M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z',
+    'M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3z',
     'M9 12l2 2 4-4',
   ],
-  usuarios: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
+  usuarios: [
+    'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+    'M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
+  ],
+  // arrows and actions of the boards
+  chevron: ['M9 6l6 6-6 6'],
+  chevronLeft: ['M15 6l-6 6 6 6'],
+  chevronDown: ['M6 9l6 6 6-6'],
+  flecha: ['M5 12h14M13 6l6 6-6 6'],
+  descargar: ['M12 4v11M7 10l5 5 5-5M5 20h14'],
+  subir: ['M12 15V4M7 9l5-5 5 5M5 20h14'],
+  mas: ['M12 5v14M5 12h14'],
 } as const;
 
 /** Shapes that are not paths (circles and rectangles of some icons). */
@@ -74,7 +87,6 @@ const EXTRA: Partial<Record<IconName, ReactNode>> = {
   candado: <rect x="4" y="10" width="16" height="10" rx="2" />,
   buscar: <circle cx="11" cy="11" r="7" />,
   alertaCirculo: <circle cx="12" cy="12" r="9" />,
-  estudiantes: <circle cx="9.5" cy="7" r="3.5" />,
 };
 
 export type IconName = keyof typeof PATHS;

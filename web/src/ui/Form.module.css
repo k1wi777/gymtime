@@ -44,3 +44,28 @@
 .control {
   position: relative;
 }
+
+/* Fields of the administrator boards: 13px label, 44px control, 12px help. */
+:global([data-area='admin']) .field {
+  gap: 6px;
+}
+
+:global([data-area='admin']) .field label {
+  font-size: 13px;
+  color: #2a3a2c;
+}
+
+:global([data-area='admin']) .input {
+  min-height: 44px;
+  padding: 0 14px;
+  border-color: #cfd8cc;
+  font-size: 14px;
+}
+
+:global([data-area='admin']) textarea.input {
+  padding: 10px 14px;
+}
+
+:global([data-area='admin']) .help {
+  font-size: 12px;
+}

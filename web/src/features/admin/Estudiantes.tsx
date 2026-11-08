@@ -8,12 +8,16 @@ import { ConsentDialog } from '@/features/students/ConsentDialog';
 import { formatDate } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import type { FieldErrors } from '@/lib/validators';
+import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
 import { ImportWizard } from './ImportWizard';
+import { RowMenu } from './RowMenu';
 import styles from './Admin.module.css';
 
 const PAGE = 20;
@@ -97,12 +101,14 @@ function StudentForm({
   });
   return (
     <form
-      className="card stack"
+      className={`card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
     >
-      <h2>{creating ? 'Nuevo estudiante' : `Editar ${student.name}`}</h2>
+      <h2 className={styles.formTitle}>
+        {creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
+      </h2>
       {failure && <Notice kind="error">{failure}</Notice>}
       {fields.map((field) => (
         <TextField
@@ -220,240 +226,319 @@ export function Estudiantes() {
     }
   };
 
+  // Split of the people matching the search, program and state (not the
+  // fingerprint filter), for the line under the title.
+  const split = useResource(
+    async (signal) => {
+      const count = async (fingerprint: 'enrolled' | 'none') =>
+        (
+          await call(
+            getApi().client.GET('/panel/students', {
+              params: {
+                query: {
+                  limit: 1,
+                  fingerprint,
+                  ...(debounced ? { search: debounced } : {}),
+                  ...(program.trim() ? { program: program.trim() } : {}),
+                  ...(active ? { active: active as 'true' | 'false' } : {}),
+                },
+              },
+              signal,
+            }),
+          )
+        ).total;
+      const [enrolled, none] = await Promise.all([
+        count('enrolled'),
+        count('none'),
+      ]);
+      return { enrolled, none };
+    },
+    [debounced, program, active],
+  );
+
   const total = students.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const page = Math.floor(offset / PAGE) + 1;
+  const noun = (n: number) => (n === 1 ? 'estudiante' : 'estudiantes');
+  const lead = split.data
+    ? `${split.data.enrolled + split.data.none} ${noun(split.data.enrolled + split.data.none)} · ${split.data.enrolled} con huella · ${split.data.none} sin huella`
+    : students.data
+      ? `${total} ${noun(total)}`
+      : undefined;
 
   return (
-    <div className="stack">
-      <h1>Estudiantes</h1>
-      {failure && (
-        <Notice kind="error" onDismiss={() => setFailure(null)}>
-          {failure}
-        </Notice>
-      )}
-      {mode === 'none' && fields.data && (
-        <div className="row">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setMode('new')}
-          >
-            Nuevo estudiante
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setMode('import')}
-          >
-            Importar CSV
-          </button>
-        </div>
-      )}
-      {fields.error ? (
-        <Notice kind="error">{describeError(fields.error)}</Notice>
-      ) : null}
-      {mode === 'new' && fields.data && (
-        <StudentForm
-          fields={fields.data}
-          student={null}
-          onCancel={() => setMode('none')}
-          onSaved={() => {
-            setMode('none');
-            students.reload();
-          }}
-        />
-      )}
-      {typeof mode === 'object' && fields.data && (
-        <StudentForm
-          key={mode.edit.id}
-          fields={fields.data}
-          student={mode.edit}
-          onCancel={() => setMode('none')}
-          onSaved={() => {
-            setMode('none');
-            students.reload();
-          }}
-        />
-      )}
-      {mode === 'import' && fields.data && (
-        <ImportWizard
-          fields={fields.data}
-          onDone={students.reload}
-          onClose={() => setMode('none')}
-        />
-      )}
+    <div>
+      <PageHeader
+        crumb="Estudiantes"
+        title="Estudiantes"
+        {...(lead ? { lead } : {})}
+        aside={
+          mode === 'none' && fields.data ? (
+            <div className={styles.headActions}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setMode('import')}
+              >
+                <Icon name="subir" size={17} strokeWidth={2} />
+                Importar CSV
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setMode('new')}
+              >
+                <Icon name="mas" size={17} strokeWidth={2} />
+                Nuevo estudiante
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
+      <div className={styles.main}>
+        {failure && (
+          <Notice kind="error" onDismiss={() => setFailure(null)}>
+            {failure}
+          </Notice>
+        )}
+        {fields.error ? (
+          <Notice kind="error">{describeError(fields.error)}</Notice>
+        ) : null}
+        {mode === 'new' && fields.data && (
+          <StudentForm
+            fields={fields.data}
+            student={null}
+            onCancel={() => setMode('none')}
+            onSaved={() => {
+              setMode('none');
+              students.reload();
+              split.reload();
+            }}
+          />
+        )}
+        {typeof mode === 'object' && fields.data && (
+          <StudentForm
+            key={mode.edit.id}
+            fields={fields.data}
+            student={mode.edit}
+            onCancel={() => setMode('none')}
+            onSaved={() => {
+              setMode('none');
+              students.reload();
+            }}
+          />
+        )}
+        {mode === 'import' && fields.data && (
+          <ImportWizard
+            fields={fields.data}
+            onDone={() => {
+              students.reload();
+              split.reload();
+            }}
+            onClose={() => setMode('none')}
+          />
+        )}
 
-      <div className={styles.filters}>
-        <TextField
-          label="Buscar por nombre o documento"
-          type="search"
-          value={search}
-          onChange={setSearch}
-        />
-        <TextField
-          label="Carrera"
-          value={program}
-          onChange={(v) => {
-            setProgram(v);
-            setOffset(0);
-          }}
-        />
-        <SelectField
-          label="Estado"
-          value={active}
-          onChange={(v) => {
-            setActive(v);
-            setOffset(0);
-          }}
-          options={[
-            { value: '', label: 'Todos' },
-            { value: 'true', label: 'Activos' },
-            { value: 'false', label: 'De baja' },
-          ]}
-        />
-        <SelectField
-          label="Huella"
-          value={fingerprint}
-          onChange={(v) => {
-            setFingerprint(v);
-            setOffset(0);
-          }}
-          options={[
-            { value: '', label: 'Todas' },
-            { value: 'none', label: 'Sin huella' },
-            { value: 'enrolled', label: 'Con huella' },
-          ]}
-        />
-      </div>
-
-      {students.loading && !students.data && <Spinner />}
-      {students.error ? (
-        <Notice kind="error">{describeError(students.error)}</Notice>
-      ) : null}
-      {students.data && (
-        <>
-          <p className="muted">{total} estudiante(s)</p>
-          <div className={styles.scroll}>
-            <table className={styles.table}>
-              <caption className="visually-hidden">Estudiantes</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Nombre</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Carrera</th>
-                  <th scope="col">Huella</th>
-                  <th scope="col">Consentimiento</th>
-                  <th scope="col">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.data.items.map((s: PanelStudent) => (
-                  <tr key={s.id}>
-                    <td>
-                      {s.name}{' '}
-                      {s.anonymizedAt ? (
-                        <Badge tone="warning">Datos suprimidos</Badge>
-                      ) : (
-                        !s.active && <Badge tone="warning">De baja</Badge>
-                      )}
-                    </td>
-                    <td>{s.document}</td>
-                    <td>{s.program ?? '—'}</td>
-                    <td>
-                      {s.fingerprintEnrolledAt ? (
-                        <Badge tone="success">Con huella</Badge>
-                      ) : (
-                        <Badge>Sin huella</Badge>
-                      )}
-                    </td>
-                    <td>
-                      {s.consented ? (
-                        <Badge tone="success">
-                          {s.consentVersion}
-                          {s.consentAt ? ` · ${formatDate(s.consentAt)}` : ''}
-                        </Badge>
-                      ) : (
-                        <Badge tone="warning">Falta</Badge>
-                      )}
-                    </td>
-                    <td>
-                      <div className="row">
-                        {!s.consented && s.active && (
-                          <button
-                            type="button"
-                            className="btn"
-                            aria-label={`Registrar consentimiento de ${s.name}`}
-                            onClick={() => setConsentFor(s)}
-                          >
-                            Consentimiento
-                          </button>
-                        )}
-                        {!s.anonymizedAt && (
-                          <button
-                            type="button"
-                            className="btn"
-                            aria-label={`Editar a ${s.name}`}
-                            onClick={() => setMode({ edit: s })}
-                          >
-                            Editar
-                          </button>
-                        )}
-                        {s.active && (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            aria-label={`Dar de baja a ${s.name}`}
-                            onClick={() => setToDeactivate(s)}
-                          >
-                            Dar de baja
-                          </button>
-                        )}
-                        {!s.anonymizedAt && (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            aria-label={`Suprimir datos de ${s.name}`}
-                            onClick={() => setToErase(s)}
-                          >
-                            Suprimir datos
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <section
+          className={`card ${styles.filterCard} ${styles.filterEnd}`}
+          aria-label="Filtros"
+        >
+          <div className={styles.grow2}>
+            <TextField
+              label="Buscar por nombre o documento"
+              type="search"
+              value={search}
+              onChange={setSearch}
+            />
           </div>
-          {students.data.items.length === 0 && (
-            <p className="muted">No hay estudiantes con esos filtros.</p>
-          )}
-          {pages > 1 && (
-            <nav className="row" aria-label="Paginación">
-              <button
-                type="button"
-                className="btn"
-                disabled={offset === 0}
-                onClick={() => setOffset(Math.max(0, offset - PAGE))}
-              >
-                Anterior
-              </button>
-              <span>
-                Página {page} de {pages}
-              </span>
-              <button
-                type="button"
-                className="btn"
-                disabled={page >= pages}
-                onClick={() => setOffset(offset + PAGE)}
-              >
-                Siguiente
-              </button>
-            </nav>
-          )}
-        </>
-      )}
+          <div className={styles.grow1}>
+            <TextField
+              label="Carrera"
+              value={program}
+              onChange={(v) => {
+                setProgram(v);
+                setOffset(0);
+              }}
+            />
+          </div>
+          <div className={styles.fixed}>
+            <SelectField
+              label="Estado"
+              value={active}
+              onChange={(v) => {
+                setActive(v);
+                setOffset(0);
+              }}
+              options={[
+                { value: '', label: 'Todos' },
+                { value: 'true', label: 'Activos' },
+                { value: 'false', label: 'De baja' },
+              ]}
+            />
+          </div>
+          <div className={styles.fixed}>
+            <SelectField
+              label="Huella"
+              value={fingerprint}
+              onChange={(v) => {
+                setFingerprint(v);
+                setOffset(0);
+              }}
+              options={[
+                { value: '', label: 'Todas' },
+                { value: 'none', label: 'Sin huella' },
+                { value: 'enrolled', label: 'Con huella' },
+              ]}
+            />
+          </div>
+        </section>
+
+        {students.loading && !students.data && <Spinner />}
+        {students.error ? (
+          <Notice kind="error">{describeError(students.error)}</Notice>
+        ) : null}
+        {students.data && (
+          <section
+            className={`card ${styles.tableCard}`}
+            aria-label="Lista de estudiantes"
+          >
+            <div className={styles.scroll}>
+              <table className={`${styles.board} ${styles.wide900}`}>
+                <caption className="visually-hidden">Estudiantes</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Estudiante</th>
+                    <th scope="col">Documento</th>
+                    <th scope="col">Carrera</th>
+                    <th scope="col">Huella</th>
+                    <th scope="col">Consentimiento</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.data.items.map((s: PanelStudent) => (
+                    <tr key={s.id}>
+                      <td>
+                        <div className={styles.person}>
+                          <Avatar
+                            name={s.name}
+                            id={s.id}
+                            size={36}
+                            fontSize={13}
+                          />
+                          <span className={styles.personName}>{s.name}</span>
+                          {s.anonymizedAt ? (
+                            <Badge tone="warning">Datos suprimidos</Badge>
+                          ) : (
+                            !s.active && <Badge tone="warning">De baja</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.documentCell}>{s.document}</td>
+                      <td>{s.program ?? '—'}</td>
+                      <td>
+                        {s.fingerprintEnrolledAt ? (
+                          <Badge tone="success">Con huella</Badge>
+                        ) : (
+                          <Badge tone="warning">Sin huella</Badge>
+                        )}
+                      </td>
+                      <td>
+                        {s.consented ? (
+                          <Badge tone="soft">
+                            {s.consentVersion}
+                            {s.consentAt ? ` · ${formatDate(s.consentAt)}` : ''}
+                          </Badge>
+                        ) : (
+                          <Badge tone="warning">Falta</Badge>
+                        )}
+                      </td>
+                      <td>
+                        <div className={styles.rowActions}>
+                          {!s.consented && s.active && (
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Registrar consentimiento de ${s.name}`}
+                              onClick={() => setConsentFor(s)}
+                            >
+                              Consentimiento
+                            </button>
+                          )}
+                          {!s.anonymizedAt && (
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Editar a ${s.name}`}
+                              onClick={() => setMode({ edit: s })}
+                            >
+                              Editar
+                            </button>
+                          )}
+                          <RowMenu
+                            label={`Más acciones de ${s.name}`}
+                            items={[
+                              ...(s.active
+                                ? [
+                                    {
+                                      key: 'deactivate',
+                                      label: 'Dar de baja',
+                                      ariaLabel: `Dar de baja a ${s.name}`,
+                                      onSelect: () => setToDeactivate(s),
+                                    },
+                                  ]
+                                : []),
+                              ...(!s.anonymizedAt
+                                ? [
+                                    {
+                                      key: 'erase',
+                                      label: 'Suprimir datos…',
+                                      ariaLabel: `Suprimir datos de ${s.name}`,
+                                      danger: true,
+                                      onSelect: () => setToErase(s),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {students.data.items.length === 0 && (
+              <p className={`muted ${styles.empty}`}>
+                No hay estudiantes con esos filtros.
+              </p>
+            )}
+            {pages > 1 && (
+              <nav className={styles.pager} aria-label="Paginación">
+                <button
+                  type="button"
+                  className="btn btn-s"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - PAGE))}
+                >
+                  Anterior
+                </button>
+                <span>
+                  Página {page} de {pages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-s"
+                  disabled={page >= pages}
+                  onClick={() => setOffset(offset + PAGE)}
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
+          </section>
+        )}
+      </div>
 
       <ConsentDialog
         student={consentFor}

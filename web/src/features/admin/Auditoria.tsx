@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type { AuditItem } from '@/api/types';
-import { formatDateTime } from '@/lib/time';
+import { formatDate, formatTime } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import { SelectField, TextField } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
+import { auditDot, withDayHeaders } from './audit-days';
+import { BoardCard } from './BoardCard';
 import { DateRange, Detail, dayRange } from './filters';
 import styles from './Admin.module.css';
 
@@ -87,82 +90,122 @@ export function Auditoria() {
     }
   };
 
+  const rows = withDayHeaders(items, (item) => formatDate(item.createdAt));
+
   return (
-    <div className="stack">
-      <h1>Auditoría</h1>
-      <p className="muted">
-        Quién hizo qué y cuándo. No incluye huellas, contraseñas ni datos de
-        contacto.
-      </p>
-      <div className={styles.filters}>
-        <TextField
-          label="Tipo de evento"
-          value={type}
-          onChange={setType}
-          help="Por ejemplo student.created"
-        />
-        <SelectField
-          label="Usuario"
-          value={actorId}
-          onChange={setActorId}
-          options={[
-            { value: '', label: 'Todos' },
-            ...(users.data ?? []).map((u) => ({ value: u.id, label: u.name })),
-          ]}
-        />
-        <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
-      </div>
-      {first.loading && !first.data && <Spinner />}
-      {first.error ? (
-        <Notice kind="error">{describeError(first.error)}</Notice>
-      ) : null}
-      {moreFailure && <Notice kind="error">{moreFailure}</Notice>}
-      {first.data && (
-        <>
-          <div className={styles.scroll}>
-            <table className={styles.table}>
-              <caption className="visually-hidden">
-                Eventos de auditoría
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Evento</th>
-                  <th scope="col">Responsable</th>
-                  <th scope="col">Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{formatDateTime(item.createdAt)}</td>
-                    <td>{EVENT_LABELS[item.type] ?? item.type}</td>
-                    <td>{actorLabel(item.actor)}</td>
+    <div>
+      <PageHeader
+        crumb="Auditoría"
+        title="Auditoría"
+        lead="Quién hizo qué y cuándo. No incluye huellas, contraseñas ni datos de contacto."
+      />
+      <div className={styles.main}>
+        <section className={`card ${styles.filterCard}`} aria-label="Filtros">
+          <div className={styles.grow2}>
+            <TextField
+              label="Tipo de evento"
+              value={type}
+              onChange={setType}
+              help="Por ejemplo student.created"
+            />
+          </div>
+          <div className={styles.grow200}>
+            <SelectField
+              label="Usuario"
+              value={actorId}
+              onChange={setActorId}
+              options={[
+                { value: '', label: 'Todos' },
+                ...(users.data ?? []).map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                })),
+              ]}
+            />
+          </div>
+          <DateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
+        </section>
+        {first.loading && !first.data && <Spinner />}
+        {first.error ? (
+          <Notice kind="error">{describeError(first.error)}</Notice>
+        ) : null}
+        {moreFailure && <Notice kind="error">{moreFailure}</Notice>}
+        {first.data && (
+          <BoardCard
+            label="Eventos de auditoría"
+            minWidth={900}
+            footer={
+              <>
+                {items.length === 0 && (
+                  <p className={`muted ${styles.empty}`}>
+                    No hay eventos con esos filtros.
+                  </p>
+                )}
+                {nextBefore !== null && (
+                  <div className={styles.more}>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={loadingMore}
+                      onClick={() => void loadMore()}
+                    >
+                      {loadingMore ? 'Un momento…' : 'Cargar más antiguos'}
+                    </button>
+                  </div>
+                )}
+              </>
+            }
+          >
+            <caption className="visually-hidden">Eventos de auditoría</caption>
+            <thead>
+              <tr>
+                <th scope="col">Hora</th>
+                <th scope="col">Evento</th>
+                <th scope="col">Responsable</th>
+                <th scope="col">Detalle</th>
+              </tr>
+            </thead>
+            <tbody className={styles.top}>
+              {rows.map(({ item, day }) => (
+                <Fragment key={item.id}>
+                  {day !== null && (
+                    <tr>
+                      <th
+                        colSpan={4}
+                        scope="colgroup"
+                        className={styles.dayRow}
+                      >
+                        {day}
+                      </th>
+                    </tr>
+                  )}
+                  <tr>
+                    <td className={`${styles.nowrap} ${styles.time}`}>
+                      {formatTime(item.createdAt)}
+                    </td>
+                    <td className={styles.nowrap}>
+                      <span className={styles.eventPill}>
+                        <span
+                          aria-hidden="true"
+                          className={styles.eventDot}
+                          style={{ background: auditDot(item.type) }}
+                        />
+                        {EVENT_LABELS[item.type] ?? item.type}
+                      </span>
+                    </td>
+                    <td className={`${styles.nowrap} ${styles.strong}`}>
+                      {actorLabel(item.actor)}
+                    </td>
                     <td>
                       <Detail detail={item.detail} />
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {items.length === 0 && (
-            <p className="muted">No hay eventos con esos filtros.</p>
-          )}
-          {nextBefore !== null && (
-            <div>
-              <button
-                type="button"
-                className="btn"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-              >
-                {loadingMore ? 'Un momento…' : 'Cargar más antiguos'}
-              </button>
-            </div>
-          )}
-        </>
-      )}
+                </Fragment>
+              ))}
+            </tbody>
+          </BoardCard>
+        )}
+      </div>
     </div>
   );
 }

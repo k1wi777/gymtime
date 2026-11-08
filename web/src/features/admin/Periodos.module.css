@@ -1,0 +1,203 @@
+.main {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  align-items: flex-start;
+}
+
+.left {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.periodCard {
+  padding: 26px 28px;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.periodName {
+  margin: 0;
+  font-size: 24px;
+}
+
+.dates {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.timeline {
+  margin-top: 26px;
+}
+
+.track {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: #e6ece4;
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 6px 0 0 6px;
+  background: var(--primary-mid);
+}
+
+.fillFull {
+  border-radius: 6px;
+}
+
+.tick,
+.span,
+.today {
+  position: absolute;
+}
+
+.tick {
+  top: -3px;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.span {
+  top: -3px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.today {
+  top: -8px;
+  width: 3px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--primary-dark);
+}
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.now {
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.daysCard {
+  padding: 24px 28px 14px;
+}
+
+.cardTitle {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.none {
+  margin: 0 0 10px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exception {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid #eeeae6;
+}
+
+.exception:hover {
+  background: var(--row-hover);
+}
+
+.dot {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: var(--peak-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exceptionText {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.reason {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.when {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.addCard {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.addCard .cardTitle {
+  margin: 0;
+}
+
+.cardLead {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.formCard {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}

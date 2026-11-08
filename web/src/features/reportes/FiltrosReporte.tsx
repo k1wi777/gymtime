@@ -149,56 +149,75 @@ export function FiltrosReporte({
       onSubmit={(event) => event.preventDefault()}
       noValidate
     >
-      <TextField
-        label="Desde"
-        value={filters.from}
-        onChange={(from) => set({ from })}
-        help={`AAAA-MM-DD (por defecto ${options.defaultRange.from})`}
-        error={bad(filters.from) ? 'Use AAAA-MM-DD.' : undefined}
-        maxLength={10}
-      />
-      <TextField
-        label="Hasta"
-        value={filters.to}
-        onChange={(to) => set({ to })}
-        help={`AAAA-MM-DD (por defecto ${options.defaultRange.to})`}
-        error={bad(filters.to) ? 'Use AAAA-MM-DD.' : undefined}
-        maxLength={10}
-      />
-      <SelectField
-        label="Horario"
-        value={filters.scheduleId}
-        onChange={(scheduleId) => set({ scheduleId })}
-        placeholder="Todos los horarios"
-        options={options.schedules.map((s) => ({
-          value: s.id,
-          label: `${s.name} (${s.startTime.slice(0, 5)}–${s.endTime.slice(0, 5)})`,
-        }))}
-      />
-      {person && (
-        <SelectField
-          label="Programa"
-          value={filters.program}
-          onChange={(program) => set({ program })}
-          placeholder="Todos los programas"
-          options={options.programs.map((p) => ({ value: p, label: p }))}
+      <div className={styles.fieldS}>
+        <TextField
+          label="Desde"
+          value={filters.from}
+          onChange={(from) => set({ from })}
+          help={`AAAA-MM-DD (por defecto ${options.defaultRange.from})`}
+          error={bad(filters.from) ? 'Use AAAA-MM-DD.' : undefined}
+          maxLength={10}
         />
+      </div>
+      <div className={styles.fieldS}>
+        <TextField
+          label="Hasta"
+          value={filters.to}
+          onChange={(to) => set({ to })}
+          help={`AAAA-MM-DD (por defecto ${options.defaultRange.to})`}
+          error={bad(filters.to) ? 'Use AAAA-MM-DD.' : undefined}
+          maxLength={10}
+        />
+      </div>
+      <div className={styles.fieldM}>
+        <SelectField
+          label="Horario"
+          value={filters.scheduleId}
+          onChange={(scheduleId) => set({ scheduleId })}
+          placeholder="Todos los horarios"
+          options={options.schedules.map((s) => ({
+            value: s.id,
+            label: `${s.name} (${s.startTime.slice(0, 5)}–${s.endTime.slice(0, 5)})`,
+          }))}
+        />
+      </div>
+      {person && (
+        <div className={styles.fieldM}>
+          <SelectField
+            label="Programa"
+            value={filters.program}
+            onChange={(program) => set({ program })}
+            placeholder="Todos los programas"
+            options={options.programs.map((p) => ({ value: p, label: p }))}
+          />
+        </div>
       )}
       {person && (
-        <StudentPicker
-          studentId={filters.studentId}
-          onPick={(studentId) => set({ studentId })}
-        />
+        <div className={styles.fieldL}>
+          <StudentPicker
+            studentId={filters.studentId}
+            onPick={(studentId) => set({ studentId })}
+          />
+        </div>
       )}
       {groupings && (
-        <SelectField
-          label="Agrupar"
-          value={groupBy}
-          onChange={(value) => onGroupBy(value as GroupBy)}
-          options={groupings.map((g) => ({ value: g, label: GROUP_LABELS[g] }))}
-        />
+        <div className={styles.fieldM}>
+          <SelectField
+            label="Agrupar"
+            value={groupBy}
+            onChange={(value) => onGroupBy(value as GroupBy)}
+            options={groupings.map((g) => ({
+              value: g,
+              label: GROUP_LABELS[g],
+            }))}
+          />
+        </div>
       )}
-      {problem && <Notice kind="error">{problem}</Notice>}
+      {problem && (
+        <div className={styles.problem}>
+          <Notice kind="error">{problem}</Notice>
+        </div>
+      )}
     </form>
   );
 }

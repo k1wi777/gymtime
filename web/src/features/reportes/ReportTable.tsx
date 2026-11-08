@@ -10,6 +10,8 @@ export type Row = Table['rows'][number];
 interface Props {
   table: Table | undefined;
   caption: string;
+  /** Frames the table in a titled card (administrator reports). */
+  title?: string;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -36,6 +38,7 @@ const sortValue = (column: ReportColumn, row: Row): string | number | null => {
 export function ReportTable({
   table,
   caption,
+  title,
   loading,
   error,
   onRetry,
@@ -57,7 +60,7 @@ export function ReportTable({
             return (
               <button
                 type="button"
-                className="btn"
+                className="btn btn-s"
                 aria-label={`Ver detalle de ${text}`}
                 onClick={() => onOpenStudent(studentId, text)}
               >
@@ -86,6 +89,7 @@ export function ReportTable({
   return (
     <DataTable<Row>
       caption={caption}
+      {...(title ? { title } : {})}
       columns={columns}
       rows={table?.rows}
       rowKey={(row) => JSON.stringify(row)}

@@ -48,3 +48,85 @@
   background: var(--surface);
   color: var(--text);
 }
+
+/* Framed variant (administrator reports): title, inline search, pager bar. */
+.frame {
+  overflow: hidden;
+  padding: 0;
+}
+
+.frameHead {
+  padding: 18px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.frameTitle {
+  margin: 0;
+  font-size: 20px;
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2a3a2c;
+}
+
+.inlineInput {
+  height: 38px;
+  width: 200px;
+  padding: 0 14px;
+  border: 1px solid #cfd8cc;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.framed {
+  min-width: 560px;
+}
+
+.framed th,
+.framed td {
+  padding: 13px 20px;
+  border-bottom: 0;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.framed th {
+  padding: 12px 20px;
+  font-size: 12px;
+  background: #f3f1ef;
+  white-space: nowrap;
+}
+
+.framed td {
+  border-top: 1px solid #eeeae6;
+}
+
+.framed tbody tr:hover {
+  background: var(--row-hover);
+}
+
+.framedEmpty {
+  margin: 0;
+  padding: 14px 24px;
+  border-top: 1px solid #eeeae6;
+}
+
+.pager {
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid #eeeae6;
+  font-size: 14px;
+}

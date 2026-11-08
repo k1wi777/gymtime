@@ -84,10 +84,10 @@
   position: relative;
   overflow: hidden;
   padding: 22px 22px 20px;
-  border-radius: var(--radius-card);
+  border-radius: 14px;
   background: #ffffff;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
 }
 
 .bar {
@@ -98,36 +98,17 @@
   height: 4px;
 }
 
-.dot {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  margin-bottom: 14px;
-}
-
 .m1 .bar {
   background: var(--m1);
-}
-.m1 .dot {
-  background: var(--m1-soft);
 }
 .m2 .bar {
   background: var(--m2);
 }
-.m2 .dot {
-  background: var(--m2-soft);
-}
 .m3 .bar {
   background: var(--m3);
 }
-.m3 .dot {
-  background: var(--m3-soft);
-}
 .m4 .bar {
   background: var(--m4);
-}
-.m4 .dot {
-  background: var(--m4-soft);
 }
 
 .term {

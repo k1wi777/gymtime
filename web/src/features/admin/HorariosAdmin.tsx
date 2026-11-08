@@ -11,16 +11,19 @@ import type {
   Student,
   Week,
 } from '@/api/types';
-import { bogotaDay, formatDay } from '@/lib/time';
+import { bogotaDay, formatDay, formatShortDay } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import { type FieldErrors } from '@/lib/validators';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
 import { RegenerationNotice } from './RegenerationNotice';
 import styles from './Admin.module.css';
+import view from './HorariosAdmin.module.css';
 
 export const WEEKDAYS = [
   'Lunes',
@@ -123,12 +126,14 @@ function ScheduleForm({
   });
   return (
     <form
-      className="card stack"
+      className={`card ${view.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}
     >
-      <h2>{schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}</h2>
+      <h2 className={view.formTitle}>
+        {schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}
+      </h2>
       {failure && <Notice kind="error">{failure}</Notice>}
       <TextField
         label="Nombre"
@@ -150,7 +155,7 @@ function ScheduleForm({
           label,
         }))}
       />
-      <div className="row" style={{ alignItems: 'flex-start' }}>
+      <div className={view.times}>
         <TextField
           label="Inicio"
           value={form.values.start}
@@ -241,7 +246,7 @@ function AssignPanel({
               {!s.active && <Badge tone="warning">De baja</Badge>}{' '}
               <button
                 type="button"
-                className="btn"
+                className="btn btn-s"
                 aria-label={`Quitar a ${s.name}`}
                 disabled={busy}
                 onClick={() =>
@@ -398,34 +403,37 @@ function AssignPanel({
   );
 }
 
-function WeekGrid({ week }: { week: Week }) {
+function WeekGrid({ week, today }: { week: Week; today: string }) {
   return (
-    <div className={styles.scroll}>
-      <table className={styles.week}>
+    <div className={view.weekScroll}>
+      <table className={view.week}>
         <caption className="visually-hidden">
           Semana del {formatDay(week.weekStart)}
         </caption>
         <thead>
           <tr>
-            {week.days.map((day) => (
-              <th
-                scope="col"
-                key={day.date}
-                className={`${styles.weekHead} ${day.closedReason ? styles.closed : ''}`}
-              >
-                <strong>{WEEKDAYS[day.weekday - 1]}</strong>
-                <br />
-                <span className="muted">{formatDay(day.date)}</span>
-                {day.closedReason && (
-                  <>
-                    <br />
-                    <Badge tone="warning">
-                      Sin servicio: {day.closedReason}
-                    </Badge>
-                  </>
-                )}
-              </th>
-            ))}
+            {week.days.map((day) => {
+              const name = WEEKDAYS[day.weekday - 1] ?? '';
+              const classes = [view.dayHead];
+              if (day.closedReason) classes.push(view.closed);
+              else if (day.date === today) classes.push(view.today);
+              return (
+                <th scope="col" key={day.date} className={classes.join(' ')}>
+                  <div className={view.dayBox}>
+                    <div className={view.dayName}>{name}</div>
+                    <div className={view.dayDate}>
+                      {name.slice(0, 3).toLowerCase()},{' '}
+                      {formatShortDay(day.date)}
+                    </div>
+                    {day.closedReason && (
+                      <Badge tone="warning">
+                        Sin servicio: {day.closedReason}
+                      </Badge>
+                    )}
+                  </div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -433,21 +441,21 @@ function WeekGrid({ week }: { week: Week }) {
             {week.days.map((day) => (
               <td
                 key={day.date}
-                className={`${styles.weekCell} ${day.closedReason ? styles.closed : ''}`}
+                className={`${view.dayBody} ${day.closedReason ? view.closedBody : ''}`}
               >
                 {!day.closedReason &&
                   week.schedules
                     .filter((s) => s.weekday === day.weekday)
                     .sort((a, b) => a.startTime.localeCompare(b.startTime))
                     .map((s) => (
-                      <div key={s.id} className={styles.slot}>
-                        <strong>{s.name}</strong>
-                        <span>
+                      <div key={s.id} className={view.slot} title={s.name}>
+                        <span className="visually-hidden">{s.name}: </span>
+                        <div className={view.slotHour}>
                           {hhmm(s.startTime)}–{hhmm(s.endTime)}
-                        </span>
-                        <span className="muted">
+                        </div>
+                        <div className={view.slotCount}>
                           {s.assignedCount} estudiantes
-                        </span>
+                        </div>
                       </div>
                     ))}
               </td>
@@ -457,6 +465,13 @@ function WeekGrid({ week }: { week: Week }) {
       </table>
     </div>
   );
+}
+
+/** Weekday (1 = Monday) of a recurring schedule, or of the day of a one-off one. */
+function weekdayOf(schedule: Schedule): number | null {
+  if (schedule.weekday) return schedule.weekday;
+  if (!schedule.date) return null;
+  return ((new Date(`${schedule.date}T12:00:00Z`).getUTCDay() + 6) % 7) + 1;
 }
 
 function monday(day: string): string {
@@ -487,30 +502,38 @@ function WeekView({ periodId }: { periodId: string }) {
     [periodId, weekStart],
   );
   return (
-    <section className="stack" aria-label="Vista semanal">
-      <h2>Vista semanal</h2>
-      <div className="row">
-        <button
-          type="button"
-          className="btn"
-          onClick={() => setWeekStart(shiftDay(weekStart, -7))}
-        >
-          Semana anterior
-        </button>
-        <span>Semana del {formatDay(weekStart)}</span>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => setWeekStart(shiftDay(weekStart, 7))}
-        >
-          Semana siguiente
-        </button>
+    <section className={`card ${view.weekCard}`} aria-label="Vista semanal">
+      <div className={view.weekHead}>
+        <h2 className={view.weekTitle}>Vista semanal</h2>
+        <div className={view.weekNav}>
+          <button
+            type="button"
+            className="btn btn-s"
+            aria-label="Semana anterior"
+            onClick={() => setWeekStart(shiftDay(weekStart, -7))}
+          >
+            <Icon name="chevronLeft" size={16} strokeWidth={2} />
+            Anterior
+          </button>
+          <span className={view.weekLabel}>
+            Semana del {formatDay(weekStart)}
+          </span>
+          <button
+            type="button"
+            className="btn btn-s"
+            aria-label="Semana siguiente"
+            onClick={() => setWeekStart(shiftDay(weekStart, 7))}
+          >
+            Siguiente
+            <Icon name="chevron" size={16} strokeWidth={2} />
+          </button>
+        </div>
       </div>
       {week.loading && !week.data && <Spinner />}
       {week.error ? (
         <Notice kind="error">{describeError(week.error)}</Notice>
       ) : null}
-      {week.data && <WeekGrid week={week.data} />}
+      {week.data && <WeekGrid week={week.data} today={bogotaDay(new Date())} />}
     </section>
   );
 }
@@ -574,133 +597,155 @@ export function HorariosAdmin() {
   };
 
   return (
-    <div className="stack">
-      <h1>Gestión de horarios</h1>
-      <p className="muted">
-        Los horarios semanales pertenecen a un periodo. Al crear o cambiar uno
-        se generan sus sesiones hasta el fin del periodo, sin los días sin
-        servicio.
-      </p>
-      {periods.error ? (
-        <Notice kind="error">{describeError(periods.error)}</Notice>
-      ) : null}
-      {periods.data && periods.data.length === 0 && (
-        <Notice kind="warning" title="Falta un periodo">
-          Cree primero un periodo en la sección Periodos.
-        </Notice>
-      )}
-      {period && (
-        <>
-          <SelectField
-            label="Periodo"
-            value={period.id}
-            onChange={(v) => {
-              setChosen(v);
-              setMode('none');
-              setOpenId(null);
-            }}
-            options={(periods.data ?? []).map((p) => ({
-              value: p.id,
-              label: `${p.name}${p.active ? ' (activo)' : ''}`,
-            }))}
-          />
-          {failure && (
-            <Notice kind="error" onDismiss={() => setFailure(null)}>
-              {failure}
-            </Notice>
-          )}
-          {result && (
-            <RegenerationNotice
-              result={result}
-              onDismiss={() => setResult(null)}
-            />
-          )}
-          {mode === 'none' && (
-            <div>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setMode('new')}
-              >
-                Nuevo horario
-              </button>
-            </div>
-          )}
-          {mode === 'new' && (
-            <ScheduleForm
-              period={period}
-              onSaved={saved}
-              onCancel={() => setMode('none')}
-            />
-          )}
-          {typeof mode === 'object' && (
-            <ScheduleForm
-              key={mode.edit.id}
-              period={period}
-              schedule={mode.edit}
-              onSaved={saved}
-              onCancel={() => setMode('none')}
-            />
-          )}
-          {schedules.loading && !schedules.data && <Spinner />}
-          {schedules.data && mine.length === 0 && (
-            <p className="muted">Este periodo no tiene horarios.</p>
-          )}
-          {mine.map((schedule) => (
-            <section
-              key={schedule.id}
-              className="card stack"
-              aria-label={`Horario ${schedule.name}`}
+    <div>
+      <PageHeader
+        crumb="Gestión de horarios"
+        title="Gestión de horarios"
+        lead="Los horarios semanales pertenecen a un periodo. Al crear o cambiar uno se generan sus sesiones hasta el fin del periodo, sin los días sin servicio."
+        aside={
+          period && mode === 'none' ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setMode('new')}
             >
-              <div className="row">
-                <h2>{schedule.name}</h2>
-                <span>
-                  {schedule.weekday ? WEEKDAYS[schedule.weekday - 1] : ''}{' '}
-                  {hhmm(schedule.startTime)}–{hhmm(schedule.endTime)}
-                </span>
-                <Badge>{schedule.students.length} estudiantes</Badge>
-              </div>
-              <div className="row">
-                <button
-                  type="button"
-                  className="btn"
-                  aria-expanded={openId === schedule.id}
-                  onClick={() =>
-                    setOpenId(openId === schedule.id ? null : schedule.id)
-                  }
-                >
-                  {openId === schedule.id
-                    ? 'Ocultar estudiantes'
-                    : 'Estudiantes'}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setMode({ edit: schedule })}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() => setToDelete(schedule)}
-                >
-                  Eliminar
-                </button>
-              </div>
-              {openId === schedule.id && (
-                <AssignPanel
-                  schedule={schedule}
-                  others={mine}
-                  students={students.data ?? []}
-                  onChanged={schedules.reload}
-                />
-              )}
-            </section>
-          ))}
-          <WeekView periodId={period.id} />
-        </>
-      )}
+              <Icon name="mas" size={17} strokeWidth={2} />
+              Nuevo horario
+            </button>
+          ) : undefined
+        }
+      />
+      <div className={view.main}>
+        {periods.error ? (
+          <Notice kind="error">{describeError(periods.error)}</Notice>
+        ) : null}
+        {periods.data && periods.data.length === 0 && (
+          <Notice kind="warning" title="Falta un periodo">
+            Cree primero un periodo en la sección Periodos.
+          </Notice>
+        )}
+        {period && (
+          <>
+            <div className={view.periodSelect}>
+              <SelectField
+                label="Periodo"
+                value={period.id}
+                onChange={(v) => {
+                  setChosen(v);
+                  setMode('none');
+                  setOpenId(null);
+                }}
+                options={(periods.data ?? []).map((p) => ({
+                  value: p.id,
+                  label: `${p.name}${p.active ? ' (activo)' : ''}`,
+                }))}
+              />
+            </div>
+            {failure && (
+              <Notice kind="error" onDismiss={() => setFailure(null)}>
+                {failure}
+              </Notice>
+            )}
+            {result && (
+              <RegenerationNotice
+                result={result}
+                onDismiss={() => setResult(null)}
+              />
+            )}
+            {mode === 'new' && (
+              <ScheduleForm
+                period={period}
+                onSaved={saved}
+                onCancel={() => setMode('none')}
+              />
+            )}
+            {typeof mode === 'object' && (
+              <ScheduleForm
+                key={mode.edit.id}
+                period={period}
+                schedule={mode.edit}
+                onSaved={saved}
+                onCancel={() => setMode('none')}
+              />
+            )}
+            {schedules.loading && !schedules.data && <Spinner />}
+            {schedules.data && mine.length === 0 && (
+              <p className="muted">Este periodo no tiene horarios.</p>
+            )}
+            <div className={view.cards}>
+              {mine.map((schedule) => {
+                const weekday = weekdayOf(schedule);
+                const dayName = (weekday ? WEEKDAYS[weekday - 1] : '') ?? '';
+                return (
+                  <section
+                    key={schedule.id}
+                    className={`card ${view.card} ${openId === schedule.id ? view.cardOpen : ''}`}
+                    aria-label={`Horario ${schedule.name}`}
+                  >
+                    <div className={view.cardHead}>
+                      <div aria-hidden="true" className={view.dayBadge}>
+                        <span className={view.dayAbbr}>
+                          {dayName.slice(0, 3).toUpperCase()}
+                        </span>
+                        <span className={view.dayStart}>
+                          {hhmm(schedule.startTime)}
+                        </span>
+                      </div>
+                      <div className={view.cardTitleBox}>
+                        <h2 className={view.cardTitle}>{schedule.name}</h2>
+                        <div className={view.cardRange}>
+                          {dayName} {hhmm(schedule.startTime)}–
+                          {hhmm(schedule.endTime)}
+                        </div>
+                      </div>
+                      <Badge tone="mint">
+                        {schedule.students.length} estudiantes
+                      </Badge>
+                    </div>
+                    <div className={view.cardActions}>
+                      <button
+                        type="button"
+                        className="btn btn-s"
+                        aria-expanded={openId === schedule.id}
+                        onClick={() =>
+                          setOpenId(openId === schedule.id ? null : schedule.id)
+                        }
+                      >
+                        {openId === schedule.id
+                          ? 'Ocultar estudiantes'
+                          : 'Estudiantes'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-s"
+                        onClick={() => setMode({ edit: schedule })}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-s btn-outline-danger"
+                        onClick={() => setToDelete(schedule)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    {openId === schedule.id && (
+                      <AssignPanel
+                        schedule={schedule}
+                        others={mine}
+                        students={students.data ?? []}
+                        onChanged={schedules.reload}
+                      />
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+            <WeekView periodId={period.id} />
+          </>
+        )}
+      </div>
       <ConfirmDialog
         open={toDelete !== null}
         title="Eliminar horario"

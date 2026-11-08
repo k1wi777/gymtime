@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type { Period, Regeneration } from '@/api/types';
-import { formatDay } from '@/lib/time';
+import { bogotaDay, formatDay, formatShortDay } from '@/lib/time';
+import { periodTimeline } from '@/lib/timeline';
 import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
+import { Icon } from '@/ui/icons';
+import { PageHeader } from '@/ui/PageHeader';
 import { SubmitButton, TextField, useForm } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
 import type { FieldErrors } from '@/lib/validators';
 import { RegenerationNotice } from './RegenerationNotice';
+import styles from './Periodos.module.css';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -109,7 +113,7 @@ function PeriodForm({
   });
   return (
     <form
-      className="card stack"
+      className={`card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={
@@ -139,7 +143,7 @@ function PeriodForm({
         onBlur={() => form.blur('endDate')}
         error={form.errors.endDate}
       />
-      <div className="row">
+      <div className={styles.actions}>
         <SubmitButton busy={form.submitting}>{submitLabel}</SubmitButton>
         <button type="button" className="btn" onClick={onCancel}>
           Cancelar
@@ -178,42 +182,45 @@ function ExceptionForm({
   });
   return (
     <form
-      className="stack"
+      className={`card ${styles.addCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={`Agregar día sin servicio a ${period.name}`}
     >
-      <h3>Agregar días sin servicio</h3>
-      {failure && <Notice kind="error">{failure}</Notice>}
-      <div className="row" style={{ alignItems: 'flex-start' }}>
-        <DateField
-          label="Desde"
-          value={form.values.from}
-          onChange={(v) => form.setValue('from', v)}
-          onBlur={() => form.blur('from')}
-          error={form.errors.from}
-        />
-        <DateField
-          label="Hasta"
-          value={form.values.to}
-          onChange={(v) => form.setValue('to', v)}
-          onBlur={() => form.blur('to')}
-          error={form.errors.to}
-        />
-        <TextField
-          label="Motivo"
-          value={form.values.reason}
-          onChange={(v) => form.setValue('reason', v)}
-          onBlur={() => form.blur('reason')}
-          error={form.errors.reason}
-          maxLength={200}
-        />
-      </div>
       <div>
-        <SubmitButton busy={form.submitting}>
-          Agregar día sin servicio
-        </SubmitButton>
+        <h2 className={styles.cardTitle}>Agregar días sin servicio</h2>
+        <p className={styles.cardLead}>
+          {period.active
+            ? 'Un día o un rango de fechas dentro del periodo activo.'
+            : 'Un día o un rango de fechas dentro de este periodo.'}
+        </p>
       </div>
+      {failure && <Notice kind="error">{failure}</Notice>}
+      <DateField
+        label="Desde"
+        value={form.values.from}
+        onChange={(v) => form.setValue('from', v)}
+        onBlur={() => form.blur('from')}
+        error={form.errors.from}
+      />
+      <DateField
+        label="Hasta"
+        value={form.values.to}
+        onChange={(v) => form.setValue('to', v)}
+        onBlur={() => form.blur('to')}
+        error={form.errors.to}
+      />
+      <TextField
+        label="Motivo"
+        value={form.values.reason}
+        onChange={(v) => form.setValue('reason', v)}
+        onBlur={() => form.blur('reason')}
+        error={form.errors.reason}
+        maxLength={200}
+      />
+      <SubmitButton busy={form.submitting}>
+        Agregar día sin servicio
+      </SubmitButton>
     </form>
   );
 }
@@ -259,159 +266,236 @@ export function Periodos() {
       return updated.regeneration ?? undefined;
     });
 
-  return (
-    <div className="stack">
-      <h1>Periodos</h1>
-      <p className="muted">
-        Un periodo agrupa los horarios semanales de un semestre. Solo uno puede
-        estar activo; los días sin servicio (festivos, semana santa) no generan
-        sesiones.
-      </p>
-      {failure && (
-        <Notice kind="error" onDismiss={() => setFailure(null)}>
-          {failure}
-        </Notice>
-      )}
-      {result && (
-        <RegenerationNotice result={result} onDismiss={() => setResult(null)} />
-      )}
-      {mode === 'none' && (
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setMode('new')}
-          >
-            Nuevo periodo
-          </button>
-        </div>
-      )}
-      {mode === 'new' && (
-        <PeriodForm
-          initial={{ name: '', startDate: '', endDate: '' }}
-          submitLabel="Crear periodo"
-          onCancel={() => setMode('none')}
-          onSubmit={async (values) => {
-            await call(getApi().client.POST('/periods', { body: values }));
-            setMode('none');
-            periods.reload();
-          }}
-        />
-      )}
-      {typeof mode === 'object' && (
-        <PeriodForm
-          key={mode.edit.id}
-          initial={{
-            name: mode.edit.name,
-            startDate: mode.edit.startDate,
-            endDate: mode.edit.endDate,
-          }}
-          submitLabel="Guardar cambios"
-          onCancel={() => setMode('none')}
-          onSubmit={async (values) => {
-            const edit = mode.edit;
-            const updated = await call(
-              getApi().client.PATCH('/periods/{id}', {
-                params: { path: { id: edit.id } },
-                body: values,
-              }),
-            );
-            setMode('none');
-            setResult(updated.regeneration ?? null);
-            periods.reload();
-          }}
-        />
-      )}
+  const today = bogotaDay(new Date());
 
-      {periods.loading && !periods.data && <Spinner />}
-      {periods.error ? (
-        <Notice kind="error">{describeError(periods.error)}</Notice>
-      ) : null}
-      {periods.data?.length === 0 && (
-        <p className="muted">Todavía no hay periodos.</p>
-      )}
-      {periods.data?.map((period) => (
-        <section
-          key={period.id}
-          className="card stack"
-          aria-label={`Periodo ${period.name}`}
-        >
-          <div className="row">
-            <h2>{period.name}</h2>
-            <Badge tone={period.active ? 'success' : 'neutral'}>
-              {period.active ? 'Activo' : 'Inactivo'}
-            </Badge>
-          </div>
-          <p>
-            Del {formatDay(period.startDate)} al {formatDay(period.endDate)} ·{' '}
-            {period.schedulesCount} horario(s)
-          </p>
-          <div className="row">
+  return (
+    <div>
+      <PageHeader
+        crumb="Periodos"
+        title="Periodos"
+        lead="Un periodo agrupa los horarios semanales de un semestre. Solo uno puede estar activo; los días sin servicio (festivos, semana santa) no generan sesiones."
+        aside={
+          mode === 'none' ? (
             <button
               type="button"
-              className="btn"
-              disabled={busy}
-              onClick={() => void toggle(period)}
+              className="btn btn-primary"
+              onClick={() => setMode('new')}
             >
-              {period.active ? 'Desactivar' : 'Activar'}
+              <Icon name="mas" size={17} strokeWidth={2} />
+              Nuevo periodo
             </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setMode({ edit: period })}
-            >
-              Editar fechas
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => setConfirm({ kind: 'delete-period', period })}
-            >
-              Eliminar
-            </button>
-          </div>
-          <h3>Días sin servicio</h3>
-          {period.exceptions.length === 0 ? (
-            <p className="muted">No hay días sin servicio.</p>
-          ) : (
-            <ul>
-              {period.exceptions.map((exception) => {
-                const label =
-                  exception.from === exception.to
-                    ? formatDay(exception.from)
-                    : `${formatDay(exception.from)} al ${formatDay(exception.to)}`;
-                return (
-                  <li key={exception.id}>
-                    {label}: {exception.reason}{' '}
-                    <button
-                      type="button"
-                      className="btn"
-                      aria-label={`Quitar día sin servicio ${label}`}
-                      onClick={() =>
-                        setConfirm({
-                          kind: 'delete-exception',
-                          period,
-                          id: exception.id,
-                          label,
-                        })
-                      }
-                    >
-                      Quitar
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <ExceptionForm
-            period={period}
-            onDone={(regeneration) => {
-              setResult(regeneration);
+          ) : undefined
+        }
+      />
+      <div className={styles.main}>
+        {failure && (
+          <Notice kind="error" onDismiss={() => setFailure(null)}>
+            {failure}
+          </Notice>
+        )}
+        {result && (
+          <RegenerationNotice
+            result={result}
+            onDismiss={() => setResult(null)}
+          />
+        )}
+        {mode === 'new' && (
+          <PeriodForm
+            initial={{ name: '', startDate: '', endDate: '' }}
+            submitLabel="Crear periodo"
+            onCancel={() => setMode('none')}
+            onSubmit={async (values) => {
+              await call(getApi().client.POST('/periods', { body: values }));
+              setMode('none');
               periods.reload();
             }}
           />
-        </section>
-      ))}
+        )}
+        {typeof mode === 'object' && (
+          <PeriodForm
+            key={mode.edit.id}
+            initial={{
+              name: mode.edit.name,
+              startDate: mode.edit.startDate,
+              endDate: mode.edit.endDate,
+            }}
+            submitLabel="Guardar cambios"
+            onCancel={() => setMode('none')}
+            onSubmit={async (values) => {
+              const edit = mode.edit;
+              const updated = await call(
+                getApi().client.PATCH('/periods/{id}', {
+                  params: { path: { id: edit.id } },
+                  body: values,
+                }),
+              );
+              setMode('none');
+              setResult(updated.regeneration ?? null);
+              periods.reload();
+            }}
+          />
+        )}
+
+        {periods.loading && !periods.data && <Spinner />}
+        {periods.error ? (
+          <Notice kind="error">{describeError(periods.error)}</Notice>
+        ) : null}
+        {periods.data?.length === 0 && (
+          <p className="muted">Todavía no hay periodos.</p>
+        )}
+        {periods.data?.map((period) => {
+          const timeline = periodTimeline(period, today);
+          return (
+            <div key={period.id} className={styles.block}>
+              <div className={styles.left}>
+                <section
+                  className={`card ${styles.periodCard}`}
+                  aria-label={`Periodo ${period.name}`}
+                >
+                  <div className={styles.titleRow}>
+                    <h2 className={styles.periodName}>{period.name}</h2>
+                    <Badge tone={period.active ? 'mint' : 'neutral'}>
+                      {period.active ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </div>
+                  <p className={styles.dates}>
+                    Del {formatDay(period.startDate)} al{' '}
+                    {formatDay(period.endDate)} · {period.schedulesCount}{' '}
+                    horario(s)
+                  </p>
+                  <div className={styles.timeline}>
+                    <div className={styles.track}>
+                      <div
+                        className={
+                          timeline.progress >= 100
+                            ? `${styles.fill} ${styles.fillFull}`
+                            : styles.fill
+                        }
+                        style={{ width: `${timeline.progress}%` }}
+                      />
+                      {timeline.marks.map((mark) => (
+                        <div
+                          key={mark.id}
+                          title={mark.title}
+                          className={
+                            mark.width === null ? styles.tick : styles.span
+                          }
+                          style={{
+                            left: `${mark.left}%`,
+                            ...(mark.width !== null
+                              ? { width: `${mark.width}%` }
+                              : {}),
+                          }}
+                        />
+                      ))}
+                      {timeline.todayAt !== null && (
+                        <div
+                          title="Hoy"
+                          className={styles.today}
+                          style={{ left: `${timeline.todayAt}%` }}
+                        />
+                      )}
+                    </div>
+                    <div className={styles.labels}>
+                      <span>{formatShortDay(period.startDate)}</span>
+                      {timeline.todayAt !== null ? (
+                        <span className={styles.now}>
+                          Hoy · {formatShortDay(today)}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <span>{formatShortDay(period.endDate)}</span>
+                    </div>
+                  </div>
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={busy}
+                      onClick={() => void toggle(period)}
+                    >
+                      {period.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setMode({ edit: period })}
+                    >
+                      Editar fechas
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger"
+                      onClick={() =>
+                        setConfirm({ kind: 'delete-period', period })
+                      }
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </section>
+
+                <section
+                  className={`card ${styles.daysCard}`}
+                  aria-label="Días sin servicio"
+                >
+                  <h2 className={styles.cardTitle}>Días sin servicio</h2>
+                  {period.exceptions.length === 0 ? (
+                    <p className={`muted ${styles.none}`}>
+                      No hay días sin servicio.
+                    </p>
+                  ) : (
+                    <ul className={styles.list}>
+                      {period.exceptions.map((exception) => {
+                        const label =
+                          exception.from === exception.to
+                            ? formatDay(exception.from)
+                            : `${formatDay(exception.from)} al ${formatDay(exception.to)}`;
+                        return (
+                          <li key={exception.id} className={styles.exception}>
+                            <span aria-hidden="true" className={styles.dot}>
+                              <Icon name="horarios" />
+                            </span>
+                            <div className={styles.exceptionText}>
+                              <div className={styles.reason}>
+                                {exception.reason}
+                              </div>
+                              <div className={styles.when}>{label}</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Quitar día sin servicio ${label}`}
+                              onClick={() =>
+                                setConfirm({
+                                  kind: 'delete-exception',
+                                  period,
+                                  id: exception.id,
+                                  label,
+                                })
+                              }
+                            >
+                              Quitar
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              </div>
+              <ExceptionForm
+                period={period}
+                onDone={(regeneration) => {
+                  setResult(regeneration);
+                  periods.reload();
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
 
       <ConfirmDialog
         open={confirm !== null}

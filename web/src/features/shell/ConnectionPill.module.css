@@ -23,3 +23,14 @@
   background: var(--muted);
   box-shadow: 0 0 0 4px rgba(77, 90, 102, 0.2);
 }
+
+.warning {
+  background: #fff4e0;
+  border-color: #f6d9a8;
+  color: var(--warning);
+}
+
+.warning .off {
+  background: #e0a526;
+  box-shadow: 0 0 0 4px rgba(224, 165, 38, 0.25);
+}

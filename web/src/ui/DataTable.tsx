@@ -23,6 +23,11 @@ export interface SelectFilter<T> {
 
 interface Props<T> {
   caption: string;
+  /**
+   * Frames the table in a card with this title, the search inline and the
+   * pager in a bar (administrator reports).
+   */
+  title?: string;
   columns: ReadonlyArray<Column<T>>;
   rows: readonly T[] | undefined;
   rowKey: (row: T) => string;
@@ -47,6 +52,7 @@ const normalize = (text: string): string =>
  */
 export function DataTable<T>({
   caption,
+  title,
   columns,
   rows,
   rowKey,
@@ -118,124 +124,152 @@ export function DataTable<T>({
   }
   if (loading && !rows) return <Spinner />;
 
+  const search = searchText && (
+    <label className={title ? styles.inline : styles.filter}>
+      <span>Buscar</span>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setPage(0);
+        }}
+        className={title ? styles.inlineInput : styles.input}
+      />
+    </label>
+  );
+  const selectFilters = selects.map((select) => (
+    <label key={select.id} className={styles.filter}>
+      <span>{select.label}</span>
+      <select
+        value={chosen[select.id] ?? ''}
+        onChange={(event) => {
+          setChosen({ ...chosen, [select.id]: event.target.value });
+          setPage(0);
+        }}
+        className={styles.input}
+      >
+        <option value="">Todos</option>
+        {select.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  ));
+  const table = (
+    <div className={styles.scroll}>
+      <table
+        className={title ? `${styles.table} ${styles.framed}` : styles.table}
+      >
+        <caption className="visually-hidden">{caption}</caption>
+        <thead>
+          <tr>
+            {columns.map((column) => {
+              const sorted = sort?.key === column.key ? sort.dir : 0;
+              return (
+                <th
+                  key={column.key}
+                  scope="col"
+                  aria-sort={
+                    sorted === 0
+                      ? undefined
+                      : sorted === 1
+                        ? 'ascending'
+                        : 'descending'
+                  }
+                >
+                  {column.sortValue ? (
+                    <button
+                      type="button"
+                      className={styles.sortButton}
+                      onClick={() => {
+                        const dir = sorted === 1 ? -1 : 1;
+                        setSort({ key: column.key, dir });
+                        onSortChange?.({
+                          key: column.key,
+                          dir: dir === 1 ? 'asc' : 'desc',
+                        });
+                      }}
+                    >
+                      {column.header}
+                      {sorted === 0 ? '' : sorted === 1 ? ' ▲' : ' ▼'}
+                    </button>
+                  ) : (
+                    column.header
+                  )}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((row) => (
+            <tr key={rowKey(row)}>
+              {columns.map((column) => (
+                <td key={column.key}>{column.render(row)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  const empty = shown.length === 0 && (
+    <p className={title ? `muted ${styles.framedEmpty}` : 'muted'}>
+      {emptyMessage}
+    </p>
+  );
+  const pager = pages > 1 && (
+    <nav className={title ? styles.pager : 'row'} aria-label="Paginación">
+      <button
+        type="button"
+        className={title ? 'btn btn-s' : 'btn'}
+        disabled={current === 0}
+        onClick={() => setPage(current - 1)}
+      >
+        Anterior
+      </button>
+      <span>
+        Página {current + 1} de {pages}
+      </span>
+      <button
+        type="button"
+        className={title ? 'btn btn-s' : 'btn'}
+        disabled={current >= pages - 1}
+        onClick={() => setPage(current + 1)}
+      >
+        Siguiente
+      </button>
+    </nav>
+  );
+
+  if (title) {
+    return (
+      <section className={`card ${styles.frame}`} aria-label={title}>
+        <div className={styles.frameHead}>
+          <h2 className={styles.frameTitle}>{title}</h2>
+          {search}
+          {selectFilters}
+        </div>
+        {table}
+        {empty}
+        {pager}
+      </section>
+    );
+  }
   return (
     <div className="stack">
       {(searchText || selects.length > 0) && (
         <div className="row">
-          {searchText && (
-            <label className={styles.filter}>
-              <span>Buscar</span>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPage(0);
-                }}
-                className={styles.input}
-              />
-            </label>
-          )}
-          {selects.map((select) => (
-            <label key={select.id} className={styles.filter}>
-              <span>{select.label}</span>
-              <select
-                value={chosen[select.id] ?? ''}
-                onChange={(event) => {
-                  setChosen({ ...chosen, [select.id]: event.target.value });
-                  setPage(0);
-                }}
-                className={styles.input}
-              >
-                <option value="">Todos</option>
-                {select.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+          {search}
+          {selectFilters}
         </div>
       )}
-      <div className={styles.scroll}>
-        <table className={styles.table}>
-          <caption className="visually-hidden">{caption}</caption>
-          <thead>
-            <tr>
-              {columns.map((column) => {
-                const sorted = sort?.key === column.key ? sort.dir : 0;
-                return (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    aria-sort={
-                      sorted === 0
-                        ? undefined
-                        : sorted === 1
-                          ? 'ascending'
-                          : 'descending'
-                    }
-                  >
-                    {column.sortValue ? (
-                      <button
-                        type="button"
-                        className={styles.sortButton}
-                        onClick={() => {
-                          const dir = sorted === 1 ? -1 : 1;
-                          setSort({ key: column.key, dir });
-                          onSortChange?.({
-                            key: column.key,
-                            dir: dir === 1 ? 'asc' : 'desc',
-                          });
-                        }}
-                      >
-                        {column.header}
-                        {sorted === 0 ? '' : sorted === 1 ? ' ▲' : ' ▼'}
-                      </button>
-                    ) : (
-                      column.header
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((row) => (
-              <tr key={rowKey(row)}>
-                {columns.map((column) => (
-                  <td key={column.key}>{column.render(row)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {shown.length === 0 && <p className="muted">{emptyMessage}</p>}
-      {pages > 1 && (
-        <nav className="row" aria-label="Paginación">
-          <button
-            type="button"
-            className="btn"
-            disabled={current === 0}
-            onClick={() => setPage(current - 1)}
-          >
-            Anterior
-          </button>
-          <span>
-            Página {current + 1} de {pages}
-          </span>
-          <button
-            type="button"
-            className="btn"
-            disabled={current >= pages - 1}
-            onClick={() => setPage(current + 1)}
-          >
-            Siguiente
-          </button>
-        </nav>
-      )}
+      {table}
+      {empty}
+      {pager}
     </div>
   );
 }

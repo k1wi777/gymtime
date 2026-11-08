@@ -409,9 +409,10 @@ describe('students (R12, R13, R16, R17)', () => {
     );
     app(<Estudiantes />);
     await user.click(
-      await screen.findByRole('button', {
-        name: 'Suprimir datos de Ana Gómez',
-      }),
+      await screen.findByRole('button', { name: 'Más acciones de Ana Gómez' }),
+    );
+    await user.click(
+      screen.getByRole('menuitem', { name: 'Suprimir datos de Ana Gómez' }),
     );
     const dialog = screen.getByRole('dialog');
     const confirm = within(dialog).getByRole('button', {

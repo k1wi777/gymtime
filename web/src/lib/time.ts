@@ -82,3 +82,13 @@ const longDayFormat = new Intl.DateTimeFormat(LOCALE, {
 /** `lunes 2 de noviembre` */
 export const formatLongDay = (value: string | Date): string =>
   longDayFormat.format(toDate(value)).replace(',', '');
+
+const shortDayFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: TIME_ZONE,
+  day: 'numeric',
+  month: 'short',
+});
+
+/** `7 sept`: a `YYYY-MM-DD` day without weekday or year. */
+export const formatShortDay = (day: string): string =>
+  shortDayFormat.format(new Date(`${day}T12:00:00-05:00`)).replace(' de ', ' ');

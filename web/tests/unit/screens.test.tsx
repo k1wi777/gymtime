@@ -792,6 +792,22 @@ describe('device (R19)', () => {
     expect(await screen.findByText('Desfase del reloj')).toBeTruthy();
   });
 
+  it('draws the four metric cards without the empty circle', async () => {
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /devices/status': [device],
+    });
+    const { container } = app(<Dispositivo />);
+    await screen.findByText('En línea');
+    const metrics = container.querySelector('dl');
+    expect(metrics?.querySelectorAll('div')).not.toHaveLength(0);
+    // Only the top stripe remains; the circle (`dot`) is gone.
+    expect(metrics?.querySelectorAll('span[aria-hidden]')).toHaveLength(
+      metrics?.querySelectorAll('div').length ?? -1,
+    );
+    expect(metrics?.querySelector('[class*="dot"]')).toBeNull();
+  });
+
   it('goes offline on the disconnection event', async () => {
     installFakeApi({
       'GET /auth/me': account(),

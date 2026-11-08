@@ -1,3 +1,217 @@
+/* Shared pieces of the administrator screens (boards in design-ref). */
+.main {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.formCard {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 20px;
+}
+
+.filterCard {
+  padding: 20px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.filterEnd {
+  align-items: flex-end;
+}
+
+.grow2 {
+  flex: 2 1 240px;
+}
+
+.grow1 {
+  flex: 1 1 200px;
+}
+
+.fixed {
+  flex: 0 1 150px;
+}
+
+.dateField {
+  flex: 1 1 140px;
+}
+
+.grow160 {
+  flex: 1 1 160px;
+}
+
+.grow200 {
+  flex: 1 1 200px;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pill {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #cfd8cc;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill:hover {
+  background: #f1f6ef;
+}
+
+.pill[aria-selected='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.reasonCell {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.more {
+  padding: 16px 24px;
+  border-top: 1px solid #eeeae6;
+}
+
+.emptyOnly {
+  margin: 0;
+  padding: 18px 24px;
+}
+
+.tableCard {
+  overflow: hidden;
+  padding: 0;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+/* Table of the boards: grey head, 12px uppercase titles, hairline rows. */
+.board {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.board th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: #f3f1ef;
+  white-space: nowrap;
+}
+
+.board td {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-top: 1px solid #eeeae6;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.board tbody tr:hover {
+  background: var(--row-hover);
+}
+
+.wide720 {
+  min-width: 720px;
+}
+
+.wide900 {
+  min-width: 900px;
+}
+
+.wide940 {
+  min-width: 940px;
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 24px;
+  border-top: 1px solid #eeeae6;
+}
+
+.pager {
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid #eeeae6;
+  font-size: 14px;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.personName {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.documentCell {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Assigning students to a schedule (inside the schedule card). */
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -15,51 +229,11 @@
 }
 
 .textarea {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 10px 14px;
+  border: 1px solid #cfd8cc;
+  border-radius: 12px;
   width: 100%;
-}
-
-.week {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0.25rem;
-  table-layout: fixed;
-  min-width: 52rem;
-}
-
-.weekHead,
-.weekCell {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 0.4rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.weekCell {
-  height: 5rem;
-}
-
-.closed {
-  background: var(--warning-bg);
-}
-
-.slot {
-  display: flex;
-  flex-direction: column;
-  background: var(--primary-light);
-  border-radius: 6px;
-  padding: 0.25rem 0.4rem;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
+  font-size: 14px;
 }
 
 .table {
@@ -75,28 +249,8 @@
   vertical-align: top;
 }
 
-.scroll {
-  overflow-x: auto;
-}
-
-.kv {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.15rem 0.75rem;
-  margin: 0;
-}
-
-.kv dt {
-  font-weight: 600;
-}
-
-.kv dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
 .password {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-code);
   font-size: 1.2rem;
   background: var(--primary-light);
   padding: 0.4rem 0.6rem;
@@ -115,4 +269,195 @@
 .wizardSteps li[aria-current='step'] {
   font-weight: 700;
   text-decoration: underline;
+}
+
+/* Audit detail: key/value tags. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+}
+
+.tag {
+  display: flex;
+  gap: 0.35em;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tag dt {
+  color: var(--muted);
+}
+
+.tag dd {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.none {
+  color: #6b7672;
+}
+
+/* Audit table: rows aligned to the top, one header row per day. */
+.top td {
+  padding: 14px 16px;
+  vertical-align: top;
+}
+
+.board .top .dayRow {
+  padding: 10px 16px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--primary-dark);
+  background: #eef5ec;
+  border-top: 1px solid #eeeae6;
+}
+
+.time {
+  color: #3f4a52;
+}
+
+.eventPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 11px;
+  border-radius: 8px;
+  background: #f3f1ef;
+  font-family: var(--font-code);
+  font-size: 12.5px;
+}
+
+.eventDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* Users: table and the role cards side by side. */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  align-items: flex-start;
+}
+
+.splitMain {
+  flex: 3 1 640px;
+  min-width: 0;
+}
+
+.roomy td {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+/* Users table: tighter sides so the three actions fit next to the role cards. */
+.tight th,
+.tight td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.tight th:first-child,
+.tight td:first-child {
+  padding-left: 16px;
+}
+
+.username {
+  font-family: var(--font-code);
+  font-size: 13px;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.stateDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--live);
+}
+
+.stateOff {
+  color: #3d4650;
+}
+
+.stateOff .stateDot {
+  background: #9aa3a1;
+}
+
+.wrapActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.roles {
+  flex: 0 1 268px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.roleCard {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.roleTitle {
+  margin: 0;
+  font-size: 19px;
+}
+
+.role {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.roleText {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #3f4a52;
+}
+
+.sessionCard {
+  padding: 22px 24px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.sessionIcon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #eaf2e8;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sessionTitle {
+  margin: 0 0 4px;
+  font-size: 17px;
 }

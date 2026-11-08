@@ -1,38 +1,71 @@
-.page {
-  display: grid;
-  gap: 1rem;
+.main {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
+.exportBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 420px;
+}
+
+/* Filters card: five fields that wrap. */
 .filters {
+  padding: 22px 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.fieldS {
+  flex: 1 1 150px;
+}
+
+.fieldM {
+  flex: 1 1 190px;
+}
+
+.fieldL {
+  flex: 1 1 210px;
+}
+
+.problem {
+  flex: 1 1 100%;
+}
+
+.matches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  align-items: end;
+  gap: 0.25rem;
 }
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #ddd8d4;
 }
 
 .tab {
-  padding: 0.5rem 0.9rem;
+  padding: 12px 4px;
+  margin-right: 22px;
   border: 0;
   border-bottom: 3px solid transparent;
   background: transparent;
   color: var(--muted);
-  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
-  transition:
-    background var(--transition),
-    color var(--transition);
 }
 
 .tab:hover {
-  background: var(--primary-light);
-  color: var(--text);
+  color: var(--primary-dark);
 }
 
 .tab[aria-selected='true'] {
@@ -41,49 +74,74 @@
   font-weight: 600;
 }
 
-.toolbar {
+.panel {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: stretch;
 }
 
-.card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  box-shadow: var(--shadow-card);
+.chartCard {
+  flex: 1 1 340px;
   min-width: 0;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardHeader > button {
+  flex: none;
+  white-space: nowrap;
 }
 
 .cardHeader {
   display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.cardHeader h3 {
+.cardTitle {
   margin: 0;
+  font-size: 19px;
 }
 
-.cardHeader p {
-  margin: 0.15rem 0 0;
+.cardSub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
 }
 
 /* The table equivalent of a chart: closed on wide screens until asked for. */
 .equivalent {
   display: none;
-  margin-top: 0.75rem;
   max-height: 18rem;
   overflow: auto;
 }
@@ -109,54 +167,10 @@
   text-align: left;
   padding: 0.3rem 0.5rem;
   border-bottom: 1px solid var(--border);
-  font-variant-numeric: tabular-nums;
-}
-
-.stats {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-}
-
-.stat {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow var(--transition);
-}
-
-.stat:hover {
-  box-shadow: 0 2px 8px rgb(15 90 43 / 18%);
-}
-
-.stat h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.big {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary-dark);
-  font-variant-numeric: tabular-nums;
-}
-
-.alerts {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.matches {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.25rem;
 }
 
 .dl {
+  padding: 22px 26px;
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.25rem 1rem;
@@ -169,12 +183,4 @@
 
 .dl dd {
   margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tab,
-  .stat {
-    transition: none;
-  }
 }

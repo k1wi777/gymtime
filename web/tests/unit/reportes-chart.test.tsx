@@ -24,13 +24,14 @@ const data: BarDatum[] = [
 ];
 
 describe('real bar chart', () => {
-  it('labels the peak with the word and keeps empty hours at zero', async () => {
+  it('draws the peak in the accent with its own label color and the rest in the color of the chart', async () => {
     const { container } = render(
       <RechartsBar
         data={data}
         ariaLabel="Entradas por hora; pico en 07:00 con 54"
         width={480}
         height={280}
+        color="var(--chart-2)"
       />,
     );
     expect(
@@ -39,11 +40,17 @@ describe('real bar chart', () => {
       }),
     ).toBeTruthy();
     const text = container.textContent ?? '';
-    expect(text).toContain('Pico 54');
+    expect(text).toContain('54');
     expect(text).toContain('07:00');
     expect(text).toContain('06:00');
-    // The peak bar uses the pattern, not only the color.
-    expect(container.innerHTML).toContain('gt-peak-pattern');
+    // The peak is the accent; the others take the color of their chart.
+    const fills = [
+      ...container.querySelectorAll('path.recharts-rectangle'),
+    ].map((bar) => bar.getAttribute('fill'));
+    expect(fills).toContain('var(--accent)');
+    expect(fills).toContain('var(--chart-2)');
+    // No bar and no label is drawn for an empty hour.
+    expect(text).not.toContain('Pico');
   });
 
   it('keeps the equivalent table with every value in the DOM', async () => {
@@ -60,8 +67,6 @@ describe('real bar chart', () => {
     );
     const row = await screen.findByRole('row', { name: /07:00/ });
     expect(row.textContent).toContain('54 (pico)');
-    expect(
-      screen.getByRole('button', { name: 'Ver datos como tabla' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ver tabla' })).toBeTruthy();
   });
 });

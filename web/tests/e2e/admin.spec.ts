@@ -29,7 +29,7 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     await section.getByRole('button', { name: 'Activar', exact: true }).click();
     await expect(section.getByText('Activo', { exact: true })).toBeVisible();
 
-    const exception = section.getByRole('form', {
+    const exception = page.getByRole('form', {
       name: 'Agregar día sin servicio a 2026-2',
     });
     await exception.getByLabel('Desde').fill('2026-11-16');
@@ -39,7 +39,11 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
       .getByRole('button', { name: 'Agregar día sin servicio' })
       .click();
     await expect(page.getByText('Ocurrencias actualizadas')).toBeVisible();
-    await expect(section.getByText(/Festivo/)).toBeVisible();
+    await expect(
+      page
+        .getByRole('region', { name: 'Días sin servicio' })
+        .getByText(/Festivo/),
+    ).toBeVisible();
 
     // Weekly schedule inside the period.
     await menu.getByRole('link', { name: 'Gestión de horarios' }).click();

@@ -6,6 +6,7 @@ import { call, getApi } from '@/api/client';
 import type { FlowReport, ReportTable as Table } from '@/api/types';
 import { useResource } from '@/lib/use-resource';
 import { Notice } from '@/ui/Notice';
+import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
 import { BarChart } from './BarChart';
 import { EstudianteDetalle } from './EstudianteDetalle';
@@ -50,6 +51,7 @@ function FlowCharts({
   return (
     <div className={styles.grid}>
       <BarChart
+        color="var(--chart-1)"
         title="Entradas por hora"
         subtitle={subtitle}
         data={hours}
@@ -58,6 +60,7 @@ function FlowCharts({
         valueHeader="Entradas"
       />
       <BarChart
+        color="var(--chart-2)"
         title="Entradas por día de la semana"
         subtitle={subtitle}
         data={weekdays}
@@ -66,6 +69,7 @@ function FlowCharts({
         valueHeader="Entradas"
       />
       <BarChart
+        color="var(--chart-3)"
         title="Horas pico"
         subtitle={subtitle}
         data={peakHours}
@@ -74,6 +78,7 @@ function FlowCharts({
         valueHeader="Entradas"
       />
       <BarChart
+        color="var(--chart-4)"
         title="Fechas pico"
         subtitle={subtitle}
         data={peakDates}
@@ -151,92 +156,102 @@ export function Reportes() {
   };
 
   return (
-    <div className={styles.page}>
-      <h1>Reportes</h1>
-      {options.error !== undefined && (
-        <Notice kind="error" title="No se pudieron cargar las opciones">
-          <button type="button" className="btn" onClick={options.reload}>
-            Reintentar
-          </button>
-        </Notice>
-      )}
-      {options.data && (
-        <FiltrosReporte
-          kind={tab.kind}
-          options={options.data}
-          filters={state.filters}
-          groupBy={state.groupBy}
-          onFilters={setFilters}
-          onGroupBy={setGroupBy}
-        />
-      )}
-      {options.loading && <Spinner label="Cargando opciones…" />}
-
-      <div className={styles.tabs} role="tablist" aria-label="Tipo de reporte">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`tab-${t.id}`}
-            aria-selected={t.id === state.tab}
-            aria-controls="reporte-panel"
-            className={styles.tab}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div
-        id="reporte-panel"
-        role="tabpanel"
-        aria-labelledby={`tab-${state.tab}`}
-        className="stack"
-      >
-        <div className={styles.toolbar}>
-          <p className="muted">
-            {range ? `Rango: ${subtitle}` : 'Elija el rango del reporte.'}
-          </p>
-          <ExportButton
+    <div>
+      <PageHeader
+        crumb="Reportes"
+        title="Reportes"
+        lead={range ? `Rango: ${subtitle}` : 'Elija el rango del reporte.'}
+        aside={
+          <div className={styles.exportBox}>
+            <ExportButton
+              kind={tab.kind}
+              query={query}
+              sort={sort}
+              range={{ from, to }}
+              disabled={!ready || !data || data.rows.length === 0}
+            />
+          </div>
+        }
+      />
+      <div className={styles.main}>
+        {options.error !== undefined && (
+          <Notice kind="error" title="No se pudieron cargar las opciones">
+            <button type="button" className="btn" onClick={options.reload}>
+              Reintentar
+            </button>
+          </Notice>
+        )}
+        {options.data && (
+          <FiltrosReporte
             kind={tab.kind}
-            query={query}
-            sort={sort}
-            range={{ from, to }}
-            disabled={!ready || !data || data.rows.length === 0}
-          />
-        </div>
-        {isFlow && data?.byHour && (
-          <FlowCharts flow={data as FlowReport} subtitle={subtitle} />
-        )}
-        {tab.kind === 'alarms' && data && 'summary' in data && (
-          <AlarmsSummary
-            summary={(data as { summary: AlarmsSummaryData }).summary}
-          />
-        )}
-        {/* Remounted per tab and grouping: its sort state must match `sort`. */}
-        <ReportTable
-          key={`${state.tab}:${state.groupBy}`}
-          table={data}
-          caption={`Reporte de ${tab.label.toLowerCase()}`}
-          loading={options.loading || (ready && report.loading)}
-          error={report.error}
-          onRetry={report.reload}
-          onSortChange={setSort}
-          {...(groupedByStudent
-            ? {
-                onOpenStudent: (id: string) => setDetailId(id),
-              }
-            : {})}
-        />
-        {detailId && (
-          <EstudianteDetalle
-            studentId={detailId}
+            options={options.data}
             filters={state.filters}
-            onClose={() => setDetailId(null)}
+            groupBy={state.groupBy}
+            onFilters={setFilters}
+            onGroupBy={setGroupBy}
           />
         )}
+        {options.loading && <Spinner label="Cargando opciones…" />}
+
+        <div
+          className={styles.tabs}
+          role="tablist"
+          aria-label="Tipo de reporte"
+        >
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-selected={t.id === state.tab}
+              aria-controls="reporte-panel"
+              className={styles.tab}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          id="reporte-panel"
+          role="tabpanel"
+          aria-labelledby={`tab-${state.tab}`}
+          className={styles.panel}
+        >
+          {isFlow && data?.byHour && (
+            <FlowCharts flow={data as FlowReport} subtitle={subtitle} />
+          )}
+          {tab.kind === 'alarms' && data && 'summary' in data && (
+            <AlarmsSummary
+              summary={(data as { summary: AlarmsSummaryData }).summary}
+            />
+          )}
+          {/* Remounted per tab and grouping: its sort state must match `sort`. */}
+          <ReportTable
+            key={`${state.tab}:${state.groupBy}`}
+            table={data}
+            title="Datos en tabla"
+            caption={`Reporte de ${tab.label.toLowerCase()}`}
+            loading={options.loading || (ready && report.loading)}
+            error={report.error}
+            onRetry={report.reload}
+            onSortChange={setSort}
+            {...(groupedByStudent
+              ? {
+                  onOpenStudent: (id: string) => setDetailId(id),
+                }
+              : {})}
+          />
+          {detailId && (
+            <EstudianteDetalle
+              studentId={detailId}
+              filters={state.filters}
+              onClose={() => setDetailId(null)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

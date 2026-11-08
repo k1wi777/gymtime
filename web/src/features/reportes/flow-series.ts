@@ -73,25 +73,31 @@ export function weekdaySeries(flow: FlowReport): BarDatum[] {
   }));
 }
 
+/** In a chart made only of peaks, the accent marks the highest one. */
+const isTop = (count: number, counts: readonly number[]): boolean =>
+  count === Math.max(...counts);
+
 /** The busiest hours only, as bars sorted by hour. */
 export function peakHoursSeries(flow: FlowReport): BarDatum[] {
+  const counts = flow.peaks.hours.map((p) => p.count);
   return [...flow.peaks.hours]
     .sort((a, b) => a.hour - b.hour)
     .map((p) => ({
       key: `p${p.hour}`,
       label: hourLabel(p.hour),
       value: p.count,
-      peak: true,
+      peak: isTop(p.count, counts),
       tooltip: `${hourLabel(p.hour)}–${String(p.hour).padStart(2, '0')}:59 · ${entries(p.count)} (${share(p.count, flow.total)} del total)`,
     }));
 }
 
 export function peakDatesSeries(flow: FlowReport): BarDatum[] {
+  const counts = flow.peaks.dates.map((p) => p.count);
   return flow.peaks.dates.map((p) => ({
     key: `f${p.date}`,
     label: p.date.slice(5),
     value: p.count,
-    peak: true,
+    peak: isTop(p.count, counts),
     tooltip: `${formatDay(p.date)} · ${entries(p.count)} (${share(p.count, flow.total)} del total)`,
   }));
 }

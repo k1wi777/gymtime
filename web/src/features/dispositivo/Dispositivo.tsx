@@ -150,7 +150,6 @@ export function Dispositivo() {
                     className={`${styles.metric} ${styles[`m${(index % 4) + 1}`]}`}
                   >
                     <span aria-hidden="true" className={styles.bar} />
-                    <div aria-hidden="true" className={styles.dot} />
                     <dt className={styles.term}>{metric.term}</dt>
                     <dd
                       className={`${styles.value} ${metric.small ? styles.valueSmall : ''}`}

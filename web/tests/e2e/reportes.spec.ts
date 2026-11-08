@@ -19,7 +19,9 @@ test.describe('reportes del administrador (H10)', () => {
     page,
   }) => {
     await loginAndWait(page, 'boss');
-    await expect(page.getByRole('region', { name: 'Alertas' })).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Requiere atención' }),
+    ).toBeVisible();
 
     await page
       .getByRole('navigation', { name: 'Secciones' })
@@ -33,13 +35,10 @@ test.describe('reportes del administrador (H10)', () => {
     await expect(
       hours.getByRole('img', { name: /pico en 06:00 con 176/ }),
     ).toBeVisible();
-    await expect(
-      hours.getByText('Pico', { exact: false }).first(),
-    ).toBeVisible();
-    // The peaks are drawn with the pattern: the first one is 06:00.
+    // The peak is the accent bar: the first one is 06:00.
     await hours
       .locator('.recharts-bar-rectangle')
-      .filter({ has: page.locator('[fill*="gt-peak-pattern"]') })
+      .filter({ has: page.locator('[fill="var(--accent)"]') })
       .first()
       .hover();
     await expect(hours.getByRole('status')).toContainText('176 entradas');

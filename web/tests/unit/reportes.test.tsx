@@ -495,6 +495,7 @@ describe('summary and landing (R21)', () => {
     const today = await screen.findByRole('region', { name: 'Hoy' });
     expect(within(today).getByText('62,5 %')).toBeTruthy();
     expect(screen.getByText('No hay un periodo activo.')).toBeTruthy();
-    expect(screen.getByText('Lector en línea')).toBeTruthy();
+    // The state shows in the header pill and in the attention card.
+    expect(screen.getAllByText('Lector en línea')).toHaveLength(2);
   });
 });

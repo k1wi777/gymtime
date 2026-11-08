@@ -14,12 +14,15 @@ const LABELS = {
 export function ConnectionPill({
   label,
   online,
+  warning = false,
 }: {
   label: string;
   online: boolean;
+  /** Amber pill (offline reader on the summary) instead of the white one. */
+  warning?: boolean;
 }) {
   return (
-    <div className={styles.pill}>
+    <div className={warning ? `${styles.pill} ${styles.warning}` : styles.pill}>
       <span
         aria-hidden="true"
         className={online ? styles.dot : `${styles.dot} ${styles.off}`}

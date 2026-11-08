@@ -16,7 +16,10 @@
   --primary-light: #eef4ec;
   --primary-mid: #4e8c42;
   --primary-text: #ffffff;
-  --primary-gradient-end: #234f27;
+  /* Solid green of the side menu (and hover of the primary button in admin). */
+  --sidebar: #234f27;
+  --sidebar-scroll: rgba(255, 255, 255, 0.32);
+  --sidebar-scroll-hover: rgba(255, 255, 255, 0.5);
   --hero-start: #2f6a33;
   --accent: #f89f32;
   --accent-text: #3d2400;
@@ -30,6 +33,14 @@
   --disabled-text: #6b6660;
   /* Highlight of the peaks in the charts: amber, with pattern and label too. */
   --peak: #b45309;
+  /* Charts of the reports: one color per chart; the peak is the accent. */
+  --chart-1: #4e8c42;
+  --chart-2: #0b8f86;
+  --chart-3: #1b78a8;
+  --chart-4: #6752a0;
+  --chart-axis: #d9d4d0;
+  --peak-text: #8a4b00;
+  --chart-text: #2a3a2c;
   --danger: #b3261e;
   --danger-bg: #fdecea;
   --success: #2f6a1f;
@@ -52,15 +63,11 @@
   --av5-fg: #3a7a26;
   --av6-bg: #fdecd3;
   --av6-fg: #8a4b00;
-  /* Accent colors of the metric cards (top bar and soft circle). */
+  /* Accent colors of the metric cards (top bar). */
   --m1: #16baaf;
-  --m1-soft: #dcf5f2;
   --m2: #08afe6;
-  --m2-soft: #dff4fc;
   --m3: #6752a0;
-  --m3-soft: #ebe6f5;
   --m4: var(--accent);
-  --m4-soft: #fdecd3;
   --shadow-card:
     0 1px 2px rgba(31, 74, 34, 0.05), 0 14px 28px -20px rgba(31, 74, 34, 0.25);
   --shadow-btn: 0 8px 16px -10px rgba(31, 74, 34, 0.8);
@@ -220,6 +227,94 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   align-items: start;
+}
+
+/*
+ * Administrator screens (the shell marks them with data-area="admin"): thin
+ * border cards without shadow, fixed-width figures and the compact buttons of
+ * the approved boards. The assistant screens keep the global styles above.
+ */
+[data-area='admin'] {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-area='admin'] .card {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+[data-area='admin'] .btn {
+  gap: 8px;
+  padding: 0 18px;
+  border-color: #cfd8cc;
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+[data-area='admin'] .btn:hover:not(:disabled) {
+  background: #f1f6ef;
+  border-color: #cfd8cc;
+}
+
+[data-area='admin'] .btn:disabled {
+  background: var(--surface);
+  border-color: #cfd8cc;
+  color: var(--primary-dark);
+  opacity: 0.45;
+}
+
+[data-area='admin'] .btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+  box-shadow: none;
+}
+
+[data-area='admin'] .btn-primary:hover:not(:disabled) {
+  background: var(--sidebar);
+  border-color: var(--primary);
+}
+
+[data-area='admin'] .btn-primary:disabled {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+[data-area='admin'] .btn-danger,
+[data-area='admin'] .btn-danger:disabled {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  box-shadow: none;
+}
+
+[data-area='admin'] .btn-danger:hover:not(:disabled) {
+  background: #8f1d17;
+  border-color: #8f1d17;
+}
+
+/* Outline danger of the boards (Eliminar, Quitar, Desactivar). */
+[data-area='admin'] .btn-outline-danger {
+  color: #9b1c1c;
+  border-color: #efc9c9;
+}
+
+[data-area='admin'] .btn-outline-danger:hover:not(:disabled) {
+  background: #fdf0f0;
+  border-color: #efc9c9;
+}
+
+[data-area='admin'] .btn-outline-danger:disabled {
+  color: #9b1c1c;
+  border-color: #efc9c9;
+}
+
+[data-area='admin'] .btn-s {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
 }
 
 /* The subtle effects (hover, transitions) are switched off for those who ask. */

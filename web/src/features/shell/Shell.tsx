@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/auth/auth-provider';
@@ -11,10 +10,10 @@ import { formatTime } from '@/lib/time';
 import { useLive } from '@/live/live-provider';
 import { BRAND } from '@/lib/brand';
 import { initialsOf } from '@/lib/display';
-import { NAV_GROUPS, visibleItems } from '@/lib/nav';
-import { Icon } from '@/ui/icons';
+import { visibleItems } from '@/lib/nav';
 import { Notice } from '@/ui/Notice';
 import { ConnectionBadge } from './ConnectionBadge';
+import { NavGroups } from './NavGroups';
 import styles from './Shell.module.css';
 
 const TITLE = 'GymTime UniCórdoba';
@@ -38,7 +37,10 @@ export function Shell({ children }: { children: ReactNode }) {
   const items = visibleItems(role);
   return (
     <div className={styles.layout}>
-      <aside className={styles.aside}>
+      <aside
+        className={styles.aside}
+        data-menu={role === 'admin' ? 'admin' : undefined}
+      >
         <img
           src={BRAND.crestWatermark}
           alt=""
@@ -59,36 +61,12 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav aria-label="Secciones" className={styles.nav}>
-          {NAV_GROUPS.map((group) => {
-            const inGroup = items.filter((item) => item.group === group);
-            if (inGroup.length === 0) return null;
-            return (
-              <div key={group} className={styles.group}>
-                <div className={styles.groupTitle}>{group}</div>
-                {inGroup.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={
-                      pathname.startsWith(item.href) ? 'page' : undefined
-                    }
-                    className={styles.link}
-                  >
-                    <Icon name={item.icon} />
-                    <span className={styles.label}>{item.label}</span>
-                    {item.href === '/por-revisar' && pending > 0 && (
-                      <span
-                        className={styles.counter}
-                        aria-label={`${pending} por revisar`}
-                      >
-                        {pending}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            );
-          })}
+          <NavGroups
+            items={items}
+            pathname={pathname}
+            pending={pending}
+            collapsible={role === 'admin'}
+          />
         </nav>
         <div className={styles.user}>
           <div className={styles.who}>
@@ -160,7 +138,9 @@ export function Shell({ children }: { children: ReactNode }) {
               </Notice>
             )}
           </div>
-          <div className={styles.page}>{children}</div>
+          <div data-area={pathname.startsWith('/admin') ? 'admin' : undefined}>
+            {children}
+          </div>
         </main>
       </div>
     </div>
