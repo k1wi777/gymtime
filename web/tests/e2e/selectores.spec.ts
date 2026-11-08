@@ -301,7 +301,7 @@ test.describe('selectores de fecha y de horario', () => {
       .getByRole('link', { name: 'Periodos' })
       .click();
     await page.getByRole('button', { name: 'Nuevo periodo' }).click();
-    const newPeriod = page.getByRole('form', { name: 'Nuevo periodo' });
+    const newPeriod = page.getByRole('dialog', { name: 'Nuevo periodo' });
     await newPeriod.getByLabel('Nombre').fill('2026-S');
     await newPeriod.getByLabel('Primer día').click();
     await pickDay(page, '2026-11-02');

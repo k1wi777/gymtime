@@ -1,0 +1,89 @@
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--pill-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pill:hover {
+  background: var(--primary-light);
+  border-color: var(--primary-mid);
+}
+
+/* The active pill is also marked by weight and an underline, not only color. */
+.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.active:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.count {
+  min-width: 1.5em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.active .count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.short {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  /* Visually hidden, still the accessible name; the short one is drawn. */
+  .name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pill {
+    position: relative;
+  }
+
+  .short {
+    display: inline;
+  }
+}

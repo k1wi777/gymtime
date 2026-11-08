@@ -39,7 +39,6 @@ export type EventOf<T extends SystemEventType> = Extract<
 export type Period = Schemas['PeriodResponseDto'];
 export type ServiceException = Schemas['ServiceExceptionDto'];
 export type Regeneration = Schemas['RegenerationDto'];
-export type Week = Schemas['WeekDto'];
 export type PanelStudent = Schemas['PanelStudentDto'];
 export type ImportField = Schemas['ImportFieldDto'];
 export type ImportPreview = Schemas['PreviewResponseDto'];

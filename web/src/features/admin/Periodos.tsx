@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type { Period, Regeneration } from '@/api/types';
@@ -12,7 +12,9 @@ import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { DateRangePicker } from '@/ui/DatePicker';
 import { Icon } from '@/ui/icons';
 import { PageHeader } from '@/ui/PageHeader';
-import { SubmitButton, TextField, useForm } from '@/ui/Form';
+import { FormModal } from '@/ui/FormModal';
+import { FormActions, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { useInModal } from '@/ui/Modal';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
 import type { FieldErrors } from '@/lib/validators';
@@ -74,6 +76,8 @@ function PeriodForm({
   onCancel: () => void;
 }) {
   const [failure, setFailure] = useState<string | null>(null);
+  const formId = useId();
+  const inModal = useInModal();
   const form = useForm<PeriodValues>({
     initial,
     validate: validatePeriod,
@@ -88,7 +92,8 @@ function PeriodForm({
   });
   return (
     <form
-      className={`card ${styles.formCard}`}
+      id={formId}
+      className={inModal ? 'stack' : `card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={
@@ -119,12 +124,12 @@ function PeriodForm({
         fromError={form.errors.startDate}
         toError={form.errors.endDate}
       />
-      <div className={styles.actions}>
-        <SubmitButton busy={form.submitting}>{submitLabel}</SubmitButton>
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        formId={formId}
+        busy={form.submitting}
+        submitLabel={submitLabel}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -254,16 +259,14 @@ export function Periodos() {
         title="Periodos"
         lead="Un periodo agrupa los horarios semanales de un semestre. Solo uno puede estar activo; los días sin servicio (festivos, semana santa) no generan sesiones."
         aside={
-          mode === 'none' ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setMode('new')}
-            >
-              <Icon name="mas" size={17} strokeWidth={2} />
-              Nuevo periodo
-            </button>
-          ) : undefined
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setMode('new')}
+          >
+            <Icon name="mas" size={17} strokeWidth={2} />
+            Nuevo periodo
+          </button>
         }
       />
       <div className={styles.main}>
@@ -278,42 +281,48 @@ export function Periodos() {
             onDismiss={() => setResult(null)}
           />
         )}
-        {mode === 'new' && (
-          <PeriodForm
-            initial={{ name: '', startDate: '', endDate: '' }}
-            submitLabel="Crear periodo"
-            onCancel={() => setMode('none')}
-            onSubmit={async (values) => {
-              await call(getApi().client.POST('/periods', { body: values }));
-              setMode('none');
-              periods.reload();
-            }}
-          />
-        )}
-        {typeof mode === 'object' && (
-          <PeriodForm
-            key={mode.edit.id}
-            initial={{
-              name: mode.edit.name,
-              startDate: mode.edit.startDate,
-              endDate: mode.edit.endDate,
-            }}
-            submitLabel="Guardar cambios"
-            onCancel={() => setMode('none')}
-            onSubmit={async (values) => {
-              const edit = mode.edit;
-              const updated = await call(
-                getApi().client.PATCH('/periods/{id}', {
-                  params: { path: { id: edit.id } },
-                  body: values,
-                }),
-              );
-              setMode('none');
-              setResult(updated.regeneration ?? null);
-              periods.reload();
-            }}
-          />
-        )}
+        <FormModal
+          open={mode !== 'none'}
+          title={mode === 'new' ? 'Nuevo periodo' : 'Editar fechas'}
+          onClose={() => setMode('none')}
+        >
+          {mode === 'new' && (
+            <PeriodForm
+              initial={{ name: '', startDate: '', endDate: '' }}
+              submitLabel="Crear periodo"
+              onCancel={() => setMode('none')}
+              onSubmit={async (values) => {
+                await call(getApi().client.POST('/periods', { body: values }));
+                setMode('none');
+                periods.reload();
+              }}
+            />
+          )}
+          {typeof mode === 'object' && (
+            <PeriodForm
+              key={mode.edit.id}
+              initial={{
+                name: mode.edit.name,
+                startDate: mode.edit.startDate,
+                endDate: mode.edit.endDate,
+              }}
+              submitLabel="Guardar cambios"
+              onCancel={() => setMode('none')}
+              onSubmit={async (values) => {
+                const edit = mode.edit;
+                const updated = await call(
+                  getApi().client.PATCH('/periods/{id}', {
+                    params: { path: { id: edit.id } },
+                    body: values,
+                  }),
+                );
+                setMode('none');
+                setResult(updated.regeneration ?? null);
+                periods.reload();
+              }}
+            />
+          )}
+        </FormModal>
 
         {periods.loading && !periods.data && <Spinner />}
         {periods.error ? (

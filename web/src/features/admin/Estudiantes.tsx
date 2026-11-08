@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError, issuesByField } from '@/api/errors';
 import type { ImportField, PanelStudent, Student } from '@/api/types';
@@ -11,7 +11,9 @@ import type { FieldErrors } from '@/lib/validators';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
-import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
+import { FormModal } from '@/ui/FormModal';
+import { useInModal } from '@/ui/Modal';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
@@ -56,6 +58,8 @@ function StudentForm({
   onCancel: () => void;
 }) {
   const creating = student === null;
+  const formId = useId();
+  const inModal = useInModal();
   const [failure, setFailure] = useState<string | null>(null);
   const initial: Values = Object.fromEntries(
     fields.map((f) => {
@@ -101,14 +105,17 @@ function StudentForm({
   });
   return (
     <form
-      className={`card ${styles.formCard}`}
+      id={formId}
+      className={inModal ? 'stack' : `card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
     >
-      <h2 className={styles.formTitle}>
-        {creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
-      </h2>
+      {!inModal && (
+        <h2 className={styles.formTitle}>
+          {creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
+        </h2>
+      )}
       {failure && <Notice kind="error">{failure}</Notice>}
       {fields.map((field) => (
         <TextField
@@ -122,14 +129,12 @@ function StudentForm({
           disabled={!creating && !field.editable}
         />
       ))}
-      <div className="row">
-        <SubmitButton busy={form.submitting}>
-          {creating ? 'Crear estudiante' : 'Guardar cambios'}
-        </SubmitButton>
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        formId={formId}
+        busy={form.submitting}
+        submitLabel={creating ? 'Crear estudiante' : 'Guardar cambios'}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -273,7 +278,7 @@ export function Estudiantes() {
         title="Estudiantes"
         {...(lead ? { lead } : {})}
         aside={
-          mode === 'none' && fields.data ? (
+          (mode === 'none' || mode === 'new') && fields.data ? (
             <div className={styles.headActions}>
               <button
                 type="button"
@@ -304,18 +309,24 @@ export function Estudiantes() {
         {fields.error ? (
           <Notice kind="error">{describeError(fields.error)}</Notice>
         ) : null}
-        {mode === 'new' && fields.data && (
-          <StudentForm
-            fields={fields.data}
-            student={null}
-            onCancel={() => setMode('none')}
-            onSaved={() => {
-              setMode('none');
-              students.reload();
-              split.reload();
-            }}
-          />
-        )}
+        <FormModal
+          open={mode === 'new' && !!fields.data}
+          title="Nuevo estudiante"
+          onClose={() => setMode('none')}
+        >
+          {fields.data && (
+            <StudentForm
+              fields={fields.data}
+              student={null}
+              onCancel={() => setMode('none')}
+              onSaved={() => {
+                setMode('none');
+                students.reload();
+                split.reload();
+              }}
+            />
+          )}
+        </FormModal>
         {typeof mode === 'object' && fields.data && (
           <StudentForm
             key={mode.edit.id}

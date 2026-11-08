@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError, issuesByField } from '@/api/errors';
 import type { Account } from '@/api/types';
@@ -11,7 +11,9 @@ import type { FieldErrors } from '@/lib/validators';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
-import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
+import { FormModal } from '@/ui/FormModal';
+import { useInModal } from '@/ui/Modal';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
@@ -59,6 +61,8 @@ function UserForm({
   onCancel: () => void;
 }) {
   const creating = user === null;
+  const formId = useId();
+  const inModal = useInModal();
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<UserValues>({
     initial: {
@@ -102,14 +106,17 @@ function UserForm({
   });
   return (
     <form
-      className={`card ${styles.formCard}`}
+      id={formId}
+      className={inModal ? 'stack' : `card ${styles.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo usuario' : `Editar ${user.name}`}
     >
-      <h2 className={styles.formTitle}>
-        {creating ? 'Nuevo usuario' : `Editar ${user.name}`}
-      </h2>
+      {!inModal && (
+        <h2 className={styles.formTitle}>
+          {creating ? 'Nuevo usuario' : `Editar ${user.name}`}
+        </h2>
+      )}
       {failure && <Notice kind="error">{failure}</Notice>}
       <TextField
         label="Nombre"
@@ -145,14 +152,12 @@ function UserForm({
           persona deberá cambiarla al entrar.
         </p>
       )}
-      <div className="row">
-        <SubmitButton busy={form.submitting}>
-          {creating ? 'Crear usuario' : 'Guardar cambios'}
-        </SubmitButton>
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        formId={formId}
+        busy={form.submitting}
+        submitLabel={creating ? 'Crear usuario' : 'Guardar cambios'}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -203,7 +208,7 @@ export function Usuarios() {
         title="Usuarios del panel"
         lead="Quién puede entrar al panel y con qué rol."
         aside={
-          mode === 'none' ? (
+          mode === 'none' || mode === 'new' ? (
             <button
               type="button"
               className="btn btn-primary"
@@ -221,7 +226,11 @@ export function Usuarios() {
             {failure}
           </Notice>
         )}
-        {mode === 'new' && (
+        <FormModal
+          open={mode === 'new'}
+          title="Nuevo usuario"
+          onClose={() => setMode('none')}
+        >
           <UserForm
             user={null}
             onCancel={() => setMode('none')}
@@ -231,7 +240,7 @@ export function Usuarios() {
               users.reload();
             }}
           />
-        )}
+        </FormModal>
         {typeof mode === 'object' && (
           <UserForm
             key={mode.edit.id}

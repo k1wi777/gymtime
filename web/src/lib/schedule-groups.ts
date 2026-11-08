@@ -88,3 +88,54 @@ export function scheduleSummary(
 ): string {
   return `${group.label} ${rangeLabel(schedule)} · ${schedule.name}`;
 }
+
+export interface DayFilterOption {
+  /** 1 (Monday) to 7 (Sunday), or null for «Todos». */
+  weekday: number | null;
+  /** `Lun`, or `Todos` */
+  label: string;
+  /** `lunes`, or `todos` */
+  longLabel: string;
+  count: number;
+}
+
+/**
+ * Pills of the day filter: only the weekdays that have schedules, Monday to
+ * Sunday with their count, and «Todos» (the total) at the end.
+ */
+export function dayFilterOptions(
+  schedules: readonly SelectableSchedule[],
+): DayFilterOption[] {
+  const days = groupByWeekday(schedules)
+    .filter((group) => group.schedules.length > 0)
+    .map((group) => ({
+      weekday: group.weekday,
+      label: group.label,
+      longLabel: group.longLabel,
+      count: group.schedules.length,
+    }));
+  if (days.length === 0) return [];
+  const total = days.reduce((sum, day) => sum + day.count, 0);
+  return [
+    ...days,
+    { weekday: null, label: 'Todos', longLabel: 'todos', count: total },
+  ];
+}
+
+/** First weekday (Monday to Sunday) with schedules, or null if there are none. */
+export function firstDayWithSchedules(
+  schedules: readonly SelectableSchedule[],
+): number | null {
+  return (
+    groupByWeekday(schedules).find((group) => group.schedules.length > 0)
+      ?.weekday ?? null
+  );
+}
+
+/** Schedules of one weekday, ordered by start time. */
+export function filterByDay<T extends SelectableSchedule>(
+  schedules: readonly T[],
+  weekday: number,
+): T[] {
+  return groupByWeekday(schedules)[weekday - 1]?.schedules ?? [];
+}

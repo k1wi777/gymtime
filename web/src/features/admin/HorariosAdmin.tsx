@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type {
@@ -9,20 +9,30 @@ import type {
   Regeneration,
   Schedule,
   Student,
-  Week,
 } from '@/api/types';
-import { bogotaDay, formatDay, formatShortDay } from '@/lib/time';
+import {
+  dayFilterOptions,
+  filterByDay,
+  firstDayWithSchedules,
+  groupByWeekday,
+  weekdayOf,
+} from '@/lib/schedule-groups';
+import { bogotaDay } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import { type FieldErrors } from '@/lib/validators';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { DatePicker } from '@/ui/DatePicker';
+import { DayFilter } from '@/ui/DayFilter';
+import { FormModal, useModalGuard } from '@/ui/FormModal';
+import { useInModal } from '@/ui/Modal';
 import { ScheduleSelect } from '@/ui/ScheduleSelect';
-import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
+import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
+import { RowMenu } from './RowMenu';
 import { RegenerationNotice } from './RegenerationNotice';
 import styles from './Admin.module.css';
 import view from './HorariosAdmin.module.css';
@@ -88,6 +98,8 @@ function ScheduleForm({
   onCancel: () => void;
 }) {
   const [failure, setFailure] = useState<string | null>(null);
+  const formId = useId();
+  const inModal = useInModal();
   const form = useForm<ScheduleValues>({
     initial: {
       name: schedule?.name ?? '',
@@ -128,14 +140,12 @@ function ScheduleForm({
   });
   return (
     <form
-      className={`card ${view.formCard}`}
+      id={formId}
+      className={inModal ? 'stack' : `card ${view.formCard}`}
       onSubmit={form.submit}
       noValidate
       aria-label={schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}
     >
-      <h2 className={view.formTitle}>
-        {schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}
-      </h2>
       {failure && <Notice kind="error">{failure}</Notice>}
       <TextField
         label="Nombre"
@@ -177,14 +187,12 @@ function ScheduleForm({
           maxLength={5}
         />
       </div>
-      <div className="row">
-        <SubmitButton busy={form.submitting}>
-          {schedule ? 'Guardar cambios' : 'Crear horario'}
-        </SubmitButton>
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        formId={formId}
+        busy={form.submitting}
+        submitLabel={schedule ? 'Guardar cambios' : 'Crear horario'}
+        onCancel={onCancel}
+      />
     </form>
   );
 }
@@ -208,6 +216,8 @@ function AssignPanel({
   const [bulkResult, setBulkResult] = useState<BulkAssignResult | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Pasted documents not yet assigned are the only thing worth asking about.
+  useModalGuard(bulk.trim() !== '');
 
   const assignedIds = useMemo(
     () => new Set(schedule.students.map((s) => s.id)),
@@ -404,137 +414,159 @@ function AssignPanel({
   );
 }
 
-function WeekGrid({ week, today }: { week: Week; today: string }) {
-  return (
-    <div className={view.weekScroll}>
-      <table className={view.week}>
-        <caption className="visually-hidden">
-          Semana del {formatDay(week.weekStart)}
-        </caption>
-        <thead>
-          <tr>
-            {week.days.map((day) => {
-              const name = WEEKDAYS[day.weekday - 1] ?? '';
-              const classes = [view.dayHead];
-              if (day.closedReason) classes.push(view.closed);
-              else if (day.date === today) classes.push(view.today);
-              return (
-                <th scope="col" key={day.date} className={classes.join(' ')}>
-                  <div className={view.dayBox}>
-                    <div className={view.dayName}>{name}</div>
-                    <div className={view.dayDate}>
-                      {name.slice(0, 3).toLowerCase()},{' '}
-                      {formatShortDay(day.date)}
-                    </div>
-                    {day.closedReason && (
-                      <Badge tone="warning">
-                        Sin servicio: {day.closedReason}
-                      </Badge>
-                    )}
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {week.days.map((day) => (
-              <td
-                key={day.date}
-                className={`${view.dayBody} ${day.closedReason ? view.closedBody : ''}`}
-              >
-                {!day.closedReason &&
-                  week.schedules
-                    .filter((s) => s.weekday === day.weekday)
-                    .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                    .map((s) => (
-                      <div key={s.id} className={view.slot} title={s.name}>
-                        <span className="visually-hidden">{s.name}: </span>
-                        <div className={view.slotHour}>
-                          {hhmm(s.startTime)}–{hhmm(s.endTime)}
-                        </div>
-                        <div className={view.slotCount}>
-                          {s.assignedCount} estudiantes
-                        </div>
-                      </div>
-                    ))}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
+interface WeekActions {
+  onStudents: (schedule: Schedule) => void;
+  onEdit: (schedule: Schedule) => void;
+  onDelete: (schedule: Schedule) => void;
 }
 
-/** Weekday (1 = Monday) of a recurring schedule, or of the day of a one-off one. */
-function weekdayOf(schedule: Schedule): number | null {
-  if (schedule.weekday) return schedule.weekday;
-  if (!schedule.date) return null;
-  return ((new Date(`${schedule.date}T12:00:00Z`).getUTCDay() + 6) % 7) + 1;
-}
-
-function monday(day: string): string {
-  const date = new Date(`${day}T12:00:00-05:00`);
-  const offset = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - offset);
-  return bogotaDay(date);
-}
-
-const shiftDay = (day: string, days: number): string => {
-  const date = new Date(`${day}T12:00:00-05:00`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return bogotaDay(date);
-};
-
-function WeekView({ periodId }: { periodId: string }) {
-  const [weekStart, setWeekStart] = useState(() =>
-    monday(bogotaDay(new Date())),
-  );
-  const week = useResource(
-    (signal) =>
-      call(
-        getApi().client.GET('/panel/schedules/week', {
-          params: { query: { periodId, weekStart } },
-          signal,
-        }),
-      ),
-    [periodId, weekStart],
-  );
+/**
+ * The typical week of the period, built from its schedules: one column per
+ * weekday, no dates. With `actions` (the «Todos» filter, where the cards are
+ * not shown) each slot carries «Estudiantes» and a «Más» menu.
+ */
+function WeekView({
+  schedules,
+  actions,
+}: {
+  schedules: readonly Schedule[];
+  actions?: WeekActions;
+}) {
+  const days = groupByWeekday(schedules);
   return (
     <section className={`card ${view.weekCard}`} aria-label="Vista semanal">
       <div className={view.weekHead}>
         <h2 className={view.weekTitle}>Vista semanal</h2>
-        <div className={view.weekNav}>
-          <button
-            type="button"
-            className="btn btn-s"
-            aria-label="Semana anterior"
-            onClick={() => setWeekStart(shiftDay(weekStart, -7))}
-          >
-            <Icon name="chevronLeft" size={16} strokeWidth={2} />
-            Anterior
-          </button>
-          <span className={view.weekLabel}>
-            Semana del {formatDay(weekStart)}
-          </span>
-          <button
-            type="button"
-            className="btn btn-s"
-            aria-label="Semana siguiente"
-            onClick={() => setWeekStart(shiftDay(weekStart, 7))}
-          >
-            Siguiente
-            <Icon name="chevron" size={16} strokeWidth={2} />
-          </button>
-        </div>
       </div>
-      {week.loading && !week.data && <Spinner />}
-      {week.error ? (
-        <Notice kind="error">{describeError(week.error)}</Notice>
-      ) : null}
-      {week.data && <WeekGrid week={week.data} today={bogotaDay(new Date())} />}
+      <div className={view.weekScroll}>
+        <table className={view.week}>
+          <caption className="visually-hidden">Semana tipo del periodo</caption>
+          <thead>
+            <tr>
+              {days.map((day) => (
+                <th scope="col" key={day.weekday} className={view.dayHead}>
+                  <div className={view.dayBox}>
+                    <div className={view.dayName}>
+                      {WEEKDAYS[day.weekday - 1]}
+                    </div>
+                    <div className={view.dayDate}>
+                      {day.schedules.length}{' '}
+                      {day.schedules.length === 1 ? 'horario' : 'horarios'}
+                    </div>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {days.map((day) => (
+                <td key={day.weekday} className={view.dayBody}>
+                  {day.schedules.map((s) => {
+                    const when = `${day.longLabel} ${hhmm(s.startTime)}–${hhmm(s.endTime)}`;
+                    return (
+                      <div
+                        key={s.id}
+                        className={`${view.slot} ${actions ? view.slotWithActions : ''}`}
+                        title={s.name}
+                      >
+                        <span className="visually-hidden">{s.name}: </span>
+                        <div className={view.slotHour}>
+                          {hhmm(s.startTime)}–{hhmm(s.endTime)}
+                        </div>
+                        {actions ? (
+                          <div className={view.slotActions}>
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-label={`Estudiantes ${when}`}
+                              onClick={() => actions.onStudents(s)}
+                            >
+                              Estudiantes
+                            </button>
+                            <RowMenu
+                              label={`Más acciones de ${when}`}
+                              items={[
+                                {
+                                  key: 'edit',
+                                  label: 'Editar',
+                                  onSelect: () => actions.onEdit(s),
+                                },
+                                {
+                                  key: 'delete',
+                                  label: 'Eliminar',
+                                  danger: true,
+                                  onSelect: () => actions.onDelete(s),
+                                },
+                              ]}
+                            />
+                          </div>
+                        ) : (
+                          <div className={view.slotCount}>
+                            {s.students.length} estudiantes
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ScheduleCard({
+  schedule,
+  onStudents,
+  onEdit,
+  onDelete,
+}: {
+  schedule: Schedule;
+  onStudents: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const weekday = weekdayOf(schedule);
+  const dayName = (weekday ? WEEKDAYS[weekday - 1] : '') ?? '';
+  return (
+    <section
+      className={`card ${view.card}`}
+      aria-label={`Horario ${schedule.name}`}
+    >
+      <div className={view.cardHead}>
+        <div aria-hidden="true" className={view.dayBadge}>
+          <span className={view.dayAbbr}>
+            {dayName.slice(0, 3).toUpperCase()}
+          </span>
+          <span className={view.dayStart}>{hhmm(schedule.startTime)}</span>
+        </div>
+        <div className={view.cardTitleBox}>
+          <h2 className={view.cardTitle}>{schedule.name}</h2>
+          <div className={view.cardRange}>
+            {dayName} {hhmm(schedule.startTime)}–{hhmm(schedule.endTime)}
+          </div>
+        </div>
+        <Badge tone="mint">{schedule.students.length} estudiantes</Badge>
+      </div>
+      <div className={view.cardActions}>
+        <button type="button" className="btn btn-s" onClick={onStudents}>
+          Estudiantes
+        </button>
+        <button type="button" className="btn btn-s" onClick={onEdit}>
+          Editar
+        </button>
+        <button
+          type="button"
+          className="btn btn-s btn-outline-danger"
+          onClick={onDelete}
+        >
+          Eliminar
+        </button>
+      </div>
     </section>
   );
 }
@@ -558,7 +590,9 @@ export function HorariosAdmin() {
   const [failure, setFailure] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Schedule | null>(null);
   const [busy, setBusy] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [studentsOf, setStudentsOf] = useState<string | null>(null);
+  // undefined = nobody chose yet: the first day with schedules is active.
+  const [chosenDay, setChosenDay] = useState<number | null | undefined>();
 
   const period: Period | undefined =
     periods.data?.find((p) => p.id === chosen) ??
@@ -571,6 +605,14 @@ export function HorariosAdmin() {
         (a.weekday ?? 0) - (b.weekday ?? 0) ||
         a.startTime.localeCompare(b.startTime),
     );
+
+  const options = dayFilterOptions(mine);
+  const day =
+    chosenDay === null ||
+    (chosenDay !== undefined && options.some((o) => o.weekday === chosenDay))
+      ? chosenDay
+      : firstDayWithSchedules(mine);
+  const assigning = mine.find((s) => s.id === studentsOf);
 
   const saved = (regeneration: Regeneration | null) => {
     setMode('none');
@@ -604,7 +646,7 @@ export function HorariosAdmin() {
         title="Gestión de horarios"
         lead="Los horarios semanales pertenecen a un periodo. Al crear o cambiar uno se generan sus sesiones hasta el fin del periodo, sin los días sin servicio."
         aside={
-          period && mode === 'none' ? (
+          period ? (
             <button
               type="button"
               className="btn btn-primary"
@@ -633,8 +675,9 @@ export function HorariosAdmin() {
                 value={period.id}
                 onChange={(v) => {
                   setChosen(v);
+                  setChosenDay(undefined);
                   setMode('none');
-                  setOpenId(null);
+                  setStudentsOf(null);
                 }}
                 options={(periods.data ?? []).map((p) => ({
                   value: p.id,
@@ -653,97 +696,79 @@ export function HorariosAdmin() {
                 onDismiss={() => setResult(null)}
               />
             )}
-            {mode === 'new' && (
+            <FormModal
+              open={mode !== 'none'}
+              title={
+                typeof mode === 'object'
+                  ? `Editar ${mode.edit.name}`
+                  : 'Nuevo horario'
+              }
+              onClose={() => setMode('none')}
+            >
               <ScheduleForm
+                key={typeof mode === 'object' ? mode.edit.id : 'new'}
                 period={period}
+                {...(typeof mode === 'object' ? { schedule: mode.edit } : {})}
                 onSaved={saved}
                 onCancel={() => setMode('none')}
               />
-            )}
-            {typeof mode === 'object' && (
-              <ScheduleForm
-                key={mode.edit.id}
-                period={period}
-                schedule={mode.edit}
-                onSaved={saved}
-                onCancel={() => setMode('none')}
-              />
-            )}
+            </FormModal>
+            <FormModal
+              open={assigning !== undefined}
+              title={`Estudiantes de ${assigning?.name ?? ''}`}
+              size="lg"
+              onClose={() => setStudentsOf(null)}
+            >
+              {assigning && (
+                <AssignPanel
+                  schedule={assigning}
+                  others={mine}
+                  students={students.data ?? []}
+                  onChanged={schedules.reload}
+                />
+              )}
+            </FormModal>
             {schedules.loading && !schedules.data && <Spinner />}
             {schedules.data && mine.length === 0 && (
               <p className="muted">Este periodo no tiene horarios.</p>
             )}
-            <div className={view.cards}>
-              {mine.map((schedule) => {
-                const weekday = weekdayOf(schedule);
-                const dayName = (weekday ? WEEKDAYS[weekday - 1] : '') ?? '';
-                return (
-                  <section
+            {options.length > 0 && (
+              <DayFilter
+                label="Día"
+                options={options}
+                value={day}
+                onChange={setChosenDay}
+              />
+            )}
+            {day !== null && (
+              <div className={view.cards}>
+                {filterByDay(mine, day).map((schedule) => (
+                  <ScheduleCard
                     key={schedule.id}
-                    className={`card ${view.card} ${openId === schedule.id ? view.cardOpen : ''}`}
-                    aria-label={`Horario ${schedule.name}`}
-                  >
-                    <div className={view.cardHead}>
-                      <div aria-hidden="true" className={view.dayBadge}>
-                        <span className={view.dayAbbr}>
-                          {dayName.slice(0, 3).toUpperCase()}
-                        </span>
-                        <span className={view.dayStart}>
-                          {hhmm(schedule.startTime)}
-                        </span>
-                      </div>
-                      <div className={view.cardTitleBox}>
-                        <h2 className={view.cardTitle}>{schedule.name}</h2>
-                        <div className={view.cardRange}>
-                          {dayName} {hhmm(schedule.startTime)}–
-                          {hhmm(schedule.endTime)}
-                        </div>
-                      </div>
-                      <Badge tone="mint">
-                        {schedule.students.length} estudiantes
-                      </Badge>
-                    </div>
-                    <div className={view.cardActions}>
-                      <button
-                        type="button"
-                        className="btn btn-s"
-                        aria-expanded={openId === schedule.id}
-                        onClick={() =>
-                          setOpenId(openId === schedule.id ? null : schedule.id)
-                        }
-                      >
-                        {openId === schedule.id
-                          ? 'Ocultar estudiantes'
-                          : 'Estudiantes'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-s"
-                        onClick={() => setMode({ edit: schedule })}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-s btn-outline-danger"
-                        onClick={() => setToDelete(schedule)}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                    {openId === schedule.id && (
-                      <AssignPanel
-                        schedule={schedule}
-                        others={mine}
-                        students={students.data ?? []}
-                        onChanged={schedules.reload}
-                      />
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-            <WeekView periodId={period.id} />
+                    schedule={schedule}
+                    onStudents={() => setStudentsOf(schedule.id)}
+                    onEdit={() => setMode({ edit: schedule })}
+                    onDelete={() => setToDelete(schedule)}
+                  />
+                ))}
+              </div>
+            )}
+            {mine.length > 0 && (
+              <WeekView
+                schedules={mine}
+                {...(day === null
+                  ? {
+                      actions: {
+                        onStudents: (schedule: Schedule) =>
+                          setStudentsOf(schedule.id),
+                        onEdit: (schedule: Schedule) =>
+                          setMode({ edit: schedule }),
+                        onDelete: setToDelete,
+                      },
+                    }
+                  : {})}
+              />
+            )}
           </>
         )}
       </div>

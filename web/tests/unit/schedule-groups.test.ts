@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dayFilterOptions,
+  filterByDay,
   findSchedule,
+  firstDayWithSchedules,
   groupByWeekday,
   rangeLabel,
   scheduleSummary,
@@ -65,5 +68,40 @@ describe('schedule groups', () => {
   });
   it('writes the range without seconds', () => {
     expect(rangeLabel(schedules[0]!)).toBe('18:00–19:00');
+  });
+});
+
+describe('day filter (R17, R18, R20)', () => {
+  const schedules = [
+    make('a', 3, '18:00:00'),
+    make('b', 3, '06:00:00'),
+    make('c', 1, '07:00:00'),
+    make('d', null, '10:00:00', '2026-11-07'), // a Saturday
+  ];
+
+  it('lists only the days with schedules, Monday to Sunday, and «Todos» last', () => {
+    expect(
+      dayFilterOptions(schedules).map((o) => [o.weekday, o.label, o.count]),
+    ).toEqual([
+      [1, 'Lun', 1],
+      [3, 'Mié', 2],
+      [6, 'Sáb', 1],
+      [null, 'Todos', 4],
+    ]);
+  });
+
+  it('has no pills without schedules', () => {
+    expect(dayFilterOptions([])).toEqual([]);
+    expect(firstDayWithSchedules([])).toBeNull();
+  });
+
+  it('starts on the first day with schedules', () => {
+    expect(firstDayWithSchedules(schedules.slice(0, 2))).toBe(3);
+    expect(firstDayWithSchedules(schedules)).toBe(1);
+  });
+
+  it('filters one day ordered by start time', () => {
+    expect(filterByDay(schedules, 3).map((s) => s.id)).toEqual(['b', 'a']);
+    expect(filterByDay(schedules, 2)).toEqual([]);
   });
 });

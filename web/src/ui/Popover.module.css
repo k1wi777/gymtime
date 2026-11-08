@@ -8,7 +8,7 @@
  */
 .panel {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-popover, 60);
   top: 0;
   left: 0;
   visibility: hidden;

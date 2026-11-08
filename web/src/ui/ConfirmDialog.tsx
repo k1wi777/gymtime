@@ -47,6 +47,10 @@ export function ConfirmDialog({
       ref={ref}
       className={styles.dialog}
       aria-labelledby="confirm-title"
+      onKeyDown={(event) => {
+        // Inside a modal the React tree bubbles this key up to it: keep it here.
+        if (event.key === 'Escape') event.stopPropagation();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onCancel();

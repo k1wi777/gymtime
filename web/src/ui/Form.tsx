@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import {
   useCallback,
   useId,
@@ -9,6 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { FieldErrors } from '@/lib/validators';
+import { useCloseRequest, useModalGuard } from './FormModal';
+import { useModalFooter } from './Modal';
 import styles from './Form.module.css';
 
 interface FieldFrameProps {
@@ -197,20 +200,61 @@ export function SubmitButton({
   busy,
   children,
   disabled,
+  form,
 }: {
   busy: boolean;
   children: ReactNode;
   disabled?: boolean;
+  /** Id of the `<form>` when the button sits outside it (a modal footer). */
+  form?: string;
 }) {
   return (
     <button
       type="submit"
+      form={form}
       className="btn btn-primary"
       disabled={busy || disabled}
     >
       {busy ? 'Un momento…' : children}
     </button>
   );
+}
+
+/**
+ * «Guardar» + «Cancelar» of a form. Inside a modal they go to its fixed footer
+ * (tied to the form by `formId`) and «Cancelar» asks before discarding changes.
+ */
+export function FormActions({
+  formId,
+  busy,
+  submitLabel,
+  onCancel,
+  className = 'row',
+}: {
+  formId: string;
+  busy: boolean;
+  submitLabel: ReactNode;
+  onCancel: () => void;
+  className?: string;
+}) {
+  const footer = useModalFooter();
+  const requestClose = useCloseRequest();
+  const content = (
+    <div className={className}>
+      <SubmitButton busy={busy} form={formId}>
+        {submitLabel}
+      </SubmitButton>
+      <button
+        type="button"
+        className="btn"
+        disabled={busy && footer !== null}
+        onClick={requestClose ?? onCancel}
+      >
+        Cancelar
+      </button>
+    </div>
+  );
+  return footer ? createPortal(content, footer) : content;
 }
 
 interface UseFormOptions<T extends object> {
@@ -285,10 +329,16 @@ export function useForm<T extends object>({
     }
   };
 
+  const dirty = (Object.keys(initial) as Array<keyof T>).some(
+    (key) => values[key] !== initial[key],
+  );
+  useModalGuard(dirty, submitting);
+
   return {
     values,
     errors,
     submitting,
+    dirty,
     setValue,
     blur,
     clearField,

@@ -149,6 +149,8 @@ export function Popover({ label, trigger, children }: Props) {
       }}
       onKeyDown={(event) => {
         if (open && event.key === 'Escape') {
+          // Only the innermost layer closes (a modal around it stays open).
+          event.preventDefault();
           event.stopPropagation();
           close(true);
         }

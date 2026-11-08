@@ -19,7 +19,7 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     // Period with a day without service.
     await menu.getByRole('link', { name: 'Periodos' }).click();
     await page.getByRole('button', { name: 'Nuevo periodo' }).click();
-    const newPeriod = page.getByRole('form', { name: 'Nuevo periodo' });
+    const newPeriod = page.getByRole('dialog', { name: 'Nuevo periodo' });
     await newPeriod.getByLabel('Nombre').fill('2026-2');
     await newPeriod.getByLabel('Primer día').click();
     await pickDay(page, '2026-11-02');
@@ -50,12 +50,13 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     // Weekly schedule inside the period.
     await menu.getByRole('link', { name: 'Gestión de horarios' }).click();
     await page.getByRole('button', { name: 'Nuevo horario' }).click();
-    const form = page.getByRole('form', { name: 'Nuevo horario' });
+    const form = page.getByRole('dialog', { name: 'Nuevo horario' });
     await form.getByLabel('Nombre').fill('Lunes noche');
     await form.getByLabel('Día de la semana').selectOption('1');
     await form.getByLabel('Inicio').fill('18:00');
     await form.getByLabel('Fin').fill('19:00');
     await form.getByRole('button', { name: 'Crear horario' }).click();
+    await expect(form).toHaveCount(0);
     const schedule = page.getByRole('region', { name: 'Horario Lunes noche' });
     await expect(schedule).toBeVisible();
     await expect(page.getByText('Ocurrencias actualizadas')).toBeVisible();
@@ -86,19 +87,25 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
       .getByRole('region', { name: 'Horario Lunes noche' })
       .getByRole('button', { name: 'Estudiantes' })
       .click();
-    await page
+    const assign = page.getByRole('dialog', {
+      name: 'Estudiantes de Lunes noche',
+    });
+    await assign
       .getByLabel('Asignar varios por documento')
       .fill('2001\n2003\n9999');
-    await page.getByRole('button', { name: 'Asignar lista' }).click();
-    const result = page.getByRole('status').filter({
+    await assign.getByRole('button', { name: 'Asignar lista' }).click();
+    const result = assign.getByRole('status').filter({
       hasText: 'Resultado de la asignación',
     });
     await expect(result.getByText(/Asignados: 2/)).toBeVisible();
     await expect(result.getByText(/No existen: 9999/)).toBeVisible();
+    await expect(assign.getByText('Gina Torres')).toBeVisible();
+    await assign.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(assign).toHaveCount(0);
     await expect(
       page
         .getByRole('region', { name: 'Horario Lunes noche' })
-        .getByText('Gina Torres'),
+        .getByText('2 estudiantes'),
     ).toBeVisible();
   });
 

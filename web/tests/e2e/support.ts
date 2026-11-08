@@ -73,9 +73,13 @@ const MONTHS = [
   'diciembre',
 ];
 
+/** The open date or schedule popover (a modal is a dialog too). */
+export const popover = (page: Page) =>
+  page.locator('body > [role="dialog"][data-side]');
+
 /** In the open calendar, goes to the month of `day` (`YYYY-MM-DD`). */
 export async function showMonth(page: Page, day: string) {
-  const dialog = page.getByRole('dialog');
+  const dialog = popover(page);
   const [year, month] = day.split('-').map(Number) as [number, number];
   const wanted = year * 12 + month - 1;
   for (let step = 0; step < 120; step += 1) {
@@ -98,7 +102,7 @@ export const dayButton = (page: Page, day: string) => {
     number,
     number,
   ];
-  return page.getByRole('dialog').getByRole('button', {
+  return popover(page).getByRole('button', {
     name: new RegExp(`^\\S+ ${date} de ${MONTHS[month - 1]} de ${year}`),
   });
 };
