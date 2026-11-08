@@ -163,3 +163,9 @@ export const alarmOff = {
   startedAt: null,
   openSessions: 0,
 };
+
+/** Only `Date` is faked: the pickers open on this Bogota day, timers stay real. */
+export function pinToday(iso = '2026-11-06T17:00:00Z'): void {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(iso));
+}

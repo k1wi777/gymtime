@@ -9,6 +9,7 @@ import { periodTimeline } from '@/lib/timeline';
 import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
+import { DateRangePicker } from '@/ui/DatePicker';
 import { Icon } from '@/ui/icons';
 import { PageHeader } from '@/ui/PageHeader';
 import { SubmitButton, TextField, useForm } from '@/ui/Form';
@@ -61,32 +62,6 @@ export function validateException(
   return errors;
 }
 
-function DateField({
-  label,
-  value,
-  onChange,
-  onBlur,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  error: string | undefined;
-}) {
-  return (
-    <TextField
-      label={label}
-      value={value}
-      onChange={onChange}
-      onBlur={onBlur}
-      error={error}
-      help="Formato AAAA-MM-DD"
-      maxLength={10}
-    />
-  );
-}
-
 function PeriodForm({
   initial,
   submitLabel,
@@ -129,19 +104,20 @@ function PeriodForm({
         error={form.errors.name}
         maxLength={100}
       />
-      <DateField
-        label="Primer día"
-        value={form.values.startDate}
-        onChange={(v) => form.setValue('startDate', v)}
-        onBlur={() => form.blur('startDate')}
-        error={form.errors.startDate}
-      />
-      <DateField
-        label="Último día"
-        value={form.values.endDate}
-        onChange={(v) => form.setValue('endDate', v)}
-        onBlur={() => form.blur('endDate')}
-        error={form.errors.endDate}
+      <DateRangePicker
+        fromLabel="Primer día"
+        toLabel="Último día"
+        from={form.values.startDate}
+        to={form.values.endDate}
+        onChange={(range) => {
+          form.setValue('startDate', range.from);
+          form.setValue('endDate', range.to);
+          form.blur('startDate');
+          form.blur('endDate');
+        }}
+        shortcuts={['today', 'clear']}
+        fromError={form.errors.startDate}
+        toError={form.errors.endDate}
       />
       <div className={styles.actions}>
         <SubmitButton busy={form.submitting}>{submitLabel}</SubmitButton>
@@ -196,19 +172,22 @@ function ExceptionForm({
         </p>
       </div>
       {failure && <Notice kind="error">{failure}</Notice>}
-      <DateField
-        label="Desde"
-        value={form.values.from}
-        onChange={(v) => form.setValue('from', v)}
-        onBlur={() => form.blur('from')}
-        error={form.errors.from}
-      />
-      <DateField
-        label="Hasta"
-        value={form.values.to}
-        onChange={(v) => form.setValue('to', v)}
-        onBlur={() => form.blur('to')}
-        error={form.errors.to}
+      <DateRangePicker
+        fromLabel="Desde"
+        toLabel="Hasta"
+        from={form.values.from}
+        to={form.values.to}
+        onChange={(range) => {
+          form.setValue('from', range.from);
+          form.setValue('to', range.to);
+          form.blur('from');
+          form.blur('to');
+        }}
+        bounds={{ start: period.startDate, end: period.endDate }}
+        closedDays={period.exceptions}
+        shortcuts={['today', 'period', 'clear']}
+        fromError={form.errors.from}
+        toError={form.errors.to}
       />
       <TextField
         label="Motivo"

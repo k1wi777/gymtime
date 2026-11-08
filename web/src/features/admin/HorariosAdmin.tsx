@@ -16,6 +16,8 @@ import { useResource } from '@/lib/use-resource';
 import { type FieldErrors } from '@/lib/validators';
 import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
+import { DatePicker } from '@/ui/DatePicker';
+import { ScheduleSelect } from '@/ui/ScheduleSelect';
 import { SelectField, SubmitButton, TextField, useForm } from '@/ui/Form';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
@@ -282,12 +284,12 @@ function AssignPanel({
             label: `${s.name} · ${s.document}`,
           }))}
         />
-        <TextField
+        <DatePicker
           label="Desde (opcional)"
           value={validFrom}
           onChange={setValidFrom}
-          help="AAAA-MM-DD; vacío = desde ahora"
-          maxLength={10}
+          clearable
+          help="Vacío = desde ahora"
         />
         <button
           type="button"
@@ -368,14 +370,13 @@ function AssignPanel({
       </div>
 
       <div className="row" style={{ alignItems: 'flex-end' }}>
-        <SelectField
+        <ScheduleSelect
           label="Copiar estudiantes de otro horario"
           placeholder="Elija un horario"
+          schedules={others}
+          exclude={schedule.id}
           value={copyFrom}
           onChange={setCopyFrom}
-          options={others
-            .filter((o) => o.id !== schedule.id)
-            .map((o) => ({ value: o.id, label: o.name }))}
         />
         <button
           type="button"

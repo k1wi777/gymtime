@@ -1,0 +1,184 @@
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.field svg {
+  flex: none;
+  color: var(--primary);
+}
+
+.value {
+  font-weight: 600;
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+.panel {
+  width: min(560px, calc(100vw - 2rem));
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+
+.all {
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--canvas-soft-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.all:hover,
+.all[aria-pressed='true'] {
+  background: var(--success-bg);
+}
+
+.all:focus-visible {
+  outline: 3px solid var(--primary-dark);
+  outline-offset: -3px;
+}
+
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+}
+
+.list:focus-visible {
+  outline: 3px solid var(--primary-dark);
+  outline-offset: -3px;
+}
+
+.days {
+  flex: 0 0 190px;
+  border-right: 1px solid var(--canvas-soft-border);
+  background: var(--canvas-soft);
+}
+
+.schedules {
+  flex: 1 1 260px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.dayTitle {
+  padding: 6px 14px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--primary-light);
+}
+
+.selected {
+  background: var(--success-bg);
+  border-color: var(--primary-mid);
+  font-weight: 600;
+}
+
+.active {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: -2px;
+}
+
+.empty {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.days .grow {
+  flex-direction: row;
+}
+
+.name,
+.students {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--disabled-bg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.selected .count {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.radio {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--disabled-text);
+  border-radius: 9px;
+}
+
+.selected .radio {
+  border-color: var(--primary);
+}
+
+.radioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--primary);
+}
+
+.schedules:not(:focus) .active {
+  outline: none;
+}

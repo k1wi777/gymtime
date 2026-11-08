@@ -19,10 +19,18 @@ interface FieldFrameProps {
   children: ReactNode;
 }
 
-function FieldFrame({ id, label, error, help, children }: FieldFrameProps) {
+export function FieldFrame({
+  id,
+  label,
+  error,
+  help,
+  children,
+}: FieldFrameProps) {
   return (
     <div className={styles.field}>
-      <label htmlFor={id}>{label}</label>
+      <label id={`${id}-label`} htmlFor={id}>
+        {label}
+      </label>
       {children}
       {help && !error && (
         <p id={`${id}-help`} className={styles.help}>
@@ -38,7 +46,7 @@ function FieldFrame({ id, label, error, help, children }: FieldFrameProps) {
   );
 }
 
-const describedBy = (id: string, error?: string, help?: string) =>
+export const describedBy = (id: string, error?: string, help?: string) =>
   error ? `${id}-error` : help ? `${id}-help` : undefined;
 
 interface TextFieldProps {

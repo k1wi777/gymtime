@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import type { ReportOptions } from '@/api/types';
+import { DateRangePicker } from '@/ui/DatePicker';
 import { SelectField, TextField } from '@/ui/Form';
+import { ScheduleSelect } from '@/ui/ScheduleSelect';
+import { formatPickerDay } from '@/lib/calendar';
 import { Notice } from '@/ui/Notice';
 import {
   GROUP_LABELS,
@@ -149,36 +152,29 @@ export function FiltrosReporte({
       onSubmit={(event) => event.preventDefault()}
       noValidate
     >
-      <div className={styles.fieldS}>
-        <TextField
-          label="Desde"
-          value={filters.from}
-          onChange={(from) => set({ from })}
-          help={`AAAA-MM-DD (por defecto ${options.defaultRange.from})`}
-          error={bad(filters.from) ? 'Use AAAA-MM-DD.' : undefined}
-          maxLength={10}
-        />
-      </div>
-      <div className={styles.fieldS}>
-        <TextField
-          label="Hasta"
-          value={filters.to}
-          onChange={(to) => set({ to })}
-          help={`AAAA-MM-DD (por defecto ${options.defaultRange.to})`}
-          error={bad(filters.to) ? 'Use AAAA-MM-DD.' : undefined}
-          maxLength={10}
-        />
-      </div>
+      <DateRangePicker
+        className={styles.fieldRange}
+        from={filters.from}
+        to={filters.to}
+        onChange={(range) => set(range)}
+        bounds={
+          options.period
+            ? { start: options.period.startDate, end: options.period.endDate }
+            : undefined
+        }
+        placeholder="Por defecto"
+        fromHelp={`Por defecto ${formatPickerDay(options.defaultRange.from)}`}
+        toHelp={`Por defecto ${formatPickerDay(options.defaultRange.to)}`}
+        fromError={bad(filters.from) ? 'Use AAAA-MM-DD.' : undefined}
+        toError={bad(filters.to) ? 'Use AAAA-MM-DD.' : undefined}
+      />
       <div className={styles.fieldM}>
-        <SelectField
+        <ScheduleSelect
           label="Horario"
+          schedules={options.schedules}
           value={filters.scheduleId}
           onChange={(scheduleId) => set({ scheduleId })}
-          placeholder="Todos los horarios"
-          options={options.schedules.map((s) => ({
-            value: s.id,
-            label: `${s.name} (${s.startTime.slice(0, 5)}–${s.endTime.slice(0, 5)})`,
-          }))}
+          allowAll
         />
       </div>
       {person && (

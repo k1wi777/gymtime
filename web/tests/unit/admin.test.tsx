@@ -14,7 +14,7 @@ import {
 } from '@/features/admin/HorariosAdmin';
 import { Periodos, validatePeriod } from '@/features/admin/Periodos';
 import { Usuarios } from '@/features/admin/Usuarios';
-import { account, empty, installFakeApi, json } from './helpers';
+import { account, empty, installFakeApi, json, pinToday } from './helpers';
 
 const admin = account({
   id: 'admin-1',
@@ -91,6 +91,7 @@ describe('periods (R1-R4)', () => {
   });
 
   it('creates a period and shows the server message when it overlaps', async () => {
+    pinToday();
     const user = userEvent.setup();
     const fake = setup();
     fake.route('POST /periods', () =>
@@ -109,8 +110,19 @@ describe('periods (R1-R4)', () => {
       await screen.findByRole('button', { name: 'Nuevo periodo' }),
     );
     await user.type(screen.getByLabelText('Nombre'), '2027-1');
-    await user.type(screen.getByLabelText('Primer día'), '2026-11-01');
-    await user.type(screen.getByLabelText('Último día'), '2027-02-01');
+    await user.click(screen.getByLabelText('Primer día'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: /^domingo 1 de noviembre de 2026/,
+      }),
+    );
+    const calendar = within(screen.getByRole('dialog'));
+    for (let i = 0; i < 3; i += 1) {
+      await user.click(calendar.getByRole('button', { name: 'Mes siguiente' }));
+    }
+    await user.click(
+      calendar.getByRole('button', { name: /^lunes 1 de febrero de 2027/ }),
+    );
     await user.click(screen.getByRole('button', { name: 'Crear periodo' }));
     // The message names the period that clashes, so it must come through.
     expect(
@@ -124,6 +136,7 @@ describe('periods (R1-R4)', () => {
   });
 
   it('shows created/deleted/kept after adding a day without service', async () => {
+    pinToday();
     const user = userEvent.setup();
     const fake = setup();
     fake.route('POST /periods/p1/exceptions', () =>
@@ -144,8 +157,12 @@ describe('periods (R1-R4)', () => {
     const form = await screen.findByRole('form', {
       name: 'Agregar día sin servicio a 2026-2',
     });
-    await user.type(within(form).getByLabelText('Desde'), '2026-11-02');
-    await user.type(within(form).getByLabelText('Hasta'), '2026-11-02');
+    await user.click(within(form).getByLabelText('Desde'));
+    const monday = within(screen.getByRole('dialog')).getByRole('button', {
+      name: /^lunes 2 de noviembre de 2026/,
+    });
+    await user.click(monday);
+    await user.click(monday);
     await user.type(within(form).getByLabelText('Motivo'), 'Puente');
     await user.click(
       within(form).getByRole('button', { name: 'Agregar día sin servicio' }),

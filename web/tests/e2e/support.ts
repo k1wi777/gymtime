@@ -58,4 +58,55 @@ export const expectPerson = (page: Page, section: string, name: string) =>
     page.getByRole('region', { name: section, exact: true }).getByText(name),
   );
 
+const MONTHS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+/** In the open calendar, goes to the month of `day` (`YYYY-MM-DD`). */
+export async function showMonth(page: Page, day: string) {
+  const dialog = page.getByRole('dialog');
+  const [year, month] = day.split('-').map(Number) as [number, number];
+  const wanted = year * 12 + month - 1;
+  for (let step = 0; step < 120; step += 1) {
+    const shown = (await dialog.getByRole('grid').getAttribute('aria-label'))!;
+    const [name, , shownYear] = shown.split(' ') as [string, string, string];
+    const at = Number(shownYear) * 12 + MONTHS.indexOf(name);
+    if (at === wanted) break;
+    await dialog
+      .getByRole('button', {
+        name: at < wanted ? 'Mes siguiente' : 'Mes anterior',
+      })
+      .click();
+  }
+}
+
+/** The day button of the open calendar. */
+export const dayButton = (page: Page, day: string) => {
+  const [year, month, date] = day.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  return page.getByRole('dialog').getByRole('button', {
+    name: new RegExp(`^\\S+ ${date} de ${MONTHS[month - 1]} de ${year}`),
+  });
+};
+
+/** In the open calendar, goes to the month of `day` and clicks it. */
+export async function pickDay(page: Page, day: string) {
+  await showMonth(page, day);
+  await dayButton(page, day).click();
+}
+
 export { expect };

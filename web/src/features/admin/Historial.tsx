@@ -15,6 +15,7 @@ import { Spinner } from '@/ui/Spinner';
 import { ReviewTable } from '@/features/offline/PorRevisar';
 import { actorLabel } from './Auditoria';
 import { BoardCard } from './BoardCard';
+import { ScheduleSelect } from '@/ui/ScheduleSelect';
 import { DateRange, dayRange } from './filters';
 import styles from './Admin.module.css';
 
@@ -176,18 +177,13 @@ function Attendance({ onTotal }: { onTotal: (total: number | null) => void }) {
           onFrom={reset(setFrom)}
           onTo={reset(setTo)}
         />
-        <div className={styles.grow160}>
-          <SelectField
+        <div className={styles.grow200}>
+          <ScheduleSelect
             label="Horario"
+            schedules={schedules.data ?? []}
             value={scheduleId}
             onChange={reset(setScheduleId)}
-            options={[
-              { value: '', label: 'Todos' },
-              ...(schedules.data ?? []).map((s) => ({
-                value: s.id,
-                label: s.name,
-              })),
-            ]}
+            allowAll
           />
         </div>
         <div className={styles.dateField}>

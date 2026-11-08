@@ -24,6 +24,7 @@ import {
   installFakeApi,
   json,
   person,
+  pinToday,
 } from './helpers';
 
 const NOW = '2026-11-02T15:20:00.000Z'; // 10:20 in Bogota
@@ -833,6 +834,16 @@ describe('device (R19)', () => {
 });
 
 describe('schedule rosters (R21)', () => {
+  beforeEach(() => pinToday());
+
+  /** Opens the schedule picker, then the Monday and its schedule. */
+  const pickSchedule = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByLabelText('Horario'));
+    const dialog = within(screen.getByRole('dialog'));
+    await user.click(dialog.getByRole('option', { name: /^lunes/ }));
+    await user.click(dialog.getByRole('option', { name: /Grupo A/ }));
+  };
+
   const schedules = [
     {
       id: 's1',
@@ -882,8 +893,7 @@ describe('schedule rosters (R21)', () => {
       'GET /panel/schedules/s1/roster': () => json(roster()),
     });
     app(<Horarios />);
-    await screen.findByRole('option', { name: /Grupo A/ });
-    await user.selectOptions(screen.getByLabelText('Horario'), 's1');
+    await pickSchedule(user);
     expect(await screen.findByText('Pasado')).toBeTruthy();
     const table = screen.getByRole('table', { name: 'Listado del horario' });
     expect(within(table).getByText('Asistió')).toBeTruthy();
@@ -891,8 +901,12 @@ describe('schedule rosters (R21)', () => {
     expect(within(table).getByText('Manual')).toBeTruthy();
     expect(within(table).getByText(/10:05 – 10:50/)).toBeTruthy();
 
-    const dateInput = screen.getByLabelText('Fecha');
-    fireEvent.change(dateInput, { target: { value: '2026-11-09' } });
+    await user.click(screen.getByLabelText('Fecha'));
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: /^lunes 9 de noviembre de 2026/,
+      }),
+    );
     await waitFor(() =>
       expect(
         new URL(
@@ -915,8 +929,7 @@ describe('schedule rosters (R21)', () => {
       }),
     });
     app(<Horarios />);
-    await screen.findByRole('option', { name: /Grupo A/ });
-    await user.selectOptions(screen.getByLabelText('Horario'), 's1');
+    await pickSchedule(user);
     expect(await screen.findByText(/no tiene una sesión el/)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });

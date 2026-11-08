@@ -1,6 +1,6 @@
 'use client';
 
-import { TextField } from '@/ui/Form';
+import { DateRangePicker } from '@/ui/DatePicker';
 import type { AuditItem } from '@/api/types';
 import styles from './Admin.module.css';
 
@@ -30,28 +30,18 @@ export function DateRange({
 }) {
   const bad = (value: string) => value !== '' && !DAY.test(value);
   return (
-    <>
-      <div className={styles.dateField}>
-        <TextField
-          label="Desde"
-          value={from}
-          onChange={onFrom}
-          help="AAAA-MM-DD"
-          error={bad(from) ? 'Use AAAA-MM-DD.' : undefined}
-          maxLength={10}
-        />
-      </div>
-      <div className={styles.dateField}>
-        <TextField
-          label="Hasta"
-          value={to}
-          onChange={onTo}
-          help="AAAA-MM-DD"
-          error={bad(to) ? 'Use AAAA-MM-DD.' : undefined}
-          maxLength={10}
-        />
-      </div>
-    </>
+    <DateRangePicker
+      className={styles.dateRange}
+      from={from}
+      to={to}
+      onChange={(range) => {
+        onFrom(range.from);
+        onTo(range.to);
+      }}
+      fromError={bad(from) ? 'Use AAAA-MM-DD.' : undefined}
+      toError={bad(to) ? 'Use AAAA-MM-DD.' : undefined}
+      shortcuts={['today', 'last7', 'clear']}
+    />
   );
 }
 

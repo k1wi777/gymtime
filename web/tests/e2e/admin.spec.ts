@@ -1,4 +1,4 @@
-import { expect, loginAndWait, test } from './support';
+import { expect, loginAndWait, pickDay, test } from './support';
 
 const CSV = [
   'cedula,nombre,correo',
@@ -21,8 +21,9 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     await page.getByRole('button', { name: 'Nuevo periodo' }).click();
     const newPeriod = page.getByRole('form', { name: 'Nuevo periodo' });
     await newPeriod.getByLabel('Nombre').fill('2026-2');
-    await newPeriod.getByLabel('Primer día').fill('2026-11-02');
-    await newPeriod.getByLabel('Último día').fill('2026-12-04');
+    await newPeriod.getByLabel('Primer día').click();
+    await pickDay(page, '2026-11-02');
+    await pickDay(page, '2026-12-04');
     await newPeriod.getByRole('button', { name: 'Crear periodo' }).click();
     const section = page.getByRole('region', { name: 'Periodo 2026-2' });
     await expect(section).toBeVisible();
@@ -32,8 +33,9 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     const exception = page.getByRole('form', {
       name: 'Agregar día sin servicio a 2026-2',
     });
-    await exception.getByLabel('Desde').fill('2026-11-16');
-    await exception.getByLabel('Hasta').fill('2026-11-16');
+    await exception.getByLabel('Desde').click();
+    await pickDay(page, '2026-11-16');
+    await pickDay(page, '2026-11-16');
     await exception.getByLabel('Motivo').fill('Festivo');
     await exception
       .getByRole('button', { name: 'Agregar día sin servicio' })

@@ -22,8 +22,8 @@
   align-items: flex-start;
 }
 
-.fieldS {
-  flex: 1 1 150px;
+.fieldRange {
+  flex: 2 1 340px;
 }
 
 .fieldM {

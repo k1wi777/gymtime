@@ -21,7 +21,8 @@ import { Badge } from '@/ui/Badge';
 import { DataTable, type Column, type SelectFilter } from '@/ui/DataTable';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
-import { SelectField } from '@/ui/Form';
+import { DatePicker } from '@/ui/DatePicker';
+import { ScheduleSelect } from '@/ui/ScheduleSelect';
 import { PageHeader } from '@/ui/PageHeader';
 import styles from './Horarios.module.css';
 
@@ -284,27 +285,17 @@ export function Horarios() {
             <Notice kind="error">{describeError(schedules.error)}</Notice>
           ) : (
             <div className={styles.controls}>
-              <SelectField
-                label="Horario"
-                placeholder="Elija un horario"
-                value={scheduleId}
-                onChange={setScheduleId}
-                options={(schedules.data ?? []).map((s) => ({
-                  value: s.id,
-                  label: `${s.name} · ${s.startTime.slice(0, 5)}–${s.endTime.slice(0, 5)}`,
-                }))}
-              />
-              <div className={styles.field}>
-                <label htmlFor="roster-date">Fecha</label>
-                <input
-                  id="roster-date"
-                  type="date"
-                  value={date}
-                  onChange={(event) =>
-                    event.target.value && setDate(event.target.value)
-                  }
-                  className={styles.date}
+              <div className={styles.control}>
+                <ScheduleSelect
+                  label="Horario"
+                  placeholder="Elija un horario"
+                  schedules={schedules.data ?? []}
+                  value={scheduleId}
+                  onChange={setScheduleId}
                 />
+              </div>
+              <div className={styles.control}>
+                <DatePicker label="Fecha" value={date} onChange={setDate} />
               </div>
             </div>
           )}

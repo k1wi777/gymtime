@@ -79,6 +79,10 @@ const PATHS = {
   descargar: ['M12 4v11M7 10l5 5 5-5M5 20h14'],
   subir: ['M12 15V4M7 9l5-5 5 5M5 20h14'],
   mas: ['M12 5v14M5 12h14'],
+  calendario: [
+    'M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',
+    'M4 10h16M9 3v4M15 3v4',
+  ],
 } as const;
 
 /** Shapes that are not paths (circles and rectangles of some icons). */
