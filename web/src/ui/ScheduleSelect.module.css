@@ -23,19 +23,18 @@
 .panel {
   width: min(560px, calc(100vw - 2rem));
   max-width: 100%;
-  overflow: hidden;
-  border-radius: var(--radius-card);
+  flex: none;
 }
 
 .all {
   display: block;
   width: 100%;
-  padding: 11px 14px;
+  padding: 8px 12px;
   border: 0;
   border-bottom: 1px solid var(--canvas-soft-border);
   background: transparent;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -60,7 +59,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px;
+  padding: 8px;
 }
 
 .list:focus-visible {
@@ -69,20 +68,20 @@
 }
 
 .days {
-  flex: 0 0 190px;
+  flex: 0 0 170px;
   border-right: 1px solid var(--canvas-soft-border);
   background: var(--canvas-soft);
 }
 
 .schedules {
   flex: 1 1 260px;
-  max-height: 420px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
 .dayTitle {
-  padding: 6px 14px 8px;
-  font-size: 12px;
+  padding: 4px 12px 6px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -92,11 +91,13 @@
 .option {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
+  gap: 10px;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 6px 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   cursor: pointer;
 }
 

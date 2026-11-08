@@ -2,32 +2,26 @@
   position: relative;
 }
 
-/* Hangs from the field; on narrow screens it takes the width of the field. */
+/*
+ * Portalled to body and placed by Popover.tsx (top, left, max-height); hidden
+ * until the first measurement so it never flashes in the wrong place.
+ */
 .panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
+  position: fixed;
+  z-index: 60;
+  top: 0;
   left: 0;
-  min-width: 100%;
-  max-width: min(640px, calc(100vw - 2rem));
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: 0 18px 36px -22px rgba(31, 74, 34, 0.35);
 }
 
-.right {
-  left: auto;
-  right: 0;
-}
-
 .panel:focus {
   outline: none;
-}
-
-@media (max-width: 640px) {
-  .panel {
-    width: 100%;
-    max-width: none;
-  }
 }

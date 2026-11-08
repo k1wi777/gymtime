@@ -156,3 +156,98 @@ export function fullDayName(day: string): string {
   const date = parse(day);
   return `${WEEKDAY_NAMES[weekdayIndex(day)]} ${date.getUTCDate()} de ${MONTHS[date.getUTCMonth()]} de ${date.getUTCFullYear()}`;
 }
+
+export type RangeEnd = 'from' | 'to';
+
+export interface RangePickState {
+  from: string;
+  to: string;
+  /** The end a click on a complete range replaces. */
+  active: RangeEnd;
+  /** First click of an incomplete range, not emitted yet. */
+  pending: string | null;
+}
+
+export interface RangePickResult {
+  range: DayRange;
+  active: RangeEnd;
+  pending: string | null;
+  /** Whether the range is final and must reach `onChange`. */
+  emit: boolean;
+  /** The other end that had to follow the clicked day, if any. */
+  adjusted: RangeEnd | null;
+  /** Whether the panel closes. */
+  close: boolean;
+}
+
+const isCompleteRange = (from: string, to: string): boolean =>
+  isValidDay(from) && isValidDay(to) && from <= to;
+
+/**
+ * What a click on `day` does. An incomplete range is built from → to (emitted
+ * on the second click, ends reordered). A complete one only replaces the
+ * active end; if that would invert the range, the other end is set to the
+ * same day (a one-day range) and reported in `adjusted`. Changing "from"
+ * keeps the panel open on "to"; changing "to" closes it.
+ */
+export function pickRangeDay(
+  state: RangePickState,
+  day: string,
+): RangePickResult {
+  const { from, to, active, pending } = state;
+  if (pending !== null) {
+    return {
+      range: normalizeRange(pending, day),
+      active: 'from',
+      pending: null,
+      emit: true,
+      adjusted: null,
+      close: true,
+    };
+  }
+  if (!isCompleteRange(from, to)) {
+    return {
+      range: { from: day, to: day },
+      active: 'to',
+      pending: day,
+      emit: false,
+      adjusted: null,
+      close: false,
+    };
+  }
+  if (active === 'from') {
+    const inverted = day > to;
+    return {
+      range: { from: day, to: inverted ? day : to },
+      active: 'to',
+      pending: null,
+      emit: true,
+      adjusted: inverted ? 'to' : null,
+      close: false,
+    };
+  }
+  const inverted = day < from;
+  return {
+    range: { from: inverted ? day : from, to: day },
+    active: 'to',
+    pending: null,
+    emit: true,
+    adjusted: inverted ? 'from' : null,
+    close: true,
+  };
+}
+
+/** The single instruction shown while a calendar is open. */
+export function rangeInstruction(options: {
+  single: boolean;
+  complete: boolean;
+  active: RangeEnd;
+  pending: boolean;
+}): string {
+  if (options.single) return 'Elige la fecha';
+  if (options.pending) return 'Ahora elige el día final';
+  if (!options.complete) return 'Elige el día de inicio';
+  return options.active === 'from'
+    ? 'Elige el nuevo día de inicio'
+    : 'Elige el nuevo día final';
+}

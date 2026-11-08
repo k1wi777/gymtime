@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { bogotaDay } from '@/lib/time';
 import {
   addDays,
@@ -13,11 +20,13 @@ import {
   isValidDay,
   MONTHS,
   monthGrid,
-  normalizeRange,
+  pickRangeDay,
+  rangeInstruction,
   shortcutRange,
   weekdayIndex,
   type DayBounds,
   type DayRange,
+  type RangeEnd,
   type ShortcutKind,
 } from '@/lib/calendar';
 import { describedBy, FieldFrame } from './Form';
@@ -48,7 +57,12 @@ interface PanelProps extends PeriodProps {
   from: string;
   to: string;
   shortcuts: readonly ShortcutKind[];
-  onApply: (range: DayRange) => void;
+  /** Both ends are labelled in the panel and in the adjustment notice. */
+  fromLabel?: string;
+  toLabel?: string;
+  /** The end a click edits when the panel opens on a complete range. */
+  initialEnd?: RangeEnd;
+  onApply: (range: DayRange, close: boolean) => void;
 }
 
 /** First day the grid focuses: the value, or today, kept inside the period. */
@@ -62,9 +76,37 @@ function startingDay(
   return day < bounds.start ? bounds.start : bounds.end;
 }
 
+/** One of the two ends in the side column: shows the day, picks the end. */
+function EndButton({
+  label,
+  value,
+  pressed,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={styles.end}
+      aria-pressed={pressed}
+      onClick={onClick}
+    >
+      <span className={styles.endLabel}>{label}</span>
+      <span className={styles.endValue}>
+        {isValidDay(value) ? formatPickerDay(value) : 'Sin fecha'}
+      </span>
+    </button>
+  );
+}
+
 /**
- * The calendar: one month, Monday first, with roving focus. The first click
- * of a range is kept here (`pending`) and nothing is emitted until the second.
+ * The calendar: one month, Monday first, with roving focus. An incomplete
+ * range is built here (`pending` holds the first click) and emitted on the
+ * second; a complete one edits only the active end (see `pickRangeDay`).
  */
 function CalendarPanel({
   mode,
@@ -74,14 +116,23 @@ function CalendarPanel({
   closedDays,
   today: todayProp,
   shortcuts,
+  fromLabel = 'Desde',
+  toLabel = 'Hasta',
+  initialEnd = 'from',
   onApply,
 }: PanelProps) {
   const today = todayProp ?? bogotaDay(new Date());
   const closed = expandClosedDays(closedDays ?? []);
   const [focusDay, setFocusDay] = useState(() =>
-    startingDay(from, today, bounds),
+    startingDay(
+      initialEnd === 'to' && isValidDay(to) ? to : from,
+      today,
+      bounds,
+    ),
   );
   const [pending, setPending] = useState<string | null>(null);
+  const [end, setEnd] = useState<RangeEnd>(initialEnd);
+  const [notice, setNotice] = useState('');
   const grid = useRef<HTMLDivElement>(null);
   const moveFocus = useRef(false);
 
@@ -95,11 +146,17 @@ function CalendarPanel({
   const month = Number(focusDay.slice(5, 7)) - 1;
   const cells = monthGrid(year, month);
 
+  const single = mode === 'single';
+  const complete = isValidDay(from) && isValidDay(to) && from <= to;
+  // Until the range is complete the order is fixed: from, then to.
+  const active: RangeEnd = complete ? end : pending !== null ? 'to' : 'from';
   const shown: DayRange =
     pending !== null
       ? { from: pending, to: pending }
       : { from: isValidDay(from) ? from : '', to: isValidDay(to) ? to : '' };
   const isEdge = (day: string) => day === shown.from || day === shown.to;
+  const isActiveEdge = (day: string) =>
+    !single && complete && day === (active === 'from' ? from : to);
   const inside = (day: string) =>
     shown.from !== '' &&
     shown.to !== '' &&
@@ -108,12 +165,29 @@ function CalendarPanel({
 
   const pick = (day: string) => {
     if (isDisabled(day, bounds)) return;
-    if (mode === 'single') return onApply({ from: day, to: day });
-    if (pending === null) {
-      setPending(day);
-      return;
+    if (single) return onApply({ from: day, to: day }, true);
+    const result = pickRangeDay({ from, to, active, pending }, day);
+    setEnd(result.active);
+    setPending(result.pending);
+    setNotice(
+      result.adjusted === 'to'
+        ? `“${toLabel}” se ajustó al ${formatPickerDay(day)} para que no sea anterior a “${fromLabel}”.`
+        : result.adjusted === 'from'
+          ? `“${fromLabel}” se ajustó al ${formatPickerDay(day)} para que no sea posterior a “${toLabel}”.`
+          : '',
+    );
+    if (result.emit) onApply(result.range, result.close);
+    if (result.active === 'to' && result.emit && !result.close) {
+      go(isValidDay(result.range.to) ? result.range.to : day, true);
     }
-    onApply(normalizeRange(pending, day));
+  };
+
+  const chooseEnd = (next: RangeEnd) => {
+    setEnd(next);
+    setPending(null);
+    setNotice('');
+    const value = next === 'from' ? from : to;
+    go(startingDay(value, today, bounds), true);
   };
 
   const go = (day: string, focus: boolean) => {
@@ -144,136 +218,157 @@ function CalendarPanel({
     if (bounds && range.from !== '' && range.from < bounds.start) {
       range.from = bounds.start;
     }
-    onApply(range);
+    onApply(range, true);
   };
   const shortcutOff = (kind: ShortcutKind) =>
     (kind === 'today' || kind === 'last7') && isDisabled(today, bounds);
 
-  const status =
-    pending !== null
-      ? 'Elija el último día.'
-      : shown.from === ''
-        ? 'Sin fecha elegida.'
-        : mode === 'single' || shown.from === shown.to
-          ? `Fecha: ${formatPickerDay(shown.from)}.`
-          : `Del ${formatPickerDay(shown.from)} al ${formatPickerDay(shown.to)}.`;
-
+  const instruction = rangeInstruction({
+    single,
+    complete,
+    active,
+    pending: pending !== null,
+  });
   return (
     <div className={styles.calendar}>
-      <div className={styles.head}>
-        <button
-          type="button"
-          className={styles.nav}
-          aria-label="Mes anterior"
-          onClick={() => go(addMonths(focusDay, -1), false)}
-        >
-          <Icon name="chevronLeft" size={16} strokeWidth={2} />
-        </button>
-        <div className={styles.month} aria-live="polite">
-          {MONTHS[month]} de {year}
-        </div>
-        <button
-          type="button"
-          className={styles.nav}
-          aria-label="Mes siguiente"
-          onClick={() => go(addMonths(focusDay, 1), false)}
-        >
-          <Icon name="chevron" size={16} strokeWidth={2} />
-        </button>
+      <div role="status" className={styles.instruction}>
+        <strong>{instruction}</strong>
+        {notice !== '' && <span className={styles.notice}>{notice}</span>}
       </div>
-      <div
-        ref={grid}
-        role="grid"
-        aria-label={`${MONTHS[month]} de ${year}`}
-        onKeyDown={onKeyDown}
-      >
-        <div role="row" className={styles.week} aria-hidden="true">
-          {HEADERS.map((name) => (
-            <span key={name} className={styles.weekday}>
-              {name}
-            </span>
-          ))}
-        </div>
-        {Array.from({ length: 6 }, (_, row) => (
-          <div key={row} role="row" className={styles.week}>
-            {cells.slice(row * 7, row * 7 + 7).map(({ iso, inMonth }) => {
-              const off = isDisabled(iso, bounds);
-              const edge = isEdge(iso);
-              const middle = inside(iso);
-              const noService = closed.has(iso);
-              const name = [
-                fullDayName(iso),
-                iso === today ? 'hoy' : '',
-                noService ? 'día sin servicio' : '',
-                off ? 'fuera del periodo' : '',
-              ]
-                .filter(Boolean)
-                .join(', ');
-              const classes = [
-                styles.day,
-                inMonth ? '' : styles.outside,
-                middle ? styles.middle : '',
-                edge ? styles.edge : '',
-                off ? styles.off : '',
-                iso === today && !edge ? styles.today : '',
-              ];
-              return (
-                <div key={iso} role="gridcell" className={styles.cell}>
-                  <button
-                    type="button"
-                    className={classes.filter(Boolean).join(' ')}
-                    aria-label={name}
-                    aria-pressed={edge}
-                    aria-disabled={off || undefined}
-                    tabIndex={iso === focusDay ? 0 : -1}
-                    data-autofocus={iso === focusDay ? '' : undefined}
-                    onFocus={() => iso !== focusDay && setFocusDay(iso)}
-                    onClick={() => pick(iso)}
-                  >
-                    {Number(iso.slice(8, 10))}
-                    {noService && (
-                      <span className={styles.dot} aria-hidden="true" />
-                    )}
-                  </button>
-                </div>
-              );
-            })}
+      <div className={styles.body}>
+        <div className={styles.monthCol}>
+          <div className={styles.head}>
+            <button
+              type="button"
+              className={styles.nav}
+              aria-label="Mes anterior"
+              onClick={() => go(addMonths(focusDay, -1), false)}
+            >
+              <Icon name="chevronLeft" size={16} strokeWidth={2} />
+            </button>
+            <div className={styles.month} aria-live="polite">
+              {MONTHS[month]} de {year}
+            </div>
+            <button
+              type="button"
+              className={styles.nav}
+              aria-label="Mes siguiente"
+              onClick={() => go(addMonths(focusDay, 1), false)}
+            >
+              <Icon name="chevron" size={16} strokeWidth={2} />
+            </button>
           </div>
-        ))}
-      </div>
-      <div className={styles.shortcuts}>
-        {shortcuts.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            className={`${styles.chip} ${kind === 'clear' ? styles.chipMuted : ''}`}
-            disabled={shortcutOff(kind)}
-            onClick={() => applyShortcut(kind)}
+          <div
+            ref={grid}
+            role="grid"
+            aria-label={`${MONTHS[month]} de ${year}`}
+            onKeyDown={onKeyDown}
           >
-            {SHORTCUT_LABELS[kind]}
-          </button>
-        ))}
-      </div>
-      <ul className={styles.legend} aria-label="Leyenda">
-        <li>
-          <span className={`${styles.swatch} ${styles.swatchToday}`} />
-          Hoy
-        </li>
-        <li>
-          <span className={`${styles.swatch} ${styles.swatchDot}`} />
-          Día sin servicio
-        </li>
-        <li>
-          <span className={`${styles.swatch} ${styles.swatchRange}`} />
-          Rango elegido
-        </li>
-        <li>
-          <span className={`${styles.swatch} ${styles.swatchOff}`} />
-          Fuera del periodo
-        </li>
-      </ul>
-      <div role="status" className={styles.status}>
-        {status}
+            <div role="row" className={styles.week} aria-hidden="true">
+              {HEADERS.map((name) => (
+                <span key={name} className={styles.weekday}>
+                  {name}
+                </span>
+              ))}
+            </div>
+            {Array.from({ length: 6 }, (_, row) => (
+              <div key={row} role="row" className={styles.week}>
+                {cells.slice(row * 7, row * 7 + 7).map(({ iso, inMonth }) => {
+                  const off = isDisabled(iso, bounds);
+                  const edge = isEdge(iso);
+                  const middle = inside(iso);
+                  const noService = closed.has(iso);
+                  const name = [
+                    fullDayName(iso),
+                    iso === today ? 'hoy' : '',
+                    noService ? 'día sin servicio' : '',
+                    off ? 'fuera del periodo' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(', ');
+                  const classes = [
+                    styles.day,
+                    inMonth ? '' : styles.outside,
+                    middle ? styles.middle : '',
+                    edge ? styles.edge : '',
+                    isActiveEdge(iso) ? styles.activeEdge : '',
+                    off ? styles.off : '',
+                    iso === today && !edge ? styles.today : '',
+                  ];
+                  return (
+                    <div key={iso} role="gridcell" className={styles.cell}>
+                      <button
+                        type="button"
+                        className={classes.filter(Boolean).join(' ')}
+                        aria-label={name}
+                        aria-pressed={edge}
+                        aria-disabled={off || undefined}
+                        tabIndex={iso === focusDay ? 0 : -1}
+                        data-autofocus={iso === focusDay ? '' : undefined}
+                        onFocus={() => iso !== focusDay && setFocusDay(iso)}
+                        onClick={() => pick(iso)}
+                      >
+                        {Number(iso.slice(8, 10))}
+                        {noService && (
+                          <span className={styles.dot} aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={styles.side}>
+          {!single && (
+            <div className={styles.ends}>
+              <EndButton
+                label={fromLabel}
+                value={shown.from}
+                pressed={active === 'from'}
+                onClick={() => chooseEnd('from')}
+              />
+              <EndButton
+                label={toLabel}
+                value={pending !== null ? '' : shown.to}
+                pressed={active === 'to'}
+                onClick={() => chooseEnd('to')}
+              />
+            </div>
+          )}
+          <div className={styles.shortcuts}>
+            {shortcuts.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                className={`${styles.chip} ${kind === 'clear' ? styles.chipMuted : ''}`}
+                disabled={shortcutOff(kind)}
+                onClick={() => applyShortcut(kind)}
+              >
+                {SHORTCUT_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+          <ul className={styles.legend} aria-label="Leyenda">
+            <li>
+              <span className={`${styles.swatch} ${styles.swatchToday}`} />
+              Hoy
+            </li>
+            <li>
+              <span className={`${styles.swatch} ${styles.swatchDot}`} />
+              Día sin servicio
+            </li>
+            <li>
+              <span className={`${styles.swatch} ${styles.swatchRange}`} />
+              Rango elegido
+            </li>
+            <li>
+              <span className={`${styles.swatch} ${styles.swatchOff}`} />
+              Fuera del periodo
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );
@@ -430,6 +525,15 @@ export function DateRangePicker({
   const fromId = useId();
   const toId = useId();
   const offered = shortcuts.filter((kind) => kind !== 'period' || bounds);
+  // The end whose field opened the panel: the one a click edits first.
+  const [opened, setOpened] = useState<RangeEnd>('from');
+  const openFrom = (props: PopoverTriggerProps, end: RangeEnd) => ({
+    ...props,
+    onClick: (event: MouseEvent<HTMLButtonElement>) => {
+      setOpened(end);
+      props.onClick(event);
+    },
+  });
   return (
     <div className={`${styles.range} ${className ?? ''}`}>
       <Popover
@@ -444,7 +548,7 @@ export function DateRangePicker({
             >
               <FieldButton
                 id={fromId}
-                triggerProps={triggerProps}
+                triggerProps={openFrom(triggerProps, 'from')}
                 text={dayText(from, placeholder)}
                 empty={from === ''}
                 error={fromError}
@@ -454,7 +558,7 @@ export function DateRangePicker({
             <FieldFrame id={toId} label={toLabel} error={toError} help={toHelp}>
               <FieldButton
                 id={toId}
-                triggerProps={triggerProps}
+                triggerProps={openFrom(triggerProps, 'to')}
                 text={dayText(to, placeholder)}
                 empty={to === ''}
                 error={toError}
@@ -473,9 +577,12 @@ export function DateRangePicker({
             closedDays={closedDays}
             today={today}
             shortcuts={offered}
-            onApply={(range) => {
+            fromLabel={fromLabel}
+            toLabel={toLabel}
+            initialEnd={opened}
+            onApply={(range, done) => {
               onChange(range);
-              close();
+              if (done) close();
             }}
           />
         )}

@@ -10,6 +10,8 @@ import {
   isValidDay,
   monthGrid,
   normalizeRange,
+  pickRangeDay,
+  rangeInstruction,
   shortcutRange,
 } from '@/lib/calendar';
 
@@ -101,5 +103,94 @@ describe('shortcutRange', () => {
       to: '2026-12-13',
     });
     expect(shortcutRange('period', '2026-11-07')).toBeUndefined();
+  });
+});
+
+describe('pickRangeDay', () => {
+  const full = { from: '2026-11-10', to: '2026-11-15' };
+  const state = (active: 'from' | 'to', range = full) => ({
+    ...range,
+    active,
+    pending: null,
+  });
+
+  it('builds an incomplete range from the first to the second click', () => {
+    const first = pickRangeDay(
+      state('from', { from: '', to: '' }),
+      '2026-11-20',
+    );
+    expect(first).toMatchObject({ emit: false, close: false, active: 'to' });
+    expect(first.pending).toBe('2026-11-20');
+    const second = pickRangeDay(
+      { from: '', to: '', active: 'to', pending: '2026-11-20' },
+      '2026-11-12',
+    );
+    expect(second).toMatchObject({
+      range: { from: '2026-11-12', to: '2026-11-20' },
+      emit: true,
+      close: true,
+      adjusted: null,
+      pending: null,
+    });
+  });
+  it('treats a half-filled range as incomplete', () => {
+    const result = pickRangeDay(
+      state('to', { from: '2026-11-10', to: '' }),
+      '2026-11-12',
+    );
+    expect(result).toMatchObject({ emit: false, pending: '2026-11-12' });
+  });
+  it('replaces only "from" and keeps the panel open on "to"', () => {
+    expect(pickRangeDay(state('from'), '2026-11-12')).toMatchObject({
+      range: { from: '2026-11-12', to: '2026-11-15' },
+      active: 'to',
+      emit: true,
+      close: false,
+      adjusted: null,
+    });
+  });
+  it('replaces only "to" and closes', () => {
+    expect(pickRangeDay(state('to'), '2026-11-16')).toMatchObject({
+      range: { from: '2026-11-10', to: '2026-11-16' },
+      emit: true,
+      close: true,
+      adjusted: null,
+    });
+  });
+  it('sets "to" to the new "from" when it would be inverted', () => {
+    expect(pickRangeDay(state('from'), '2026-11-20')).toMatchObject({
+      range: { from: '2026-11-20', to: '2026-11-20' },
+      adjusted: 'to',
+      close: false,
+    });
+  });
+  it('sets "from" to the new "to" when it would be inverted', () => {
+    expect(pickRangeDay(state('to'), '2026-11-05')).toMatchObject({
+      range: { from: '2026-11-05', to: '2026-11-05' },
+      adjusted: 'from',
+      close: true,
+    });
+  });
+  it('allows a one-day range at either end', () => {
+    expect(pickRangeDay(state('from'), '2026-11-15').adjusted).toBeNull();
+    expect(pickRangeDay(state('to'), '2026-11-10').adjusted).toBeNull();
+  });
+});
+
+describe('rangeInstruction', () => {
+  const base = {
+    single: false,
+    complete: false,
+    active: 'from',
+    pending: false,
+  } as const;
+  it.each([
+    [{}, 'Elige el día de inicio'],
+    [{ pending: true }, 'Ahora elige el día final'],
+    [{ complete: true }, 'Elige el nuevo día de inicio'],
+    [{ complete: true, active: 'to' as const }, 'Elige el nuevo día final'],
+    [{ single: true }, 'Elige la fecha'],
+  ])('%j -> %s', (override, text) => {
+    expect(rangeInstruction({ ...base, ...override })).toBe(text);
   });
 });

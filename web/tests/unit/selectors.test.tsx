@@ -46,7 +46,9 @@ describe('DateRangePicker', () => {
     await user.click(screen.getByLabelText('Desde'));
     await user.click(dayButton(/^lunes 2 de noviembre de 2026/));
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByRole('status').textContent).toBe('Elija el último día.');
+    expect(screen.getByRole('status').textContent).toBe(
+      'Ahora elige el día final',
+    );
     await user.click(dayButton(/^sábado 7 de noviembre de 2026/));
     expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith({
@@ -132,8 +134,9 @@ describe('DateRangePicker', () => {
     const out = dayButton(/^lunes 14 de diciembre de 2026.*fuera del periodo/);
     expect(out.getAttribute('aria-disabled')).toBe('true');
     await user.click(out);
+    expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole('status').textContent).toBe(
-      'Del 10 dic 2026 al 13 dic 2026.',
+      'Elige el nuevo día de inicio',
     );
     await user.click(screen.getByRole('button', { name: 'Mes anterior' }));
     expect(
@@ -191,7 +194,9 @@ describe('DateRangePicker', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
     await user.click(screen.getByLabelText('Desde'));
-    expect(screen.getByRole('status').textContent).toBe('Sin fecha elegida.');
+    expect(screen.getByRole('status').textContent).toBe(
+      'Elige el día de inicio',
+    );
   });
 
   it('shows the error of a field', () => {
@@ -204,6 +209,97 @@ describe('DateRangePicker', () => {
       />,
     );
     expect(screen.getByRole('alert').textContent).toBe('Use AAAA-MM-DD.');
+  });
+});
+
+describe('DateRangePicker: editing one end', () => {
+  const FULL = { from: '2026-11-10', to: '2026-11-15' };
+  const endButton = (name: RegExp) =>
+    within(screen.getByRole('dialog')).getByRole('button', { name });
+
+  it('marks the end of the field that opened the panel', async () => {
+    const user = userEvent.setup();
+    render(<Range onChange={vi.fn()} initial={FULL} />);
+    await user.click(screen.getByLabelText('Hasta'));
+    expect(endButton(/^Hasta/).getAttribute('aria-pressed')).toBe('true');
+    expect(endButton(/^Desde/).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('status').textContent).toBe(
+      'Elige el nuevo día final',
+    );
+    // The grid opens on the day of the active end.
+    expect(dayButton(/^domingo 15 de noviembre/).getAttribute('tabindex')).toBe(
+      '0',
+    );
+  });
+
+  it('changes only "Hasta" with one click, emits once and closes', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Range onChange={onChange} initial={FULL} />);
+    await user.click(screen.getByLabelText('Hasta'));
+    await user.click(dayButton(/^lunes 16 de noviembre de 2026/));
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenCalledWith({
+      from: '2026-11-10',
+      to: '2026-11-16',
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('changes only "Desde", stays open and moves to "Hasta"', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Range onChange={onChange} initial={FULL} />);
+    await user.click(screen.getByLabelText('Desde'));
+    await user.click(dayButton(/^miércoles 11 de noviembre de 2026/));
+    expect(onChange).toHaveBeenCalledWith({
+      from: '2026-11-11',
+      to: '2026-11-15',
+    });
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(endButton(/^Hasta/).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('status').textContent).toBe(
+      'Elige el nuevo día final',
+    );
+  });
+
+  it('switches the active end from the panel', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Range onChange={onChange} initial={FULL} />);
+    await user.click(screen.getByLabelText('Desde'));
+    await user.click(endButton(/^Hasta/));
+    await user.click(dayButton(/^martes 17 de noviembre de 2026/));
+    expect(onChange).toHaveBeenCalledWith({
+      from: '2026-11-10',
+      to: '2026-11-17',
+    });
+  });
+
+  it('equals the other end and says so when the range would invert', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Range onChange={onChange} initial={FULL} />);
+    await user.click(screen.getByLabelText('Desde'));
+    await user.click(dayButton(/^martes 17 de noviembre de 2026/));
+    expect(onChange).toHaveBeenCalledWith({
+      from: '2026-11-17',
+      to: '2026-11-17',
+    });
+    expect(screen.getByRole('status').textContent).toContain(
+      '“Hasta” se ajustó al 17 nov 2026',
+    );
+  });
+
+  it('mounts the panel outside the field and Escape returns the focus', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Range onChange={vi.fn()} initial={FULL} />);
+    const field = screen.getByLabelText('Hasta');
+    await user.click(field);
+    expect(container.contains(screen.getByRole('dialog'))).toBe(false);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(field);
   });
 });
 

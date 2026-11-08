@@ -37,22 +37,130 @@
   color: var(--muted);
 }
 
+/* Two columns (month | ends, shortcuts, legend); stacked on small screens. */
 .calendar {
-  width: 340px;
+  --day-size: 32px;
+  flex: none;
+  width: 520px;
   max-width: 100%;
-  padding: 16px 16px 14px;
+  box-sizing: border-box;
+}
+
+.instruction {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--canvas-soft-border);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 14px;
+}
+
+.notice {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 14px;
+  padding: 10px 14px 12px;
+}
+
+.monthCol {
+  min-width: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 1px solid var(--canvas-soft-border);
+}
+
+.ends {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 40px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.end[aria-pressed='true'] {
+  border-color: var(--primary-dark);
+  background: var(--success-bg);
+  box-shadow: inset 0 0 0 1px var(--primary-dark);
+}
+
+.end:focus-visible {
+  outline: 3px solid var(--primary-dark);
+  outline-offset: 2px;
+}
+
+.endLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.endValue {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 639px) {
+  .calendar {
+    width: 340px;
+  }
+
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 0;
+  }
+
+  .side {
+    padding-left: 0;
+    padding-top: 10px;
+    border-left: 0;
+    border-top: 1px solid var(--canvas-soft-border);
+  }
+
+  .week {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
 }
 
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .month {
   font-family: var(--font-heading);
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .month::first-letter {
@@ -61,7 +169,7 @@
 
 .nav,
 .chip {
-  min-height: 36px;
+  min-height: 32px;
   border: 1px solid var(--pill-border);
   border-radius: 999px;
   background: var(--surface);
@@ -72,14 +180,14 @@
 }
 
 .nav {
-  width: 40px;
+  width: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .chip {
-  padding: 0 14px;
+  padding: 0 12px;
 }
 
 .nav:hover,
@@ -106,13 +214,13 @@
 
 .week {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, var(--day-size));
 }
 
 .weekday {
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
 }
@@ -123,12 +231,12 @@
 
 .day {
   position: relative;
-  height: 44px;
+  height: var(--day-size);
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -155,6 +263,10 @@
   opacity: 1;
 }
 
+.activeEdge {
+  box-shadow: inset 0 0 0 2px var(--primary-dark);
+}
+
 .off {
   background: var(--canvas-soft-border);
   color: var(--disabled-text);
@@ -170,9 +282,9 @@
 .dot {
   position: absolute;
   left: 50%;
-  bottom: 5px;
-  width: 5px;
-  height: 5px;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
   margin-left: -2px;
   border-radius: 3px;
   background: var(--danger);
@@ -185,20 +297,18 @@
 .shortcuts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--canvas-soft-border);
+  gap: 6px;
 }
 
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin: 12px 0 0;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -232,13 +342,4 @@
 
 .swatchOff {
   background: var(--canvas-soft-border);
-}
-
-.status {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  font-size: 14px;
 }
