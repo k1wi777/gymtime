@@ -936,6 +936,95 @@ describe('panel users (R18, R19)', () => {
     expect(screen.queryByRole('dialog', { name: 'Nuevo usuario' })).toBeNull();
   });
 
+  it('edits a user in a modal, which closes and refreshes the list', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('PATCH /users/u2', () => json({ ...users[1], name: 'Beto R' }));
+    app(<Usuarios />);
+    await user.click(
+      await screen.findByRole('button', { name: 'Editar a Beto Asistente' }),
+    );
+    const modal = screen.getByRole('dialog', { name: 'Editar Beto Asistente' });
+    expect(
+      (within(modal).getByLabelText('Nombre') as HTMLInputElement).value,
+    ).toBe('Beto Asistente');
+    expect(
+      (within(modal).getByLabelText('Usuario') as HTMLInputElement).disabled,
+    ).toBe(true);
+    const name = within(modal).getByLabelText('Nombre');
+    await user.clear(name);
+    await user.type(name, 'Beto R');
+    await user.selectOptions(within(modal).getByLabelText('Rol'), 'admin');
+    await user.click(
+      within(modal).getByRole('button', { name: 'Guardar cambios' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Editar Beto Asistente' }),
+      ).toBeNull(),
+    );
+    const patches = fake.calls('PATCH /users/u2');
+    expect(patches).toHaveLength(1);
+    expect(await patches[0]?.json()).toEqual({ name: 'Beto R', role: 'admin' });
+    expect(fake.calls('GET /users').length).toBeGreaterThan(1);
+  });
+
+  it('keeps the edit modal open and shows the error when saving fails', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('PATCH /users/u2', () =>
+      json({ statusCode: 409, code: 'LAST_ADMIN', message: 'x' }, 409),
+    );
+    app(<Usuarios />);
+    await user.click(
+      await screen.findByRole('button', { name: 'Editar a Beto Asistente' }),
+    );
+    const modal = screen.getByRole('dialog', { name: 'Editar Beto Asistente' });
+    await user.type(within(modal).getByLabelText('Nombre'), 'X');
+    await user.click(
+      within(modal).getByRole('button', { name: 'Guardar cambios' }),
+    );
+    expect(
+      await within(modal).findByText(/sin un administrador activo/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: 'Editar Beto Asistente' }),
+    ).toBeTruthy();
+  });
+
+  it('asks before discarding unsaved user edits and closes freely without changes', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    app(<Usuarios />);
+    const open = await screen.findByRole('button', {
+      name: 'Editar a Beto Asistente',
+    });
+    await user.click(open);
+    let modal = screen.getByRole('dialog', { name: 'Editar Beto Asistente' });
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Editar Beto Asistente' }),
+    ).toBeNull();
+
+    await user.click(open);
+    modal = screen.getByRole('dialog', { name: 'Editar Beto Asistente' });
+    await user.type(within(modal).getByLabelText('Nombre'), 'X');
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByText('¿Descartar los cambios?')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Editar Beto Asistente' }),
+    ).toBeTruthy();
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Descartar cambios' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Editar Beto Asistente' }),
+      ).toBeNull(),
+    );
+    expect(fake.calls('PATCH /users/u2')).toHaveLength(0);
+  });
+
   it('blocks deactivating yourself and explains the last-administrator rule', async () => {
     const user = userEvent.setup();
     const fake = setup();

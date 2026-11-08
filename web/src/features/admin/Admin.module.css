@@ -12,19 +12,6 @@
   gap: 10px;
 }
 
-.formCard {
-  padding: 26px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-width: 560px;
-}
-
-.formTitle {
-  margin: 0;
-  font-size: 20px;
-}
-
 .filterCard {
   padding: 20px 24px;
   display: flex;

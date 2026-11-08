@@ -13,7 +13,6 @@ import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
 import { FormModal } from '@/ui/FormModal';
-import { useInModal } from '@/ui/Modal';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
@@ -62,7 +61,6 @@ function UserForm({
 }) {
   const creating = user === null;
   const formId = useId();
-  const inModal = useInModal();
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<UserValues>({
     initial: {
@@ -107,16 +105,11 @@ function UserForm({
   return (
     <form
       id={formId}
-      className={inModal ? 'stack' : `card ${styles.formCard}`}
+      className="stack"
       onSubmit={form.submit}
       noValidate
       aria-label={creating ? 'Nuevo usuario' : `Editar ${user.name}`}
     >
-      {!inModal && (
-        <h2 className={styles.formTitle}>
-          {creating ? 'Nuevo usuario' : `Editar ${user.name}`}
-        </h2>
-      )}
       {failure && <Notice kind="error">{failure}</Notice>}
       <TextField
         label="Nombre"
@@ -172,6 +165,7 @@ export function Usuarios() {
     [],
   );
   const [mode, setMode] = useState<'none' | 'new' | { edit: Account }>('none');
+  const editing = typeof mode === 'object' ? mode.edit : null;
   const [temporary, setTemporary] = useState<TemporaryPassword | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
@@ -208,16 +202,14 @@ export function Usuarios() {
         title="Usuarios del panel"
         lead="Quién puede entrar al panel y con qué rol."
         aside={
-          mode === 'none' || mode === 'new' ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setMode('new')}
-            >
-              <Icon name="mas" size={17} strokeWidth={2} />
-              Nuevo usuario
-            </button>
-          ) : undefined
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setMode('new')}
+          >
+            <Icon name="mas" size={17} strokeWidth={2} />
+            Nuevo usuario
+          </button>
         }
       />
       <div className={styles.main}>
@@ -241,17 +233,23 @@ export function Usuarios() {
             }}
           />
         </FormModal>
-        {typeof mode === 'object' && (
-          <UserForm
-            key={mode.edit.id}
-            user={mode.edit}
-            onCancel={() => setMode('none')}
-            onSaved={() => {
-              setMode('none');
-              users.reload();
-            }}
-          />
-        )}
+        <FormModal
+          open={editing !== null}
+          title={editing ? `Editar ${editing.name}` : ''}
+          onClose={() => setMode('none')}
+        >
+          {editing && (
+            <UserForm
+              key={editing.id}
+              user={editing}
+              onCancel={() => setMode('none')}
+              onSaved={() => {
+                setMode('none');
+                users.reload();
+              }}
+            />
+          )}
+        </FormModal>
         {users.loading && !users.data && <Spinner />}
         {users.error ? (
           <Notice kind="error">{describeError(users.error)}</Notice>
