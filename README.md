@@ -2,7 +2,7 @@
 
 Backend de control de asistencia y alarma por huella (ESP32 + NestJS + PostgreSQL). Monorepo npm con los workspaces `shared/` (protocolo), `simulator/` (ESP32 simulado), `cli/` (comando `gym`) y `server/`, más el panel `web/` (Next.js, fuera de los workspaces).
 
-**Estado:** iteración 2 completa: panel web (asistente y administrador), periodos y horarios recurrentes, importación de estudiantes, reportes y exportación CSV, producción (HTTPS, tokens por lector, respaldos, supresión de datos) y modo sin conexión con revisión de conflictos (H6-H12), más el cierre de la iteración (escenarios B1-B17, prueba de carga, rechazo de claves de ejemplo en producción y datos de muestra). El panel se rediseñó: barra lateral con grupos desplegables (administrador), formularios de alta y edición en ventanas modales, selectores de fecha y de rango con calendario, selector de horario en dos pasos (día y hora), pastillas de filtro por día y vista semanal en la gestión de horarios. Pendiente de hardware, y por tanto sin probar: el modo sin conexión con el ESP32 real (ventana de 72 h) y el estado de periféricos (iteración 3). Decisiones del usuario: [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md); estado del firmware en [`docs/estado_firmware.md`](docs/estado_firmware.md).
+**Estado:** iteración 2 completa: panel web (asistente y administrador), periodos y horarios recurrentes, importación de estudiantes, reportes y exportación CSV, producción (HTTPS, tokens por lector, respaldos, supresión de datos) y modo sin conexión con revisión de conflictos (H6-H12), más el cierre de la iteración (escenarios B1-B17, prueba de carga, rechazo de claves de ejemplo en producción y datos de muestra). El panel se rediseñó: barra lateral con grupos desplegables (administrador), formularios de alta y edición en ventanas modales, selectores de fecha y de rango con calendario, selector de horario en dos pasos (día y hora), pastillas de filtro por día y vista semanal en la gestión de horarios. Pendiente de hardware, y por tanto sin probar: el modo sin conexión con el ESP32 real (ventana de 72 h) y el estado de periféricos (iteración 3). Decisiones del usuario: [reporte de la iteración 2, sección 6](docs/reporte_iteracion_2.md); estado del firmware en [`docs/estado_firmware.md`](docs/estado_firmware.md).
 
 ## Inicio rápido
 
@@ -208,7 +208,6 @@ Imágenes (`server/Dockerfile`, `web/Dockerfile`), `deploy/docker-compose.prod.y
 - [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
 - [`docs/escenarios.md`](docs/escenarios.md): escenarios A1–A12 y B1–B17 y prueba de carga.
 - [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md): datos de muestra de desarrollo y sus usuarios.
-- [`docs/decisiones_iteracion_2.md`](docs/decisiones_iteracion_2.md): decisiones del usuario de la iteración 2.
 - [`docs/estado_firmware.md`](docs/estado_firmware.md): qué está disponible y qué falta.
 - [`docs/integracion_firmware.md`](docs/integracion_firmware.md): conectar el ESP32 o el simulador y diagnosticar problemas (sección 8).
 - [`docs/modo_sin_conexion_firmware.md`](docs/modo_sin_conexion_firmware.md): modo sin conexión para el firmware.

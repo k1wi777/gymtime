@@ -1,6 +1,6 @@
 # Guía de firmware: modo sin conexión
 
-> Estado: la ventana de 72 h queda lista pero sin probar hasta tener el ESP32 (ver [`decisiones_iteracion_2.md`](decisiones_iteracion_2.md)).
+> Estado: la ventana de 72 h queda lista pero sin probar hasta tener el ESP32 (ver [`reporte_iteracion_2.md`](reporte_iteracion_2.md), sección 6).
 
 
 Para el equipo de firmware del ESP32. Describe qué guarda el dispositivo cuando no hay conexión, cómo decide entradas y salidas por su cuenta, el formato de la cola y de los mensajes, los límites y el orden al reconectar. Está escrita para implementarse **sin leer el código del servidor**. El contrato base sigue en [`protocolo_v0.md`](./protocolo_v0.md) (sección 10); los textos de pantalla, en [`mensajes_pantalla.md`](./mensajes_pantalla.md).

@@ -2,7 +2,7 @@
 
 Objetivo de la iteración: completar la solución de la ficha de software. La iteración 1 entregó todo lo que habla con el dispositivo (backend, protocolo, CLI y simulador). La iteración 2 agrega lo que usan las personas (panel web, cuentas, horarios por semestre, métricas) y lo que lo pone en producción (nube, seguridad, respaldos, modo sin conexión).
 
-Documentos relacionados: `contexto_de_la_idea.md`, `detalles_de_software.md`, `backlog_iteracion_1_backend.md`, `reporte_iteracion_1.md`.
+Documentos relacionados: `backlog_iteracion_1_backend.md`.
 
 Las tareas continúan la numeración de la iteración 1 (E0 a E12), así que esta empieza en E13. Tamaños de complejidad: **S** = simple, **M** = moderada, **L** = compleja.
 

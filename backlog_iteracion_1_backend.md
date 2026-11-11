@@ -2,7 +2,6 @@
 
 Objetivo de la iteración: dejar un **backend local** al que se conecte el ESP32 (firmware hecho por otros compañeros) para probar el registro de huellas, el reconocimiento y la alarma de fin de horario. Se maneja desde la terminal.
 
-Documentos relacionados: `contexto_de_la_idea.md`, `detalles_de_software.md`.
 
 ---
 

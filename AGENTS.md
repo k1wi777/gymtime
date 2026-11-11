@@ -31,7 +31,7 @@ No continúes hasta completar estos pasos.
 
 **GymTime UniCórdoba** (nombre provisional) es un sistema de control de acceso y de tiempo de permanencia para el gimnasio institucional de la Universidad de Córdoba, que funciona por horarios de aproximadamente una hora con un grupo de estudiantes asignado a cada uno. Cada estudiante marca entrada y salida con su huella en un dispositivo ESP32; un servicio en la nube decide si es entrada, salida o rechazo, registra la asistencia y activa una alarma cuando termina el horario y aún hay gente adentro. Un panel web permite a los encargados controlar en vivo, hacer registros manuales y consultar métricas. Así el control del tiempo deja de depender de una persona vigilando el reloj.
 
-Estado actual: iteración 2 completa (servidor, CLI, simulador, panel web para asistente y administrador, periodos, importación, reportes, producción y modo sin conexión; ver `backlog_iteracion_2.md` y `docs/decisiones_iteracion_2.md`). La iteración 3 depende del hardware (pruebas con el ESP32 real, estado de periféricos).
+Estado actual: iteración 2 completa (servidor, CLI, simulador, panel web para asistente y administrador, periodos, importación, reportes, producción y modo sin conexión; ver `backlog_iteracion_2.md` y `docs/reporte_iteracion_2.md`). La iteración 3 depende del hardware (pruebas con el ESP32 real, estado de periféricos).
 
 ## Para quién
 

@@ -222,17 +222,22 @@ sin cambios.
 
 ## 6. Decisiones clave
 
-Seis decisiones del dueño del producto, registradas en
-[`decisiones_iteracion_2.md`](./decisiones_iteracion_2.md):
+Seis decisiones del dueño del producto (antes registradas en un archivo aparte,
+ya integradas aquí):
 
 - La baja de un estudiante es irreversible y elimina la huella; la supresión
-  anonimiza y conserva las sesiones para los reportes.
+  anonimiza y conserva las sesiones para los reportes. Por la Ley 1581 no hay
+  reactivación: para volver a entrar se registra y se enrola de nuevo; la
+  supresión se hace con `gym student erase` o desde el panel.
 - Salir y volver a entrar no está permitido (`ALREADY_EXITED`).
-- La exportación es solo CSV.
+- La exportación es solo CSV (CSV con BOM, `;` como separador y fechas en hora de
+  Bogotá, que Excel abre directamente).
 - La importación no sobrescribe estudiantes existentes: el documento repetido es
   un error de esa fila.
 - El modo sin conexión (ventana de 72 h) queda listo pero sin probar hasta contar
-  con el ESP32 real.
+  con el ESP32 real: el servidor y el simulador ya lo cubren
+  (`docs/modo_sin_conexion_firmware.md`), pero la atomicidad de LittleFS, la hora
+  tras un reinicio sin red y la deriva del reloj solo se verifican con hardware.
 - El estado de los periféricos lo reportará el ESP32 con un mensaje aditivo, en
   la iteración 3.
 
@@ -264,7 +269,6 @@ Decisiones de diseño del backlog (secciones 3 y 5):
 | `docs/mensajes_pantalla.md` | Catálogo de la pantalla LCD de 16 × 2. |
 | `docs/escenarios.md` | Escenarios A1–A12 y B1–B17 y su mapa a pruebas. |
 | `docs/datos_de_muestra.md` | `seed:dev`: protecciones, qué borra y qué crea. |
-| `docs/decisiones_iteracion_2.md` | Decisiones del dueño del producto. |
 | `docs/estado_firmware.md` | Estado de cada mensaje del protocolo. |
 | `backlog_iteracion_2.md` | Backlog e hitos de la iteración. |
 

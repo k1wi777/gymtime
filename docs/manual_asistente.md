@@ -1,6 +1,6 @@
 # Manual del asistente
 
-> Decisiones del producto que afectan a este manual (salir y volver a entrar no está permitido, baja irreversible): [`decisiones_iteracion_2.md`](decisiones_iteracion_2.md).
+> Decisiones del producto que afectan a este manual (salir y volver a entrar no está permitido, baja irreversible): [`reporte_iteracion_2.md`](reporte_iteracion_2.md), sección 6.
 
 
 Guía corta del panel web de GymTime para el asistente del gimnasio. Todas las horas se muestran en hora de Bogotá.
