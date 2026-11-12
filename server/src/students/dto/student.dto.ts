@@ -98,7 +98,7 @@ export class CreateStudentDto {
   phone?: string | null;
   @ApiPropertyOptional({
     description:
-      'Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS); generated from the name when omitted',
+      'Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX); generated from the name when omitted',
   })
   displayName?: string;
   @ApiPropertyOptional({
@@ -131,7 +131,8 @@ export class UpdateStudentDto {
   })
   phone?: string | null;
   @ApiPropertyOptional({
-    description: 'Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS)',
+    description:
+      'Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX)',
   })
   displayName?: string;
   @ApiPropertyOptional({

@@ -1,16 +1,15 @@
-import { REJECT_REASONS, validateDisplayLines } from '@gymtime/shared';
+import { REJECT_REASONS, validateDisplayMessage } from '@gymtime/shared';
 import {
-  ALARM_LINES,
-  DISPLAY_COLORS,
-  SYSTEM_ERROR_LINES,
+  ALARM_MESSAGE,
+  CLEAR_MESSAGE,
+  SYSTEM_ERROR_MESSAGE,
   deniedDisplay,
   entryDisplay,
   exitDisplay,
   unknownDisplay,
 } from './display.js';
 
-const LAYOUT = { cols: 16, rows: 2 };
-const LONGEST_NAME = 'Maximiliano-Alex'; // 16 characters
+const LONGEST_NAME = 'Maximiliano-Alexander O.'; // 24 characters
 
 const allDisplays = () => [
   entryDisplay(LONGEST_NAME),
@@ -22,80 +21,85 @@ const allDisplays = () => [
   ]),
 ];
 
-describe('scan displays (Anexo B)', () => {
-  it('shows the display name and the result', () => {
+describe('scan displays (catalogue)', () => {
+  it('shows the display name, the result and a success tone', () => {
     expect(entryDisplay('Ana M.')).toEqual({
+      title: 'Ana M.',
+      subtitle: 'Entrada registrada',
+      tone: 'success',
       line1: 'Ana M.',
-      line2: 'Entrada OK',
-      color: DISPLAY_COLORS.accepted,
+      line2: 'Entrada registrada',
+      color: 'green',
     });
-    expect(exitDisplay('Ana M.')).toEqual({
-      line1: 'Ana M.',
-      line2: 'Salida OK',
-      color: DISPLAY_COLORS.accepted,
-    });
-  });
-
-  it('explains each rejection with the catalogue texts', () => {
-    expect(deniedDisplay('ALREADY_EXITED', 'Ana')).toEqual({
-      line1: 'Ana',
-      line2: 'Ya marco salida',
-      color: DISPLAY_COLORS.rejected,
-    });
-    expect(deniedDisplay('NOT_IN_SCHEDULE', 'Ana').line2).toBe(
-      'No es su horario',
-    );
-    expect(deniedDisplay('STUDENT_INACTIVE', 'Ana').line2).toBe(
-      'No habilitado',
-    );
-    expect(deniedDisplay('NO_ACTIVE_SCHEDULE', 'Ana')).toMatchObject({
-      line1: 'Sin horario',
-      line2: 'en este momento',
-    });
-    expect(deniedDisplay('OUTSIDE_ENTRY_WINDOW', 'Ana')).toMatchObject({
-      line1: 'Ingreso cerrado',
-      line2: '',
-    });
-    expect(deniedDisplay('UNKNOWN_SLOT', null)).toMatchObject({
-      line1: 'No reconocida',
-      line2: 'Intente de nuevo',
+    expect(exitDisplay('Ñandú')).toMatchObject({
+      title: 'Ñandú',
+      subtitle: 'Salida registrada',
+      tone: 'success',
     });
   });
 
-  it('announces an unrecognised fingerprint like an unknown slot', () => {
-    expect(unknownDisplay()).toEqual({
-      line1: 'No reconocida',
-      line2: 'Intente de nuevo',
-      color: DISPLAY_COLORS.rejected,
-    });
-  });
-
-  it('keeps every line of every result within 16 characters of ASCII (R11)', () => {
-    for (const display of allDisplays()) {
-      const checked = validateDisplayLines(
-        [display.line1, display.line2],
-        LAYOUT,
-      );
-      expect(checked).toEqual({
-        ok: true,
-        lines: [display.line1, display.line2],
+  it('explains each rejection with its tone', () => {
+    const expected: Record<string, [string, string, string]> = {
+      UNKNOWN_SLOT: ['Huella no reconocida', 'Intente de nuevo', 'error'],
+      NOT_IN_SCHEDULE: ['Ana', 'No es su horario', 'error'],
+      NO_ACTIVE_SCHEDULE: [
+        'Sin horario',
+        'No hay un horario activo en este momento',
+        'warning',
+      ],
+      OUTSIDE_ENTRY_WINDOW: [
+        'Ingreso cerrado',
+        'El ingreso a este horario ya terminó',
+        'warning',
+      ],
+      ALREADY_EXITED: ['Ana', 'Ya registró su salida', 'warning'],
+      STUDENT_INACTIVE: ['Ana', 'No está habilitado', 'error'],
+    };
+    for (const reason of REJECT_REASONS) {
+      const [title, subtitle, tone] = expected[reason];
+      expect(deniedDisplay(reason, 'Ana')).toMatchObject({
+        title,
+        subtitle,
+        tone,
       });
     }
   });
 
-  it('keeps the reserved and alarm texts within the screen', () => {
-    for (const lines of [SYSTEM_ERROR_LINES, ALARM_LINES]) {
-      expect(validateDisplayLines([lines.line1, lines.line2], LAYOUT).ok).toBe(
-        true,
-      );
+  it('uses a fallback title when a rejection has no known student', () => {
+    expect(deniedDisplay('NOT_IN_SCHEDULE', null).title).toBe('Estudiante');
+  });
+
+  it('announces an unrecognised fingerprint like an unknown slot', () => {
+    expect(unknownDisplay()).toMatchObject({
+      title: 'Huella no reconocida',
+      subtitle: 'Intente de nuevo',
+      tone: 'error',
+      color: 'red',
+    });
+  });
+
+  it('keeps the deprecated aliases equal to the contract fields', () => {
+    for (const d of allDisplays()) {
+      expect(d.line1).toBe(d.title);
+      expect(d.line2).toBe(d.subtitle);
     }
   });
 
-  it('cuts to a narrower screen and drops the second line on a single row', () => {
-    expect(entryDisplay(LONGEST_NAME, { cols: 8, rows: 2 })).toMatchObject({
-      line1: 'Maximili',
-      line2: 'Entrada ',
+  it('fits every message within the default limits', () => {
+    for (const d of allDisplays()) {
+      expect(validateDisplayMessage(d)).toMatchObject({ ok: true });
+    }
+    for (const m of [SYSTEM_ERROR_MESSAGE, ALARM_MESSAGE]) {
+      expect(validateDisplayMessage(m)).toMatchObject({ ok: true });
+    }
+  });
+
+  it('defines the alarm as a warning and the clear message as empty', () => {
+    expect(ALARM_MESSAGE).toEqual({
+      title: 'Tiempo cumplido',
+      subtitle: 'Registre su salida',
+      tone: 'warning',
     });
-    expect(entryDisplay('Ana', { cols: 16, rows: 1 }).line2).toBe('');
+    expect(CLEAR_MESSAGE).toEqual({ title: '', subtitle: '', tone: 'info' });
   });
 });

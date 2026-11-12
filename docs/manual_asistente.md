@@ -49,7 +49,7 @@ La huella se carga en el lector antes del próximo horario del estudiante.
 - **Encender / Probar / Apagar alarma:** al apagar con gente adentro, las sesiones abiertas se cierran como «no registrada» (sin hora de salida); el panel pide confirmación.
 - Cuando la alarma suena aparece un aviso rojo en todas las pantallas con el motivo y cuántas personas siguen dentro.
 - **Probar alarma:** el aviso rojo se muestra unos 5 segundos (lo que dura el pitido) y se oculta solo en todas las pestañas; la tarjeta de Alarma vuelve a «Apagada».
-- **Mensaje en pantalla:** hasta dos líneas de 16 caracteres, sin tildes especiales. Si el lector está sin conexión, el mensaje queda en cola y se muestra al reconectarse.
+- **Mensaje en pantalla:** un título (hasta 32 caracteres), un subtítulo opcional (hasta 80 caracteres y 2 líneas), un tipo de mensaje que fija el color (éxito, rechazo, aviso o neutro) y los segundos en pantalla; se pueden usar tildes. Si el lector está sin conexión, el mensaje queda en cola y se muestra al reconectarse.
 - «Órdenes recientes» muestra si el lector confirmó cada orden.
 
 ## Por revisar

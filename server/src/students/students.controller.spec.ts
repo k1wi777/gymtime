@@ -127,7 +127,7 @@ describe('StudentsController (HTTP)', () => {
     const generated = await http()
       .post('/students')
       .set(auth)
-      .send({ ...body, name: 'Ana María Gómez Pérez' })
+      .send({ ...body, name: 'Ana María Gómez Pérez de la Hoz Castro' })
       .expect(201);
     expect(generated.body.displayName).toBe('Ana M.');
     const edited = await http()
@@ -139,13 +139,13 @@ describe('StudentsController (HTTP)', () => {
     const tooLong = await http()
       .patch(`/students/${generated.body.id}`)
       .set(auth)
-      .send({ displayName: 'x'.repeat(20) })
+      .send({ displayName: 'x'.repeat(25) })
       .expect(400);
-    expect(tooLong.body.message).toContain('máximo 16');
+    expect(tooLong.body.message).toContain('máximo 24');
     await http()
       .post('/students')
       .set(auth)
-      .send({ ...body, document: '101', displayName: 'y'.repeat(17) })
+      .send({ ...body, document: '101', displayName: 'y'.repeat(25) })
       .expect(400);
   });
 

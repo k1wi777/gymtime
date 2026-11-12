@@ -71,12 +71,13 @@ test.describe('alarma y mensajes (R7)', () => {
     await expect(
       page
         .getByRole('alert')
-        .filter({ hasText: /línea|Escriba/i })
+        .filter({ hasText: /título|Escriba/i })
         .first(),
     ).toBeVisible();
 
-    await page.getByLabel(/Línea 1/).fill('Hola equipo');
-    await page.getByLabel(/Línea 2/).fill('Cierre 11:00');
+    await page.getByLabel(/Título/).fill('Atención, mañana');
+    await page.getByLabel(/Subtítulo/).fill('Cierre 11:00');
+    await page.getByLabel(/Tipo de mensaje/).selectOption('warning');
     await page.getByRole('button', { name: 'Enviar mensaje' }).click();
     await expect(
       page.getByText('Mensaje mostrado en el lector.'),
@@ -95,7 +96,7 @@ test.describe('alarma y mensajes (R7)', () => {
     await control(request, 'device', { online: false });
     await loginAndWait(page);
     await page.getByRole('link', { name: 'Alarma y mensajes' }).click();
-    await page.getByLabel(/Línea 1/).fill('Hola');
+    await page.getByLabel(/Título/).fill('Hola');
     await page.getByRole('button', { name: 'Enviar mensaje' }).click();
     await expect(
       page.getByText(/El lector está fuera de línea: el mensaje se mostrará/),

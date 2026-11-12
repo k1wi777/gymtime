@@ -6,6 +6,7 @@ import {
   PROTOCOL_VERSION,
   generateDisplayName,
   ROSTER_NAME_MAX,
+  toAscii,
   type ServerMessage,
 } from '@gymtime/shared';
 import { AttendanceService } from '../attendance/attendance.service.js';
@@ -127,7 +128,7 @@ export class OfflineSnapshotService {
     const nameOf = new Map(
       students.map((s) => [
         s.id,
-        generateDisplayName(s.displayName || s.name, ROSTER_NAME_MAX),
+        generateDisplayName(toAscii(s.displayName || s.name), ROSTER_NAME_MAX),
       ]),
     );
     const open = new Set(await this.attendance.listOpenStudentIds());

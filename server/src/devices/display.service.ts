@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   PROTOCOL_VERSION,
-  validateDisplayLines,
+  buildDisplayPayload,
+  validateDisplayMessage,
+  type DisplayTone,
   type ServerMessage,
 } from '@gymtime/shared';
 import { EventLogService } from '../common/audit/event-log.service.js';
@@ -22,8 +24,10 @@ import {
 export interface DisplayRequest {
   /** Target device; defaults to the only online (or only known) one. */
   deviceId?: string;
-  line1: string;
-  line2?: string;
+  title: string;
+  subtitle?: string;
+  /** Colour intent; defaults to `info`. */
+  tone?: DisplayTone;
   /** Seconds on screen; defaults to DISPLAY_RESULT_SECONDS. */
   durationSec?: number;
 }
@@ -55,19 +59,16 @@ export class DisplayService {
   /**
    * Validates, persists and sends the message; resolves when the device
    * confirmed it, the order was queued (device offline) or it failed.
-   * @throws DisplayValidationError when the lines do not fit the screen.
+   * @throws DisplayValidationError when the message does not fit the screen.
    * @throws NoDeviceError when there is no device to address.
    */
   async show(
     request: DisplayRequest,
     options: ShowOptions = {},
   ): Promise<DisplayOutcome> {
-    const checked = validateDisplayLines(
-      [request.line1, request.line2 ?? ''],
-      this.config,
-    );
+    const checked = validateDisplayMessage(request, this.config);
     if (!checked.ok) throw new DisplayValidationError(checked.errors);
-    const [line1, line2] = checked.lines;
+    const content = checked.message;
     const deviceId = request.deviceId ?? (await this.defaultDevice());
     const durationSec = request.durationSec ?? this.config.resultSeconds;
 
@@ -77,7 +78,7 @@ export class DisplayService {
       type: 'display.message',
       ts: Math.floor(Date.now() / 1000),
       ref: null,
-      payload: { line1, line2, durationSec },
+      payload: { ...buildDisplayPayload(content), durationSec },
     } as ServerMessage;
     const status = await this.sender.sendCommand(deviceId, message, {
       supersedesPrevious: options.supersedesPrevious,
@@ -86,8 +87,9 @@ export class DisplayService {
       await this.eventLog.record('display.message_sent', {
         commandId: message.id,
         deviceId,
-        line1,
-        line2,
+        title: content.title,
+        subtitle: content.subtitle,
+        tone: content.tone,
         durationSec,
         status,
       });

@@ -34,7 +34,7 @@ const MIXED_CSV = [
   '1005,Pedro Largo,,,,Un nombre demasiado largo para la pantalla',
   '1006,Eva Ruiz,,,abc,',
   '1007,Maria Peña,Derecho,maria@example.com,,Ñandú',
-  '1008,Emoji,,,,Hola 😀',
+  '1008,Emoji,,,,Hola\u0007',
 ].join('\n');
 
 describe('StudentImportService (E20-2, E20-3)', () => {
@@ -84,9 +84,9 @@ describe('StudentImportService (E20-2, E20-3)', () => {
     const created = await students.list();
     expect(created.map((s) => s.document).sort()).toEqual(['1001', '1007']);
     expect(created.every((s) => !s.consented && s.active)).toBe(true);
-    // Accents are normalized for the screen and a missing name is generated.
+    // Accents are kept on the screen and a missing name is generated.
     const maria = created.find((s) => s.document === '1007');
-    expect(maria?.displayName).toBe('Nandu');
+    expect(maria?.displayName).toBe('Ñandú');
     expect(created.find((s) => s.document === '1001')?.displayName).toBe(
       'Ana Gomez',
     );

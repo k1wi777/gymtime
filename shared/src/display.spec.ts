@@ -1,72 +1,121 @@
 import {
   DISPLAY_DEFAULTS,
+  DISPLAY_TONES,
+  LEGACY_TONE_COLORS,
+  buildDisplayPayload,
   generateDisplayName,
-  toDisplayAscii,
-  validateDisplayLines,
+  normalizeDisplayText,
+  toAscii,
+  validateDisplayMessage,
 } from './display.js';
 
-const limits = { cols: DISPLAY_DEFAULTS.cols, rows: DISPLAY_DEFAULTS.rows };
+const limits = {
+  titleMax: DISPLAY_DEFAULTS.titleMax,
+  subtitleMax: DISPLAY_DEFAULTS.subtitleMax,
+  subtitleLines: DISPLAY_DEFAULTS.subtitleLines,
+};
 
-describe('toDisplayAscii', () => {
-  it('removes accents and the enye and tidies blanks', () => {
-    expect(toDisplayAscii('  Peña   Núñez Ángel ')).toBe('Pena Nunez Angel');
-    expect(toDisplayAscii('Ñandú')).toBe('Nandu');
-  });
-});
-
-describe('validateDisplayLines', () => {
-  it('normalizes valid lines', () => {
-    expect(validateDisplayLines(['Atención', 'mañana'], limits)).toEqual({
-      ok: true,
-      lines: ['Atencion', 'manana'],
-    });
-  });
-
-  it('reports the line and the limit that was exceeded', () => {
-    const result = validateDisplayLines(['x'.repeat(19)], limits);
-    expect(result).toMatchObject({
-      ok: false,
-      errors: [{ line: 1, limit: 16 }],
-    });
-    expect(JSON.stringify(result)).toContain(
-      'la línea 1 tiene 19 caracteres; máximo 16',
+describe('normalizeDisplayText', () => {
+  it('keeps accents and the enye and tidies blanks', () => {
+    expect(normalizeDisplayText('  Peña   Núñez Ángel ')).toBe(
+      'Peña Núñez Ángel',
     );
   });
 
-  it('rejects more lines than rows', () => {
-    expect(validateDisplayLines(['a', 'b', 'c'], limits)).toMatchObject({
-      ok: false,
-      errors: [{ line: 0, limit: 2 }],
+  it('keeps line breaks, trimming each line', () => {
+    expect(normalizeDisplayText(' a  b \r\n  c ')).toBe('a b\nc');
+  });
+});
+
+describe('validateDisplayMessage', () => {
+  it('normalizes a valid message and defaults the tone to info', () => {
+    expect(
+      validateDisplayMessage({ title: ' Atención ', subtitle: 'mañana' }),
+    ).toEqual({
+      ok: true,
+      message: { title: 'Atención', subtitle: 'mañana', tone: 'info' },
     });
   });
 
-  it('rejects characters that cannot be shown', () => {
-    expect(validateDisplayLines(['hola 😀'], limits)).toMatchObject({
+  it('accepts a two-line subtitle', () => {
+    expect(
+      validateDisplayMessage({ title: 'a', subtitle: 'uno\ndos' }, limits).ok,
+    ).toBe(true);
+  });
+
+  it('reports the field and the limit of a long title', () => {
+    const result = validateDisplayMessage({ title: 'x'.repeat(33) }, limits);
+    expect(result).toMatchObject({
       ok: false,
-      errors: [{ line: 1, limit: null }],
+      errors: [{ field: 'title', limit: 32 }],
+    });
+    expect(JSON.stringify(result)).toContain('máximo 32');
+  });
+
+  it('rejects a long subtitle and more than two lines', () => {
+    expect(
+      validateDisplayMessage({ title: 'a', subtitle: 'x'.repeat(81) }),
+    ).toMatchObject({ ok: false, errors: [{ field: 'subtitle', limit: 80 }] });
+    expect(
+      validateDisplayMessage({ title: 'a', subtitle: 'a\nb\nc' }),
+    ).toMatchObject({ ok: false, errors: [{ field: 'subtitle', limit: 2 }] });
+  });
+
+  it('rejects a title with a line break', () => {
+    expect(validateDisplayMessage({ title: 'a\nb' })).toMatchObject({
+      ok: false,
+      errors: [{ field: 'title' }],
     });
   });
 
-  it('measures the line after normalizing', () => {
-    expect(validateDisplayLines(['ñ'.repeat(16)], limits).ok).toBe(true);
+  it('rejects only non printable characters', () => {
+    expect(validateDisplayMessage({ title: 'a\u0007b' })).toMatchObject({
+      ok: false,
+      errors: [{ field: 'title', limit: null }],
+    });
+    expect(
+      validateDisplayMessage({ title: '¡Hola! ñandú €', subtitle: '😀' }).ok,
+    ).toBe(true);
+  });
+});
+
+describe('buildDisplayPayload', () => {
+  it('derives the deprecated aliases from the contract fields', () => {
+    for (const tone of DISPLAY_TONES) {
+      expect(buildDisplayPayload({ title: 'T', subtitle: 'S', tone })).toEqual({
+        title: 'T',
+        subtitle: 'S',
+        tone,
+        line1: 'T',
+        line2: 'S',
+        color: LEGACY_TONE_COLORS[tone],
+      });
+    }
+  });
+});
+
+describe('toAscii', () => {
+  it('removes accents and the enye', () => {
+    expect(toAscii('  Peña   Núñez Ángel ')).toBe('Pena Nunez Angel');
   });
 });
 
 describe('generateDisplayName', () => {
-  it('keeps the full name when it fits', () => {
-    expect(generateDisplayName('Ana Perez', 16)).toBe('Ana Perez');
-    expect(generateDisplayName('María Núñez', 16)).toBe('Maria Nunez');
+  it('keeps the full name, with accents, when it fits', () => {
+    expect(generateDisplayName('Ana Perez', 24)).toBe('Ana Perez');
+    expect(generateDisplayName('María Núñez', 24)).toBe('María Núñez');
   });
 
   it('shortens to the first name and the next initial', () => {
-    expect(generateDisplayName('Ana María Gómez Pérez', 16)).toBe('Ana M.');
+    expect(generateDisplayName('Ana María Gómez Pérez Rodríguez', 24)).toBe(
+      'Ana M.',
+    );
   });
 
   it('cuts a very long first name and never returns empty', () => {
     expect(
-      generateDisplayName('Maximiliano-Alexander Ortega', 16),
-    ).toHaveLength(16);
-    expect(generateDisplayName('   ', 16)).toBe('Estudiante');
-    expect(generateDisplayName('😀', 16)).toBe('Estudiante');
+      generateDisplayName('Maximiliano-Alexander-Ortega-Gutierrez', 24),
+    ).toHaveLength(24);
+    expect(generateDisplayName('   ', 24)).toBe('Estudiante');
   });
 });

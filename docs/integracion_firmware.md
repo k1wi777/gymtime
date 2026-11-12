@@ -154,7 +154,7 @@ Todos los mensajes son JSON de texto, uno por trama, con el sobre `{v, id, type,
 }
 ```
 
-   `display.message` ya está disponible: texto de hasta 2 líneas de 16 caracteres ASCII, que el firmware muestra durante `durationSec` (dos líneas vacías = limpiar la pantalla); ver [`mensajes_pantalla.md`](./mensajes_pantalla.md). Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican. Tres puntos que el firmware debe cumplir:
+   `display.message` ya está disponible: mensaje con `title`, `subtitle` y `tone` (con tildes; pantalla TFT de 3,5" 240 × 320 horizontal), que el firmware muestra durante `durationSec` (título y subtítulo vacíos = limpiar la pantalla; `line1`/`line2`/`color` están obsoletos); ver [`mensajes_pantalla.md`](./mensajes_pantalla.md). Los mensajes que el servidor puede enviar ya en esta etapa, `templates.sync` y `schedule.set`, se describen en las secciones 6 y 8 del [protocolo](./protocolo_v0.md); aquí no se duplican. Tres puntos que el firmware debe cumplir:
 
    - Al recibir el **primer bloque de una sincronización nueva** (`syncId` distinto del anterior), borra todas las plantillas locales y carga las recibidas en los slots indicados; los bloques siguientes del mismo `syncId` solo añaden. Cada bloque se confirma con su `ack`.
    - Un bloque único 1 de 1 con `templates` vacío significa «borra todo y no cargues nada». Se confirma con `ack` como cualquier otro:
@@ -257,13 +257,13 @@ gym sync
 
 ### Mensajes de pantalla simulados
 
-El simulador atiende `display.message` sin pantalla real: imprime `display.message: "línea 1" / "línea 2" (3s)` (o `(screen cleared)` si las dos líneas llegan vacías) y lo confirma con `ack`. Para verlo con el backend en marcha:
+El simulador atiende `display.message` sin pantalla real: imprime `display.message: "título" / "subtítulo" [tono] (3s)` (o `(screen cleared)` si título y subtítulo llegan vacíos; un salto de línea del subtítulo se muestra como `↵`) y lo confirma con `ack`. Para verlo con el backend en marcha:
 
 ```bash
-gym device message "Hola" "GymTime" --seconds 5
+gym device message "Atención" "Cierre a las 11:00" --tone warning --seconds 5
 ```
 
-Con el simulador desconectado, la orden queda en cola (`queued`) y llega al reconectar. Los textos que el servidor envía, la regla de 16 caracteres ASCII y los mensajes locales del firmware están en [`mensajes_pantalla.md`](./mensajes_pantalla.md).
+Con el simulador desconectado, la orden queda en cola (`queued`) y llega al reconectar. Los textos que el servidor envía, los límites de título y subtítulo, la tabla de colores por tono y los mensajes locales del firmware están en [`mensajes_pantalla.md`](./mensajes_pantalla.md).
 
 Ctrl+C cierra la conexión y termina el proceso. Detén el simulador antes de conectar el ESP32 real con el mismo `deviceId`, porque una segunda conexión expulsa a la primera.
 

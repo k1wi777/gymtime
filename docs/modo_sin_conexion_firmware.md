@@ -24,7 +24,7 @@ Todo en LittleFS (sobrevive a un reinicio), además de las huellas del AS608:
 | Contador `seq` | Dispositivo | Entero creciente que **se guarda en cada evento** y nunca se reinicia |
 | Estado local `open` / `exited` | Snapshot + decisiones | Para decidir entrada o salida y evitar reingresos |
 
-El roster guarda el **nombre corto** (ASCII, máximo 16 caracteres, el mismo `display_name` de la pantalla). Es un dato personal mínimo y **nunca va con biometría**: las plantillas de huella siguen solo en el AS608 (punto C7).
+El roster guarda el **nombre corto** (ASCII, máximo 16 caracteres: el `display_name` de la pantalla sin tildes; la pantalla en línea admite hasta 24 con tildes, pero el roster sin conexión se mantiene en ASCII). Es un dato personal mínimo y **nunca va con biometría**: las plantillas de huella siguen solo en el AS608 (punto C7).
 
 ### Cuándo llega el snapshot
 
@@ -233,7 +233,7 @@ El servidor mide `deviceTime − hora del servidor` en cada `hello` y avisa en e
 
 ## 8. Mensajes de pantalla sin conexión
 
-Se agregan a [`mensajes_pantalla.md`](./mensajes_pantalla.md) (punto C11): `Cola llena` / `Avise asistente`, `Sin hora` / `No registra`, `Sin horario` / `en este momento`, y los de resultado local (`<NOMBRE>` / `Entrada local`, `Salida local`). Solo ASCII, 16 caracteres.
+Se agregan a [`mensajes_pantalla.md`](./mensajes_pantalla.md) (punto C11): `Cola llena` / `Avise al asistente`, `Sin hora` / `No registra`, `Sin horario` / `No hay un horario activo en este momento`, y los de resultado local (`<NOMBRE>` / `Entrada local`, `Salida local`). Con título, subtítulo y tono, con tildes; el nombre del roster sigue en ASCII.
 
 ## 9. Puntos pendientes de confirmación (C1 a C11)
 

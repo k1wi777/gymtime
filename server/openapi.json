@@ -1011,7 +1011,7 @@
             "type": "boolean"
           },
           "displayName": {
-            "description": "Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS); generated from the name when omitted",
+            "description": "Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX); generated from the name when omitted",
             "type": "string"
           },
           "document": {
@@ -3425,17 +3425,35 @@
             "type": "number"
           },
           "line1": {
-            "description": "First LCD line (accents are removed)",
+            "deprecated": true,
+            "description": "Deprecated alias of title",
             "type": "string"
           },
           "line2": {
-            "description": "Second LCD line",
+            "deprecated": true,
+            "description": "Deprecated alias of subtitle",
+            "type": "string"
+          },
+          "subtitle": {
+            "description": "Subtitle: up to DISPLAY_SUBTITLE_MAX characters (80) and DISPLAY_SUBTITLE_LINES lines (2) separated by a line break",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title: one line, up to DISPLAY_TITLE_MAX characters (32 by default). Accents are kept. Required unless the deprecated alias line1 is sent",
+            "type": "string"
+          },
+          "tone": {
+            "default": "info",
+            "description": "Colour intent; the firmware picks the RGB",
+            "enum": [
+              "success",
+              "error",
+              "warning",
+              "info"
+            ],
             "type": "string"
           }
         },
-        "required": [
-          "line1"
-        ],
         "type": "object"
       },
       "SendMessageResultDto": {
@@ -4038,7 +4056,7 @@
             "type": "boolean"
           },
           "displayName": {
-            "description": "Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS)",
+            "description": "Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX)",
             "type": "string"
           },
           "email": {
@@ -5290,7 +5308,7 @@
                 }
               }
             },
-            "description": "Invalid body or lines that do not fit the screen"
+            "description": "Invalid body, or a title/subtitle that does not fit the screen (the response names the field and the limit)"
           },
           "401": {
             "content": {
@@ -5331,7 +5349,7 @@
             "session": []
           }
         ],
-        "summary": "Show a message on the reader LCD (display.message)",
+        "summary": "Show a message on the reader screen (display.message)",
         "tags": [
           "devices"
         ]

@@ -165,7 +165,15 @@ describe('Simulator against the real gateway (e2e)', () => {
       type: 'display.message',
       ts: Math.floor(Date.now() / 1000),
       ref: null,
-      payload: { line1: 'Hola', line2: 'GymTime', durationSec: 3 },
+      payload: {
+        title: 'Hola',
+        subtitle: 'GymTime',
+        tone: 'info',
+        line1: 'Hola',
+        line2: 'GymTime',
+        color: 'white',
+        durationSec: 3,
+      },
     });
     // 'acked' means the simulator's ack reached the gateway and matched.
     expect(result).toBe('acked');

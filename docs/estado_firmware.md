@@ -29,11 +29,11 @@ curl -H "x-api-key: <ADMIN_API_KEY>" http://localhost:3000/devices/status
 | `fingerprint.scan`, `fingerprint.unknown` | dispositivo | Disponible | El servidor decide entrada, salida o rechazo y responde con `scan.result`. |
 | `button.pressed` | dispositivo | Disponible | Si la sirena está encendida la silencia, marca las sesiones abiertas como `no_registrada` y registra que la apagó el botón; si está apagada solo se registra y se confirma. |
 | `alarm.state` | dispositivo | Disponible (solo log) | Se confirma y se registra en el log; el servidor es la fuente de verdad del estado de la alarma y no lo altera. |
-| `scan.result` | servidor | Disponible | Respuesta a `fingerprint.scan`/`fingerprint.unknown`, con la pantalla a mostrar. Desde H6 el `display` trae textos cortos de 16 caracteres ASCII (nombre corto + `Entrada OK`, `Salida OK` o el motivo); la estructura no cambia. |
+| `scan.result` | servidor | Disponible | Respuesta a `fingerprint.scan`/`fingerprint.unknown`, con la pantalla a mostrar. El `display` trae `title`, `subtitle` y `tone` (con tildes; título hasta 32 caracteres, subtítulo hasta 80 y 2 líneas) más `line1`/`line2`/`color`, obsoletos y en transición dentro de `v: 1`. Pantalla prevista: TFT de 3,5" 240 × 320 horizontal. Pendiente de confirmar con el hardware real (glifos, desbordamiento del título, salto de línea). |
 | `templates.sync` | servidor | Disponible | Bloques de hasta 10 plantillas con `ack` por bloque; un bloque único 1 de 1 con `templates: []` vacía el lector. Slots 1..161 (el 162 es el de trabajo del enrolamiento). Se envía al conectarse, al terminar un enrolamiento, 15 min antes de cada horario, al terminar cada horario y con `gym sync`. |
 | `schedule.set` | servidor | Disponible | Tras la sincronización, con el horario en curso o el más próximo (segundos Unix). Si no hay ninguno, no se envía. |
 | `alarm.set` | servidor | Disponible | Al terminar un horario: pitido corto `END_BEEP` si quedó vacío o continua `PENDING_EXIT` si queda alguien; al salir el último, `CLEARED`. También lo disparan `gym alarm on/test/off`. `durationSec` numérico se apaga solo; `null` suena hasta otra orden. La última orden de alarma gana: las anteriores sin confirmar se descartan, y la vigente se reenvía al reconectar. |
-| `display.message` | servidor | Disponible | Texto temporal de hasta 2 líneas de 16 caracteres ASCII y `durationSec` (1 a 60 s las del operador). Persistido, con reintento y reenvío al reconectar. También lo envía la alarma continua: `Tiempo cumplido` / `Registre salida` con `alarm.set`, y dos líneas vacías (limpiar pantalla, 1 s) al apagarla. Ver [`mensajes_pantalla.md`](./mensajes_pantalla.md). |
+| `display.message` | servidor | Disponible | Mensaje temporal con `title`, `subtitle`, `tone` y `durationSec` (1 a 60 s las del operador). Persistido, con reintento y reenvío al reconectar. También lo envía la alarma continua: `Tiempo cumplido` / `Registre su salida` (tono `warning`) con `alarm.set`, y título y subtítulo vacíos (limpiar pantalla, 1 s) al apagarla. Ver [`mensajes_pantalla.md`](./mensajes_pantalla.md). |
 
 ## REST y CLI
 
@@ -44,8 +44,8 @@ Todas las rutas de estudiantes, enrolamientos, horarios, asistencia, alarma y `/
 | `GET /health` | Estado, uptime y base de datos. |
 | `GET /devices/status` | Dispositivos conectados, última conexión, firmware y órdenes pendientes. |
 | `GET /events` | Stream SSE con `x-api-key` de conexiones, escaneos, órdenes y alarma para `gym watch`. |
-| `POST /devices/messages` | Muestra un mensaje en el LCD (`line1`, `line2?`, `durationSec?`, `deviceId?`); responde `commandId`, `deviceId` y `status` (`acked`, `queued` o `failed`). 400 si no cabe en la pantalla; 404 si no hay dispositivo. |
-| `POST /students`, `GET /students` | Alta y listado de estudiantes: `document` (cédula), `name`, `program` (carrera), `email` y `phone` opcionales, `displayName` (nombre corto del LCD). |
+| `POST /devices/messages` | Muestra un mensaje en la pantalla (`title`, `subtitle?`, `tone?`, `durationSec?`, `deviceId?`; `line1`/`line2` siguen aceptados como alias obsoletos); responde `commandId`, `deviceId` y `status` (`acked`, `queued` o `failed`). 400 si no cabe en la pantalla; 404 si no hay dispositivo. |
+| `POST /students`, `GET /students` | Alta y listado de estudiantes: `document` (cédula), `name`, `program` (carrera), `email` y `phone` opcionales, `displayName` (nombre corto de la pantalla, hasta 24 caracteres con tildes). |
 | `PATCH /students/:id`, `DELETE /students/:id` | Modificar (incluidos `email`, `phone` y `displayName`) o dar de baja un estudiante. |
 | `POST /students/:id/enrollments` | Inicia un enrolamiento. |
 | `GET /enrollments/:id` | Consulta su estado. |
@@ -72,7 +72,7 @@ CLI `gym` (opciones y configuración en el [README](../README.md#cli-gym)):
 | `gym attendance entry/exit` | Registro manual con motivo obligatorio. |
 | `gym alarm on/off/test/status` | Controla la sirena y consulta su estado. |
 | `gym device status` | Estado del lector: en línea, última conexión, firmware y órdenes pendientes. |
-| `gym device message "línea 1" ["línea 2"] [--seconds N] [--device ID]` | Muestra un mensaje en el LCD del lector (sin tildes, máximo 2 líneas de 16 caracteres). Sale con error si el lector no lo confirma. |
+| `gym device message "título" ["subtítulo"] [--tone success\|error\|warning\|info] [--seconds N] [--device ID]` | Muestra un mensaje en la pantalla del lector (título de hasta 32 caracteres; subtítulo de hasta 80 y 2 líneas, `\n` para el salto; con tildes). Sale con error si el lector no lo confirma. |
 | `gym watch` | Eventos del servidor en vivo, con reconexión automática y salida limpia con Ctrl+C. |
 | `offline.snapshot` | servidor | Disponible (opcional) | Solo para dispositivos que declaran `offline` en `hello`: horario con ventana, roster `slot` -> nombre corto, quién está dentro y límites. Se confirma con `ack`. Ver [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md). |
 | `offline.events` | dispositivo | Disponible (opcional) | Lote de 1 a 50 eventos de la cola local (`entry`, `exit`, `unknown`, `alarm`) con su hora original. El servidor reconcilia, no duplica por `id` y deja en «Por revisar» lo que contradice el estado. |
@@ -86,7 +86,7 @@ El simulador (`simulator/`) habla el mismo protocolo que el ESP32 y sirve para p
 - `simulator/src/enrollment-simulator.ts`: respuesta a `enroll.start` y `enroll.cancel`.
 - `simulator/src/reader-simulator.ts`: memoria del lector; guarda el mapa slot -> plantilla de `templates.sync`, borra todo al llegar un `syncId` nuevo y guarda `schedule.set`. Un `ack` por bloque; `status.fingerprintCount` informa cuántas plantillas hay.
 - Modo sin conexión (opcional): `--offline` (o `SIM_OFFLINE=1`) declara `capabilities: ["offline"]`; `--clock-offset-sec=N` suma un desfase al reloj; `--state-file ruta` guarda la cola y el estado local (reinicio sin red). Comandos de consola `net off|on` (perder y recuperar la red) y `scan <slot>`, que sin red se decide localmente con el último snapshot. Es el modelo de referencia de las reglas de [`modo_sin_conexion_firmware.md`](./modo_sin_conexion_firmware.md): `offline-engine.ts` (decisión), `offline-queue.ts` (cola de 500, JSON por línea) y `offline-sync.ts` (lotes con `ack`). Sin `--offline` el simulador no cambia.
-- `display.message`: el simulador imprime `display.message: "<línea 1>" / "<línea 2>" (<n>s)` (o `(screen cleared)` con dos líneas vacías) y lo confirma con `ack`.
+- `display.message`: el simulador imprime `display.message: "<título>" / "<subtítulo>" [<tono>] (<n>s)` (o `(screen cleared)` con título y subtítulo vacíos) y lo confirma con `ack`.
 - `simulator/src/alarm-simulator.ts`: sirena del dispositivo simulado; imprime `ALARM ON (motivo) continua` o `ALARM ON (motivo) N s`, y `ALARM OFF (motivo)`. Con `durationSec` numérico el `DeviceClient` la apaga al cumplirse el tiempo y envía `alarm.state {on:false, source:"local"}`.
 
 Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
@@ -114,7 +114,7 @@ Modos de enrolamiento (`SIM_ENROLL_MODE` o `--enroll-mode`):
 | Órdenes persistidas, reintentos y reenvío al reconectar | Disponible |
 | Heartbeat obligatorio y detección de conexiones muertas | Disponible |
 | Eventos en vivo por SSE y `gym watch` | Disponible |
-| Mensajes de pantalla (`display.message`) y textos de 16 × 2 | Disponible |
+| Mensajes de pantalla (`display.message`, `scan.result`) con título, subtítulo y tono para la TFT 240 × 320 | Disponible en el servidor; pendiente de prueba en el hardware. Retiro de `line1`/`line2`/`color` cuando el firmware confirme los campos nuevos |
 | Modo sin conexión (`offline.snapshot`, `offline.events`, revisión en el panel) | Disponible en el servidor y el simulador; **pendiente de confirmación del firmware** (puntos C1 a C11) y de pruebas con el ESP32 |
 
 El firmware ya puede implementar el flujo completo de la iteración 1: `scan.result`, `schedule.set`, `alarm.set` y el efecto de `button.pressed`. Debe enviar `status` con la periodicidad anunciada en `hello.ok` y confirmar con `ack` los mensajes del servidor; las órdenes que no se confirmaron se reenvían, con el mismo `id`, al reconectar el lector. Los formatos de los mensajes pendientes son los de [`protocolo_v0.md`](./protocolo_v0.md); pueden ajustarse al implementarlos, así que conviene revisar ese documento al cerrarse cada hito.

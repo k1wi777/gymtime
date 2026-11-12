@@ -1,4 +1,10 @@
-import { DISPLAY_LINE_MAX } from './display';
+import {
+  DISPLAY_SUBTITLE_LINES,
+  DISPLAY_SUBTITLE_MAX,
+  DISPLAY_TITLE_MAX,
+  DISPLAY_TONES,
+  type DisplayTone,
+} from './display';
 
 /** Pure validators: the server stays the authority, these only give early feedback. */
 export type FieldErrors<T> = Partial<Record<keyof T, string>>;
@@ -66,21 +72,33 @@ export function validateManual(
 }
 
 export interface MessageValues {
-  line1: string;
-  line2: string;
+  title: string;
+  subtitle: string;
+  tone: string;
+  seconds: string;
 }
 
 export function validateMessage(
   values: MessageValues,
 ): FieldErrors<MessageValues> {
   const errors: FieldErrors<MessageValues> = {};
-  if (values.line1.trim() === '')
-    errors.line1 = 'La primera línea es obligatoria.';
-  for (const key of ['line1', 'line2'] as const) {
-    if (values[key].length > DISPLAY_LINE_MAX) {
-      errors[key] =
-        `Máximo ${DISPLAY_LINE_MAX} caracteres (lleva ${values[key].length}).`;
-    }
+  const title = values.title.trim();
+  if (title === '') errors.title = 'El título es obligatorio.';
+  else if (title.length > DISPLAY_TITLE_MAX)
+    errors.title = `Máximo ${DISPLAY_TITLE_MAX} caracteres (lleva ${title.length}).`;
+  else if (/\n/.test(title)) errors.title = 'El título es de una sola línea.';
+  const subtitle = values.subtitle.trim();
+  const lines = subtitle === '' ? 0 : subtitle.split('\n').length;
+  if (subtitle.length > DISPLAY_SUBTITLE_MAX)
+    errors.subtitle = `Máximo ${DISPLAY_SUBTITLE_MAX} caracteres (lleva ${subtitle.length}).`;
+  else if (lines > DISPLAY_SUBTITLE_LINES)
+    errors.subtitle = `Máximo ${DISPLAY_SUBTITLE_LINES} líneas (lleva ${lines}).`;
+  if (!DISPLAY_TONES.includes(values.tone as DisplayTone))
+    errors.tone = 'Elija un tipo de mensaje.';
+  if (values.seconds.trim() !== '') {
+    const seconds = Number(values.seconds);
+    if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60)
+      errors.seconds = 'Los segundos son un número entero de 1 a 60.';
   }
   return errors;
 }

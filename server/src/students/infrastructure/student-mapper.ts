@@ -28,7 +28,8 @@ export function toStudent(row: StudentRow): Student {
     email: row.email,
     phone: row.phone,
     displayName:
-      row.displayName ?? generateDisplayName(row.name, DISPLAY_DEFAULTS.cols),
+      row.displayName ??
+      generateDisplayName(row.name, DISPLAY_DEFAULTS.nameMax),
     active: row.active,
     consented: row.consentVersion !== null,
     consentVersion: row.consentVersion,

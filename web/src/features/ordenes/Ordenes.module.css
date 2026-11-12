@@ -99,31 +99,37 @@
   margin: 0;
 }
 
-.lcd {
+/* Landscape 4:3 preview of the 3.5" TFT (240x320): colour by tone, white text. */
+.tft {
   align-self: flex-start;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 6px;
+  width: min(100%, 320px);
+  aspect-ratio: 4 / 3;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: 6px solid #2a2f2b;
   border-radius: 14px;
-  background: #2a2f2b;
-  box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  overflow: hidden;
+  transition: background-color 0.15s;
 }
 
-.screen {
-  padding: 16px 22px;
-  border-radius: 9px;
-  background: #aee6a1;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.25);
+.tftTitle {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.lcdLine {
-  font-family: var(--font-code);
-  font-weight: 500;
-  font-size: 22px;
-  letter-spacing: 0.12em;
-  line-height: 1.55;
-  color: #17361a;
-  white-space: pre;
+.tftSubtitle {
+  font-size: 16px;
+  line-height: 1.3;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .lines {
@@ -145,7 +151,7 @@
 }
 
 @media (max-width: 600px) {
-  .lcdLine {
-    font-size: 16px;
+  .tftTitle {
+    font-size: 20px;
   }
 }

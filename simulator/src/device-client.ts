@@ -39,6 +39,9 @@ type FrameInput = Pick<DeviceMessage, 'type' | 'payload'> & {
 /** Fixed match score reported by the simulated AS608. */
 export const SCAN_CONFIDENCE = 90;
 
+/** A line break of the subtitle is shown as `↵` so the log stays on one line. */
+const flat = (text: string) => text.replace(/\n/g, ' ↵ ');
+
 /** Operator-facing line for a `scan.result` (the reader's display). */
 export function describeScanResult(
   payload: Extract<ServerMessage, { type: 'scan.result' }>['payload'],
@@ -47,18 +50,18 @@ export function describeScanResult(
   const reason = payload.reason ? ` (${payload.reason})` : '';
   return (
     `scan.result ${payload.result}: ${who}${reason} | ` +
-    `${payload.display.line1} / ${payload.display.line2} [${payload.display.color}]`
+    `${payload.display.title} / ${flat(payload.display.subtitle)} [${payload.display.tone}]`
   );
 }
 
-/** Operator-facing line for a `display.message` (what the LCD would show). */
+/** Operator-facing line for a `display.message` (what the screen would show). */
 export function describeDisplayMessage(
   payload: Extract<ServerMessage, { type: 'display.message' }>['payload'],
 ): string {
-  if (payload.line1 === '' && payload.line2 === '') {
+  if (payload.title === '' && payload.subtitle === '') {
     return `display.message: (screen cleared) (${payload.durationSec}s)`;
   }
-  return `display.message: "${payload.line1}" / "${payload.line2}" (${payload.durationSec}s)`;
+  return `display.message: "${payload.title}" / "${flat(payload.subtitle)}" [${payload.tone}] (${payload.durationSec}s)`;
 }
 
 /**

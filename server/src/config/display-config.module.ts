@@ -11,8 +11,10 @@ import type { Env } from './env.schema.js';
       provide: DISPLAY_CONFIG,
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>): DisplayConfig => ({
-        cols: config.get('DISPLAY_COLS', { infer: true }),
-        rows: config.get('DISPLAY_ROWS', { infer: true }),
+        titleMax: config.get('DISPLAY_TITLE_MAX', { infer: true }),
+        subtitleMax: config.get('DISPLAY_SUBTITLE_MAX', { infer: true }),
+        subtitleLines: config.get('DISPLAY_SUBTITLE_LINES', { infer: true }),
+        nameMax: config.get('DISPLAY_NAME_MAX', { infer: true }),
         resultSeconds: config.get('DISPLAY_RESULT_SECONDS', { infer: true }),
       }),
     },

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PROTOCOL_VERSION, type ServerMessage } from '@gymtime/shared';
+import { completeLegacyDisplay } from './legacy-display.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
 import { ConnectionRegistry } from './connection-registry.js';
 import { DevicesService } from './devices.service.js';
@@ -370,7 +371,10 @@ export class OutboundSender {
       type: command.type,
       ts: Math.floor(Date.now() / 1000),
       ref: null,
-      payload: command.payload,
+      payload:
+        command.type === 'display.message'
+          ? completeLegacyDisplay(command.payload)
+          : command.payload,
     } as ServerMessage;
   }
 

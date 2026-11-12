@@ -277,9 +277,22 @@ Campos del payload: `serverTime` Unix s; `heartbeatSec` entero > 0. Respuesta: `
 
 Decisión del servidor ante un `fingerprint.scan` o `fingerprint.unknown` (`ref` = `id` del escaneo). Aquí, una entrada.
 
-Campos del payload: `result`: `entry`, `exit`, `denied`, `unknown`. Con `entry`/`exit`: `studentName` texto y `reason` `null`. Con `denied`: `reason` es un código de rechazo y `studentName` texto o `null`. Con `unknown`: ambos `null`. `display`: `line1`, `line2`, `color` (texto libre, p. ej. `green`).
+Campos del payload: `result`: `entry`, `exit`, `denied`, `unknown`. Con `entry`/`exit`: `studentName` texto y `reason` `null`. Con `denied`: `reason` es un código de rechazo y `studentName` texto o `null`. Con `unknown`: ambos `null`. `display`: el mensaje de pantalla (`title`, `subtitle`, `tone`; ver abajo) más los campos obsoletos `line1`, `line2` y `color`.
 
-`studentName` es el nombre completo; en `display.line1` el servidor envía el nombre corto de pantalla (`display_name`, máximo 16 caracteres ASCII). Las dos líneas de `display` ya vienen listas para una pantalla LCD de 16 × 2: sin tildes y de 16 caracteres como máximo; la lista de textos está en [`mensajes_pantalla.md`](./mensajes_pantalla.md). `color` no aplica a una pantalla monocroma y el firmware puede ignorarlo.
+`studentName` es el nombre completo; en `display.title` el servidor envía el nombre corto de pantalla (`display_name`, máximo 24 caracteres, con tildes). La pantalla es una TFT a color de 3,5" (240 × 320 px, horizontal) que dibuja tildes y la ñ.
+
+**Contenido de pantalla (`display`)**, igual en `scan.result` y en `display.message`:
+
+| Campo | Tipo | Significado |
+|---|---|---|
+| `title` | texto | Título de una línea (hasta 32 caracteres). No vacío, salvo el mensaje de limpiar la pantalla. |
+| `subtitle` | texto | Subtítulo (hasta 80 caracteres y 2 líneas separadas por `\n`); `""` si no hay. |
+| `tone` | `success`, `error`, `warning`, `info` | Intención de color: verde, rojo, naranja, neutro. El firmware elige el RGB final y el tamaño de la letra. |
+| `line1`, `line2`, `color` | texto | **Obsoletos** (transición, ver abajo). |
+
+Los límites son configurables en el servidor (`DISPLAY_TITLE_MAX`, `DISPLAY_SUBTITLE_MAX`, `DISPLAY_SUBTITLE_LINES`, `DISPLAY_NAME_MAX`). La tabla de colores sugeridos por tono, el catálogo completo de textos y los mensajes locales del firmware están en [`mensajes_pantalla.md`](./mensajes_pantalla.md).
+
+**Transición de `line1`, `line2` y `color` (protocolo sigue en `v: 1`).** Mientras dure la transición el servidor sigue enviando `line1 = title`, `line2 = subtitle` (ya sin recorte a 16 caracteres ni sin tildes) y `color` derivado del tono (`success→green`, `error→red`, `warning→orange`, `info→white`), para que ningún consumidor actual deje de validar. Los tres están obsoletos: el firmware debe leer `title`, `subtitle` y `tone`. Se retirarán cuando el firmware confirme el cambio.
 
 <!-- example: scan.result -->
 ```json
@@ -294,8 +307,11 @@ Campos del payload: `result`: `entry`, `exit`, `denied`, `unknown`. Con `entry`/
     "studentName": "Ana Perez",
     "reason": null,
     "display": {
+      "title": "Ana Perez",
+      "subtitle": "Entrada registrada",
+      "tone": "success",
       "line1": "Ana Perez",
-      "line2": "Entrada OK",
+      "line2": "Entrada registrada",
       "color": "green"
     }
   }
@@ -447,16 +463,16 @@ Campos del payload: `on` booleano; `durationSec` entero > 0 o `null`; `reason` u
 
 ### `display.message`
 
-Muestra un texto temporal en la pantalla.
+Muestra un mensaje temporal en la pantalla.
 
-Campos del payload: `line1`, `line2` texto; `durationSec` entero > 0.
+Campos del payload: `title`, `subtitle`, `tone` (el contenido de pantalla descrito en `scan.result`), los obsoletos `line1`, `line2` y `color`, y `durationSec` entero > 0.
 
 Reglas:
 
-- Cada línea tiene como máximo 16 caracteres y solo ASCII imprimible (el servidor quita las tildes y rechaza lo demás antes de enviarlo). El firmware debe confirmar con `ack` aunque la pantalla no pueda dibujar el texto.
+- El texto conserva tildes y ñ; el servidor solo rechaza lo no imprimible y lo que no cabe en los límites (título 32 caracteres; subtítulo 80 y 2 líneas) antes de enviarlo. El firmware debe confirmar con `ack` aunque la pantalla no pueda dibujar el texto (un glifo que falte se sustituye por uno de reemplazo).
 - `durationSec` es el tiempo en pantalla; al cumplirse, el lector vuelve a su estado de reposo. Una orden nueva reemplaza a la que se estaba mostrando.
-- **Dos líneas vacías** (`""`) significan «limpiar la pantalla»: retiran el mensaje en curso, por ejemplo el de la alarma.
-- Es una orden persistida como `alarm.set`: se reintenta con el mismo `id` y, si el lector estaba desconectado, se entrega al reconectar, en orden de creación. Lo envían `POST /devices/messages` y `gym device message`, y la alarma continua (`Tiempo cumplido` / `Registre salida`, ver [`mensajes_pantalla.md`](./mensajes_pantalla.md)).
+- **Título y subtítulo vacíos** (`""`, con `tone` `info`) significan «limpiar la pantalla»: retiran el mensaje en curso, por ejemplo el de la alarma.
+- Es una orden persistida como `alarm.set`: se reintenta con el mismo `id` y, si el lector estaba desconectado, se entrega al reconectar, en orden de creación. Lo envían `POST /devices/messages` y `gym device message`, y la alarma continua (`Tiempo cumplido` / `Registre su salida`, tono `warning`; ver [`mensajes_pantalla.md`](./mensajes_pantalla.md)).
 
 <!-- example: display.message -->
 ```json
@@ -467,8 +483,12 @@ Reglas:
   "ts": 1760000000,
   "ref": null,
   "payload": {
+    "title": "Tiempo cumplido",
+    "subtitle": "Registre su salida",
+    "tone": "warning",
     "line1": "Tiempo cumplido",
-    "line2": "Registre salida",
+    "line2": "Registre su salida",
+    "color": "orange",
     "durationSec": 10
   }
 }

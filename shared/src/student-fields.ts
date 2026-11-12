@@ -10,7 +10,7 @@ import { z } from 'zod';
 const MAX_TEXT = 200;
 const MAX_EMAIL = 254;
 const MAX_PHONE = 20;
-/** Loose bound; the exact limit (DISPLAY_COLS) is enforced by the server. */
+/** Loose bound; the exact limit (DISPLAY_NAME_MAX) is enforced by the server. */
 const MAX_DISPLAY_NAME = 40;
 
 const text = z

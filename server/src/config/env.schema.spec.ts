@@ -23,8 +23,10 @@ describe('validateEnv', () => {
       SYNC_LEAD_MINUTES: 15,
       ALARM_BEEP_SECONDS: 5,
       ALARM_TIMEOUT_MINUTES: 30,
-      DISPLAY_COLS: 16,
-      DISPLAY_ROWS: 2,
+      DISPLAY_TITLE_MAX: 32,
+      DISPLAY_SUBTITLE_MAX: 80,
+      DISPLAY_SUBTITLE_LINES: 2,
+      DISPLAY_NAME_MAX: 24,
       DISPLAY_RESULT_SECONDS: 3,
     });
   });
@@ -40,18 +42,24 @@ describe('validateEnv', () => {
   it('reads the display settings and rejects out-of-range values', () => {
     const env = validateEnv({
       ...valid(),
-      DISPLAY_COLS: '20',
-      DISPLAY_ROWS: '4',
+      DISPLAY_TITLE_MAX: '40',
+      DISPLAY_SUBTITLE_MAX: '120',
+      DISPLAY_SUBTITLE_LINES: '3',
+      DISPLAY_NAME_MAX: '20',
       DISPLAY_RESULT_SECONDS: '5',
     });
     expect(env).toMatchObject({
-      DISPLAY_COLS: 20,
-      DISPLAY_ROWS: 4,
+      DISPLAY_TITLE_MAX: 40,
+      DISPLAY_SUBTITLE_MAX: 120,
+      DISPLAY_SUBTITLE_LINES: 3,
+      DISPLAY_NAME_MAX: 20,
       DISPLAY_RESULT_SECONDS: 5,
     });
     for (const name of [
-      'DISPLAY_COLS',
-      'DISPLAY_ROWS',
+      'DISPLAY_TITLE_MAX',
+      'DISPLAY_SUBTITLE_MAX',
+      'DISPLAY_SUBTITLE_LINES',
+      'DISPLAY_NAME_MAX',
       'DISPLAY_RESULT_SECONDS',
     ]) {
       expect(() => validateEnv({ ...valid(), [name]: '0' })).toThrow(

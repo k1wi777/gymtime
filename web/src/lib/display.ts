@@ -1,9 +1,28 @@
-/** Characters per line of the reader's LCD (the server's DISPLAY_COLS default). */
-export const DISPLAY_LINE_MAX = 16;
-export const DISPLAY_LINES = 2;
+/**
+ * Limits of the reader's TFT messages (the server's defaults of
+ * DISPLAY_TITLE_MAX, DISPLAY_SUBTITLE_MAX and DISPLAY_SUBTITLE_LINES). The
+ * server is the authority; these only let the form warn before sending.
+ */
+export const DISPLAY_TITLE_MAX = 32;
+export const DISPLAY_SUBTITLE_MAX = 80;
+export const DISPLAY_SUBTITLE_LINES = 2;
 
-/** Help shown under each line; built from the constant so they cannot drift. */
-export const displayLineHelp = `Hasta ${DISPLAY_LINE_MAX} caracteres; sin tildes en la pantalla del lector.`;
+export const DISPLAY_TONES = ['success', 'error', 'warning', 'info'] as const;
+export type DisplayTone = (typeof DISPLAY_TONES)[number];
+
+/** Suggested colour of each tone; the firmware picks the final RGB. */
+export const DISPLAY_TONE_INFO: Record<
+  DisplayTone,
+  { label: string; color: string }
+> = {
+  success: { label: 'Éxito (verde)', color: '#2E9E5B' },
+  error: { label: 'Rechazo (rojo)', color: '#D64545' },
+  warning: { label: 'Aviso (naranja)', color: '#F08A24' },
+  info: { label: 'Neutro (azul)', color: '#4A6FA5' },
+};
+
+export const displayTitleHelp = `Una línea, hasta ${DISPLAY_TITLE_MAX} caracteres. Se admiten tildes.`;
+export const displaySubtitleHelp = `Opcional. Hasta ${DISPLAY_SUBTITLE_MAX} caracteres y ${DISPLAY_SUBTITLE_LINES} líneas (Enter hace un salto de línea).`;
 
 /** Up to two initials of a full name: «Laura Martínez» gives «LM». */
 export function initialsOf(name: string): string {

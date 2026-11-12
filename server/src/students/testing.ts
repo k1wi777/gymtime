@@ -9,8 +9,10 @@ import type { ConsentText } from './consent.loader.js';
 import { StudentsService } from './students.service.js';
 
 export const testDisplayConfig: DisplayConfig = {
-  cols: DISPLAY_DEFAULTS.cols,
-  rows: DISPLAY_DEFAULTS.rows,
+  titleMax: DISPLAY_DEFAULTS.titleMax,
+  subtitleMax: DISPLAY_DEFAULTS.subtitleMax,
+  subtitleLines: DISPLAY_DEFAULTS.subtitleLines,
+  nameMax: DISPLAY_DEFAULTS.nameMax,
   resultSeconds: DISPLAY_DEFAULTS.resultSeconds,
 };
 

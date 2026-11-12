@@ -68,14 +68,16 @@ describe('gym device message', () => {
     body: { commandId: 'c1', deviceId: 'd1', status },
   });
 
-  it('normalizes the text and posts both lines with the options', async () => {
+  it('normalizes the text and posts title, subtitle and tone with the options', async () => {
     const server = fakeServer(() => ok('acked'));
     const { code, out } = await invoke(
       [
         'device',
         'message',
-        'Atención',
+        ' Atención ',
         'mañana',
+        '--tone',
+        'warning',
         '--seconds',
         '5',
         '--device',
@@ -89,21 +91,22 @@ describe('gym device message', () => {
       path: '/devices/messages',
       body: {
         deviceId: 'd1',
-        line1: 'Atencion',
-        line2: 'manana',
+        title: 'Atención',
+        subtitle: 'mañana',
+        tone: 'warning',
         durationSec: 5,
       },
     });
     expect(out).toContain('Message shown on d1');
   });
 
-  it('accepts a single line and says when the order was queued', async () => {
+  it('accepts only a title, defaults the tone and says when the order was queued', async () => {
     const server = fakeServer(() => ok('queued'));
     const { code, out } = await invoke(['device', 'message', 'Hola'], {
       fetch: server.fetch,
     });
     expect(code).toBe(0);
-    expect(server.calls[0]?.body).toEqual({ line1: 'Hola' });
+    expect(server.calls[0]?.body).toEqual({ title: 'Hola', tone: 'info' });
     expect(out).toContain('queued');
   });
 
@@ -116,22 +119,50 @@ describe('gym device message', () => {
     expect(err).toContain('did not confirm');
   });
 
-  it('rejects long lines and extra lines without calling the server', async () => {
+  it('turns a literal \\n of the subtitle into a line break', async () => {
     const server = fakeServer(() => ok('acked'));
-    const long = await invoke(['device', 'message', 'x'.repeat(17)], {
+    await invoke(['device', 'message', 'Hola', 'uno\\ndos'], {
+      fetch: server.fetch,
+    });
+    expect(server.calls[0]?.body).toMatchObject({ subtitle: 'uno\ndos' });
+  });
+
+  it('rejects texts that do not fit without calling the server', async () => {
+    const server = fakeServer(() => ok('acked'));
+    const long = await invoke(['device', 'message', 'x'.repeat(33)], {
       fetch: server.fetch,
     });
     expect(long.code).toBe(1);
-    expect(long.err).toContain('la línea 1 tiene 17 caracteres; máximo 16');
-    const three = await invoke(['device', 'message', 'a', 'b', 'c'], {
+    expect(long.err).toContain('el título tiene 33 caracteres; máximo 32');
+    const subtitle = await invoke(['device', 'message', 'a', 'x'.repeat(81)], {
       fetch: server.fetch,
     });
-    expect(three.code).toBe(1);
-    expect(three.err).toContain('máximo 2');
-    const emoji = await invoke(['device', 'message', 'hola 😀'], {
+    expect(subtitle.code).toBe(1);
+    expect(subtitle.err).toContain('máximo 80');
+    const lines = await invoke(['device', 'message', 'a', 'b\\nc\\nd'], {
       fetch: server.fetch,
     });
-    expect(emoji.code).toBe(1);
+    expect(lines.code).toBe(1);
+    expect(lines.err).toContain('máximo 2');
+    expect(server.calls).toHaveLength(0);
+  });
+
+  it('rejects an invalid tone and a third text argument as usage errors', async () => {
+    const server = fakeServer(() => ok('acked'));
+    expect(
+      (
+        await invoke(['device', 'message', 'Hola', '--tone', 'purple'], {
+          fetch: server.fetch,
+        })
+      ).code,
+    ).toBe(2);
+    expect(
+      (
+        await invoke(['device', 'message', 'a', 'b', 'c'], {
+          fetch: server.fetch,
+        })
+      ).code,
+    ).toBe(2);
     expect(server.calls).toHaveLength(0);
   });
 

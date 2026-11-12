@@ -211,9 +211,12 @@ export const envSchema = z
     ALARM_BEEP_SECONDS: z.coerce.number().int().min(1).max(300).default(5),
     // After a schedule ends, how long until abandoned sessions are closed.
     ALARM_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
-    // Reader LCD: size and default time a message stays on screen.
-    DISPLAY_COLS: z.coerce.number().int().min(8).max(40).default(16),
-    DISPLAY_ROWS: z.coerce.number().int().min(1).max(4).default(2),
+    // Reader TFT: text limits (title one line, subtitle up to N lines) and
+    // default time a message stays on screen.
+    DISPLAY_TITLE_MAX: z.coerce.number().int().min(8).max(80).default(32),
+    DISPLAY_SUBTITLE_MAX: z.coerce.number().int().min(8).max(240).default(80),
+    DISPLAY_SUBTITLE_LINES: z.coerce.number().int().min(1).max(4).default(2),
+    DISPLAY_NAME_MAX: z.coerce.number().int().min(8).max(40).default(24),
     DISPLAY_RESULT_SECONDS: z.coerce.number().int().min(1).max(60).default(3),
     // JSON file `{version, text}` with the official consent text (E25-9);
     // unset = the provisional text. Validated at startup.

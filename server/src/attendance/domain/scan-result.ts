@@ -7,7 +7,6 @@ import {
   entryDisplay,
   exitDisplay,
   unknownDisplay,
-  type DisplayLayout,
 } from './display.js';
 
 export type ScanResultMessage = Extract<ServerMessage, { type: 'scan.result' }>;
@@ -22,7 +21,6 @@ export function buildScanResult(
   student: Student | null,
   ref: string,
   at: Date,
-  layout?: DisplayLayout,
 ): ScanResultMessage {
   const envelope = {
     v: 1 as const,
@@ -38,19 +36,15 @@ export function buildScanResult(
         result: 'denied',
         studentName: student?.name ?? null,
         reason: decision.reason,
-        display: deniedDisplay(
-          decision.reason,
-          student?.displayName ?? null,
-          layout,
-        ),
+        display: deniedDisplay(decision.reason, student?.displayName ?? null),
       },
     };
   }
   const resolved = requireStudent(student);
   const display =
     decision.kind === 'entry'
-      ? entryDisplay(resolved.displayName, layout)
-      : exitDisplay(resolved.displayName, layout);
+      ? entryDisplay(resolved.displayName)
+      : exitDisplay(resolved.displayName);
   return {
     ...envelope,
     payload: {
@@ -65,7 +59,6 @@ export function buildScanResult(
 export function buildUnknownScanResult(
   ref: string,
   at: Date,
-  layout?: DisplayLayout,
 ): ScanResultMessage {
   return {
     v: 1,
@@ -77,7 +70,7 @@ export function buildUnknownScanResult(
       result: 'unknown',
       studentName: null,
       reason: null,
-      display: unknownDisplay(layout),
+      display: unknownDisplay(),
     },
   };
 }

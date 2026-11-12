@@ -32,7 +32,14 @@ describe('scan.result payloads (R10, R11)', () => {
         result: 'entry',
         studentName: 'Ana María Gómez Pérez',
         reason: null,
-        display: { line1: 'Ana M.', line2: 'Entrada OK', color: 'green' },
+        display: {
+          title: 'Ana M.',
+          subtitle: 'Entrada registrada',
+          tone: 'success',
+          line1: 'Ana M.',
+          line2: 'Entrada registrada',
+          color: 'green',
+        },
       },
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);
@@ -48,7 +55,7 @@ describe('scan.result payloads (R10, R11)', () => {
     expect(message.payload).toMatchObject({
       result: 'exit',
       studentName: 'Ana María Gómez Pérez',
-      display: { line1: 'Ana M.', line2: 'Salida OK' },
+      display: { title: 'Ana M.', subtitle: 'Salida registrada' },
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);
   });
@@ -95,7 +102,11 @@ describe('scan.result payloads (R10, R11)', () => {
         result: 'unknown',
         studentName: null,
         reason: null,
-        display: { line1: 'No reconocida', line2: 'Intente de nuevo' },
+        display: {
+          title: 'Huella no reconocida',
+          subtitle: 'Intente de nuevo',
+          tone: 'error',
+        },
       },
     });
     expect(scanResultSchema.safeParse(message).success).toBe(true);

@@ -56,7 +56,7 @@ describe('DevicesController (HTTP)', () => {
 
   it('requires the API key', async () => {
     await http().get('/devices/status').expect(401);
-    await http().post('/devices/messages').send({ line1: 'x' }).expect(401);
+    await http().post('/devices/messages').send({ title: 'x' }).expect(401);
   });
 
   it('returns the status of every device', async () => {
@@ -135,7 +135,12 @@ describe('DevicesController (HTTP)', () => {
       const res = await http()
         .post('/devices/messages')
         .set(auth)
-        .send({ line1: 'Atención', line2: 'mañana', durationSec: 5 })
+        .send({
+          title: 'Atención',
+          subtitle: 'mañana',
+          tone: 'warning',
+          durationSec: 5,
+        })
         .expect(200);
       expect(res.body).toMatchObject({ deviceId: 'd1', status: 'acked' });
       expect(res.body.commandId).toEqual(expect.any(String));
@@ -144,10 +149,40 @@ describe('DevicesController (HTTP)', () => {
         expect.objectContaining({
           type: 'display.message',
           id: res.body.commandId,
-          payload: { line1: 'Atencion', line2: 'manana', durationSec: 5 },
+          payload: {
+            title: 'Atención',
+            subtitle: 'mañana',
+            tone: 'warning',
+            line1: 'Atención',
+            line2: 'mañana',
+            color: 'orange',
+            durationSec: 5,
+          },
         }),
         expect.anything(),
       );
+    });
+
+    it('still accepts line1/line2 as aliases and title wins (R9)', async () => {
+      await devices.markOnline('d1', '2.0.0');
+      await http()
+        .post('/devices/messages')
+        .set(auth)
+        .send({ line1: 'Viejo', line2: 'alias' })
+        .expect(200);
+      await http()
+        .post('/devices/messages')
+        .set(auth)
+        .send({ title: 'Nuevo', line1: 'Viejo' })
+        .expect(200);
+      expect(sendCommand.mock.calls[0][1].payload).toMatchObject({
+        title: 'Viejo',
+        subtitle: 'alias',
+        tone: 'info',
+      });
+      expect(sendCommand.mock.calls[1][1].payload).toMatchObject({
+        title: 'Nuevo',
+      });
     });
 
     it('reports a queued order as 200 with status queued', async () => {
@@ -156,23 +191,23 @@ describe('DevicesController (HTTP)', () => {
       const res = await http()
         .post('/devices/messages')
         .set(auth)
-        .send({ line1: 'Hola' })
+        .send({ title: 'Hola' })
         .expect(200);
       expect(res.body.status).toBe('queued');
     });
 
-    it('rejects an invalid text with 400 naming the line and the limit', async () => {
+    it('rejects an invalid text with 400 naming the field and the limit', async () => {
       await devices.markOnline('d1', '2.0.0');
       const res = await http()
         .post('/devices/messages')
         .set(auth)
-        .send({ line1: 'ok', line2: 'x'.repeat(17) })
+        .send({ title: 'ok', subtitle: 'x'.repeat(81) })
         .expect(400);
       expect(res.body.message).toContain(
-        'la línea 2 tiene 17 caracteres; máximo 16',
+        'el subtítulo tiene 81 caracteres; máximo 80',
       );
       expect(res.body.issues).toEqual([
-        expect.objectContaining({ line: 2, limit: 16 }),
+        expect.objectContaining({ field: 'subtitle', limit: 80 }),
       ]);
       expect(sendCommand).not.toHaveBeenCalled();
     });
@@ -181,11 +216,13 @@ describe('DevicesController (HTTP)', () => {
       await devices.markOnline('d1', '2.0.0');
       for (const body of [
         {},
-        { line1: '' },
-        { line1: 'a', extra: true },
-        { line1: 'a', durationSec: 0 },
-        { line1: 'a', durationSec: 61 },
-        { line1: 'a', durationSec: 1.5 },
+        { title: '' },
+        { subtitle: 'sin título' },
+        { title: 'a', extra: true },
+        { title: 'a', tone: 'purple' },
+        { title: 'a', durationSec: 0 },
+        { title: 'a', durationSec: 61 },
+        { title: 'a', durationSec: 1.5 },
       ]) {
         await http().post('/devices/messages').set(auth).send(body).expect(400);
       }
@@ -196,7 +233,7 @@ describe('DevicesController (HTTP)', () => {
       const res = await http()
         .post('/devices/messages')
         .set(auth)
-        .send({ line1: 'Hola' })
+        .send({ title: 'Hola' })
         .expect(404);
       expect(res.body.code).toBe('NO_DEVICE');
     });

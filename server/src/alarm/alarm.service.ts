@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PROTOCOL_VERSION, type ServerMessage } from '@gymtime/shared';
+import {
+  PROTOCOL_VERSION,
+  type DisplayMessageContent,
+  type ServerMessage,
+} from '@gymtime/shared';
 import { AttendanceService } from '../attendance/attendance.service.js';
 import type { AlarmPort } from '../attendance/domain/alarm.port.js';
-import { ALARM_LINES } from '../attendance/domain/display.js';
+import { ALARM_MESSAGE, CLEAR_MESSAGE } from '../attendance/domain/display.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
 import { KeyedMutex } from '../common/concurrency/keyed-mutex.js';
 import { SystemEventsService } from '../common/events/system-events.service.js';
@@ -534,22 +538,16 @@ export class AlarmService implements AlarmPort {
    * alarm message that was never confirmed so it is not replayed afterwards.
    */
   private clearAlarmMessage(): void {
-    this.sendMessage('', '', CLEAR_SECONDS);
+    this.sendMessage(CLEAR_MESSAGE, CLEAR_SECONDS);
   }
 
   private showAlarmMessage(durationSec: number, deviceId?: string): void {
-    this.sendMessage(
-      ALARM_LINES.line1,
-      ALARM_LINES.line2,
-      durationSec,
-      deviceId,
-    );
+    this.sendMessage(ALARM_MESSAGE, durationSec, deviceId);
   }
 
   /** Fire and forget, like `dispatch`; the server composes it, so it is not audited. */
   private sendMessage(
-    line1: string,
-    line2: string,
+    content: DisplayMessageContent,
     durationSec: number,
     deviceId?: string,
   ): void {
@@ -558,8 +556,7 @@ export class AlarmService implements AlarmPort {
         await this.display.show(
           {
             deviceId: deviceId ?? (await this.display.defaultDevice()),
-            line1,
-            line2,
+            ...content,
             durationSec,
           },
           { supersedesPrevious: true, audit: false },

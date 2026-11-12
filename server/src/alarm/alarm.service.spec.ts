@@ -418,8 +418,12 @@ describe('AlarmService screen message (R12, R13)', () => {
     const { f } = await pendingExit();
     expect(f.messages()).toEqual([
       {
+        title: 'Tiempo cumplido',
+        subtitle: 'Registre su salida',
+        tone: 'warning',
         line1: 'Tiempo cumplido',
-        line2: 'Registre salida',
+        line2: 'Registre su salida',
+        color: 'orange',
         durationSec: f.config.timeoutMinutes * 60,
       },
     ]);
@@ -442,8 +446,12 @@ describe('AlarmService screen message (R12, R13)', () => {
 
     await vi.waitFor(() => expect(f.messages()).toHaveLength(2));
     expect(f.messages()[1]).toEqual({
+      title: 'Tiempo cumplido',
+      subtitle: 'Registre su salida',
+      tone: 'warning',
       line1: 'Tiempo cumplido',
-      line2: 'Registre salida',
+      line2: 'Registre su salida',
+      color: 'orange',
       durationSec: (f.config.timeoutMinutes - 10) * 60,
     });
   });
@@ -454,7 +462,15 @@ describe('AlarmService screen message (R12, R13)', () => {
     await f.service.onInstanceEmptied(instanceId);
 
     await vi.waitFor(() => expect(f.messages()).toHaveLength(2));
-    expect(f.messages()[1]).toEqual({ line1: '', line2: '', durationSec: 1 });
+    expect(f.messages()[1]).toEqual({
+      title: '',
+      subtitle: '',
+      tone: 'info',
+      line1: '',
+      line2: '',
+      color: 'white',
+      durationSec: 1,
+    });
     const clear = f.link.send.mock.calls.filter(
       ([, message]) => message.type === 'display.message',
     )[1];

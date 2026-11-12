@@ -50,9 +50,11 @@ describe('Display and data preparation (e2e)', () => {
     it('shows the normalized message in the simulator and confirms it', async () => {
       await harness.startDevice();
 
-      const res = await post({ line1: 'Atención', line2: 'mañana' }).expect(
-        200,
-      );
+      const res = await post({
+        title: 'Atención',
+        subtitle: 'mañana',
+        tone: 'warning',
+      }).expect(200);
 
       expect(res.body).toMatchObject({ deviceId: DEVICE_ID, status: 'acked' });
       const frame = await harness.waitForFrame(
@@ -60,13 +62,17 @@ describe('Display and data preparation (e2e)', () => {
         (message) => message.id === res.body.commandId,
       );
       expect(frame.payload).toEqual({
-        line1: 'Atencion',
-        line2: 'manana',
+        title: 'Atención',
+        subtitle: 'mañana',
+        tone: 'warning',
+        line1: 'Atención',
+        line2: 'mañana',
+        color: 'orange',
         durationSec: 3,
       });
       await vi.waitFor(() =>
         expect(harness.output()).toContain(
-          '::: display.message: "Atencion" / "manana" (3s)',
+          '::: display.message: "Atención" / "mañana" [warning] (3s)',
         ),
       );
       expect(
@@ -79,8 +85,8 @@ describe('Display and data preparation (e2e)', () => {
       device.disconnect();
       await waitOffline();
 
-      const first = await post({ line1: 'Uno', durationSec: 5 }).expect(200);
-      const second = await post({ line1: 'Dos' }).expect(200);
+      const first = await post({ title: 'Uno', durationSec: 5 }).expect(200);
+      const second = await post({ title: 'Dos' }).expect(200);
       expect(first.body.status).toBe('queued');
       expect(second.body.status).toBe('queued');
       expect(
@@ -104,15 +110,18 @@ describe('Display and data preparation (e2e)', () => {
 
     it('rejects a text that does not fit without creating any order', async () => {
       await harness.startDevice();
-      const res = await post({ line1: 'x'.repeat(17) }).expect(400);
-      expect(res.body.message).toContain('la línea 1 tiene 17 caracteres');
-      await post({ line1: 'ok', durationSec: 99 }).expect(400);
+      const res = await post({ title: 'x'.repeat(33) }).expect(400);
+      expect(res.body.message).toContain('el título tiene 33 caracteres');
+      expect(res.body.issues).toEqual([
+        expect.objectContaining({ field: 'title', limit: 32 }),
+      ]);
+      await post({ title: 'ok', durationSec: 99 }).expect(400);
       expect(harness.framesOf('display.message')).toHaveLength(0);
     });
 
     it('audits the message as a system action (R19)', async () => {
       await harness.startDevice();
-      await post({ line1: 'Hola' }).expect(200);
+      await post({ title: 'Hola' }).expect(200);
       expect(harness.repositories.eventLog.entries).toContainEqual(
         expect.objectContaining({
           type: 'display.message_sent',
@@ -127,7 +136,7 @@ describe('Display and data preparation (e2e)', () => {
       await harness.startDevice();
       const ana = await harness.createEnrolledStudent(
         '111',
-        'Ana María Gómez Pérez',
+        'Ana María Gómez Pérez de la Hoz Castro',
       );
       const scheduleId = await harness.createSchedule({
         name: 'A',
@@ -145,10 +154,13 @@ describe('Display and data preparation (e2e)', () => {
         (message) => message.payload.result === 'entry',
       );
 
-      expect(entry.payload.studentName).toBe('Ana María Gómez Pérez');
+      expect(entry.payload.studentName).toBe(
+        'Ana María Gómez Pérez de la Hoz Castro',
+      );
       expect(entry.payload.display).toMatchObject({
-        line1: 'Ana M.',
-        line2: 'Entrada OK',
+        title: 'Ana M.',
+        subtitle: 'Entrada registrada',
+        tone: 'success',
       });
     });
   });
@@ -180,11 +192,15 @@ describe('Display and data preparation (e2e)', () => {
 
       const shown = await harness.waitForFrame(
         'display.message',
-        (message) => message.payload.line1 === 'Tiempo cumplido',
+        (message) => message.payload.title === 'Tiempo cumplido',
       );
       expect(shown.payload).toEqual({
+        title: 'Tiempo cumplido',
+        subtitle: 'Registre su salida',
+        tone: 'warning',
         line1: 'Tiempo cumplido',
-        line2: 'Registre salida',
+        line2: 'Registre su salida',
+        color: 'orange',
         durationSec: 30 * 60,
       });
 
@@ -192,9 +208,17 @@ describe('Display and data preparation (e2e)', () => {
       harness.device().scan(slot);
       const cleared = await harness.waitForFrame(
         'display.message',
-        (message) => message.payload.line1 === '',
+        (message) => message.payload.title === '',
       );
-      expect(cleared.payload).toEqual({ line1: '', line2: '', durationSec: 1 });
+      expect(cleared.payload).toEqual({
+        title: '',
+        subtitle: '',
+        tone: 'info',
+        line1: '',
+        line2: '',
+        color: 'white',
+        durationSec: 1,
+      });
       await vi.waitFor(() =>
         expect(harness.output()).toContain(
           '::: display.message: (screen cleared) (1s)',
@@ -206,7 +230,7 @@ describe('Display and data preparation (e2e)', () => {
       await alarmed();
       await harness.waitForFrame(
         'display.message',
-        (message) => message.payload.line1 === 'Tiempo cumplido',
+        (message) => message.payload.title === 'Tiempo cumplido',
       );
       const device = harness.device();
       device.disconnect();
@@ -218,7 +242,7 @@ describe('Display and data preparation (e2e)', () => {
         expect(
           harness
             .framesOf('display.message')
-            .filter((m) => m.payload.line1 === 'Tiempo cumplido').length,
+            .filter((m) => m.payload.title === 'Tiempo cumplido').length,
         ).toBeGreaterThanOrEqual(2),
       );
 
@@ -228,17 +252,17 @@ describe('Display and data preparation (e2e)', () => {
       await harness.http().post('/alarm/off').set(harness.auth).expect(200);
       const shownBefore = harness
         .framesOf('display.message')
-        .filter((m) => m.payload.line1 === 'Tiempo cumplido').length;
+        .filter((m) => m.payload.title === 'Tiempo cumplido').length;
       device.reconnect();
       await vi.waitFor(() => expect(device.state).toBe('online'));
       await harness.waitForFrame(
         'display.message',
-        (message) => message.payload.line1 === '',
+        (message) => message.payload.title === '',
       );
       expect(
         harness
           .framesOf('display.message')
-          .filter((m) => m.payload.line1 === 'Tiempo cumplido'),
+          .filter((m) => m.payload.title === 'Tiempo cumplido'),
       ).toHaveLength(shownBefore);
     });
 
@@ -246,7 +270,7 @@ describe('Display and data preparation (e2e)', () => {
       await alarmed();
       await harness.waitForFrame(
         'display.message',
-        (message) => message.payload.line1 === 'Tiempo cumplido',
+        (message) => message.payload.title === 'Tiempo cumplido',
       );
       harness.device().pressButton();
       await harness.waitForFrame(

@@ -24,14 +24,22 @@ type Raw = Awaited<ReturnType<typeof RawDevice.connect>>;
 
 /** Order that changes no product state: the reader only prints it. */
 const display = (
-  line1: string,
+  title: string,
 ): Extract<ServerMessage, { type: 'display.message' }> => ({
   v: PROTOCOL_VERSION,
   id: randomUUID(),
   type: 'display.message',
   ts: Math.floor(Date.now() / 1000),
   ref: null,
-  payload: { line1, line2: 'GymTime', durationSec: 3 },
+  payload: {
+    title,
+    subtitle: 'GymTime',
+    tone: 'info',
+    line1: title,
+    line2: 'GymTime',
+    color: 'white',
+    durationSec: 3,
+  },
 });
 
 /**
@@ -120,8 +128,11 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
     );
     expect(entry.payload).toMatchObject({ studentName: 'Ana', reason: null });
     expect(entry.payload.display).toEqual({
+      title: 'Ana',
+      subtitle: 'Entrada registrada',
+      tone: 'success',
       line1: 'Ana',
-      line2: 'Entrada OK',
+      line2: 'Entrada registrada',
       color: 'green',
     });
     const [open] = await harness.openSessions();
@@ -134,8 +145,9 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       (message) => message.payload.result === 'exit',
     );
     expect(exit.payload.display).toMatchObject({
-      line1: 'Ana',
-      line2: 'Salida OK',
+      title: 'Ana',
+      subtitle: 'Salida registrada',
+      tone: 'success',
     });
     expect(await harness.openSessions()).toHaveLength(0);
     expect(await harness.sessions()).toMatchObject([
@@ -160,7 +172,10 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       reason: null,
     });
     expect(result.payload.display).toEqual({
-      line1: 'No reconocida',
+      title: 'Huella no reconocida',
+      subtitle: 'Intente de nuevo',
+      tone: 'error',
+      line1: 'Huella no reconocida',
       line2: 'Intente de nuevo',
       color: 'red',
     });
@@ -195,8 +210,9 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
       reason: 'NOT_IN_SCHEDULE',
     });
     expect(denied.payload.display).toMatchObject({
-      line1: 'Luis',
-      line2: 'No es su horario',
+      title: 'Luis',
+      subtitle: 'No es su horario',
+      tone: 'error',
     });
     expect(await harness.sessions()).toHaveLength(0);
   });

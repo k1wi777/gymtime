@@ -31,6 +31,7 @@ import {
   SendMessageDto,
   SendMessageResultDto,
   sendMessageSchema,
+  type SendMessageBody,
 } from './dto/display.dto.js';
 import { ApiAuth, Roles } from '../common/auth/roles.decorator.js';
 import {
@@ -146,19 +147,20 @@ export class DevicesController {
   @Post('messages')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Show a message on the reader LCD (display.message)',
+    summary: 'Show a message on the reader screen (display.message)',
     description:
       'Persisted and delivered like any order: when the device is offline it is queued and sent on reconnection.',
   })
   @ApiBody({ type: SendMessageDto })
   @ApiOkResponse({ type: SendMessageResultDto })
   @ApiBadRequestResponse({
-    description: 'Invalid body or lines that do not fit the screen',
+    description:
+      'Invalid body, or a title/subtitle that does not fit the screen (the response names the field and the limit)',
   })
   @ApiNotFoundResponse({ description: 'No device known (NO_DEVICE)' })
   async sendMessage(
     @Body(new ZodValidationPipe(sendMessageSchema))
-    body: z.infer<typeof sendMessageSchema>,
+    body: SendMessageBody,
   ): Promise<DisplayOutcome> {
     try {
       return await this.display.show(body);

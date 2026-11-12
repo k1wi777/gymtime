@@ -264,7 +264,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Show a message on the reader LCD (display.message)
+         * Show a message on the reader screen (display.message)
          * @description Persisted and delivered like any order: when the device is offline it is queued and sent on reconnection.
          */
         post: operations["DevicesController_sendMessage"];
@@ -1647,7 +1647,7 @@ export interface components {
              * @default false
              */
             consented: boolean;
-            /** @description Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS); generated from the name when omitted */
+            /** @description Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX); generated from the name when omitted */
             displayName?: string;
             /** @description Unique identity document */
             document: string;
@@ -2404,10 +2404,26 @@ export interface components {
             deviceId?: string;
             /** @description Seconds on screen; defaults to DISPLAY_RESULT_SECONDS */
             durationSec?: number;
-            /** @description First LCD line (accents are removed) */
-            line1: string;
-            /** @description Second LCD line */
+            /**
+             * @deprecated
+             * @description Deprecated alias of title
+             */
+            line1?: string;
+            /**
+             * @deprecated
+             * @description Deprecated alias of subtitle
+             */
             line2?: string;
+            /** @description Subtitle: up to DISPLAY_SUBTITLE_MAX characters (80) and DISPLAY_SUBTITLE_LINES lines (2) separated by a line break */
+            subtitle?: string;
+            /** @description Title: one line, up to DISPLAY_TITLE_MAX characters (32 by default). Accents are kept. Required unless the deprecated alias line1 is sent */
+            title?: string;
+            /**
+             * @description Colour intent; the firmware picks the RGB
+             * @default info
+             * @enum {string}
+             */
+            tone: "success" | "error" | "warning" | "info";
         };
         SendMessageResultDto: {
             /** Format: uuid */
@@ -2616,7 +2632,7 @@ export interface components {
              * @enum {boolean}
              */
             consented?: true;
-            /** @description Name drawn on the reader LCD (ASCII, up to DISPLAY_COLS) */
+            /** @description Name drawn on the reader screen (accents kept, up to DISPLAY_NAME_MAX) */
             displayName?: string;
             email?: string | null;
             name?: string;
@@ -3388,7 +3404,7 @@ export interface operations {
                     "application/json": components["schemas"]["SendMessageResultDto"];
                 };
             };
-            /** @description Invalid body or lines that do not fit the screen */
+            /** @description Invalid body, or a title/subtitle that does not fit the screen (the response names the field and the limit) */
             400: {
                 headers: {
                     [name: string]: unknown;

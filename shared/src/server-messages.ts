@@ -8,6 +8,7 @@ import {
   unixSecondsSchema,
   uuidSchema,
 } from './envelope.js';
+import { displayToneSchema } from './display.js';
 import { rejectReasonSchema } from './errors.js';
 import { ackSchema } from './ack.js';
 import { offlineSnapshotPayloadSchema } from './offline.js';
@@ -33,12 +34,28 @@ export const helloOkSchema = message(
   { isResponse: true },
 );
 
-const displaySchema = z.strictObject({
+// `title`/`subtitle`/`tone` are the contract; `line1`/`line2`/`color` are the
+// deprecated v1 aliases the server keeps sending during the transition.
+// An empty title is only the "clear screen" message (empty subtitle too).
+const displayContentShape = {
+  title: z.string(),
+  subtitle: z.string(),
+  tone: displayToneSchema,
   line1: z.string(),
   line2: z.string(),
-  // Free text: protocol v0 does not enumerate colors.
   color: nonEmptyStringSchema,
-});
+};
+
+const emptyTitleOnlyToClear = (m: { title: string; subtitle: string }) =>
+  m.title !== '' || m.subtitle === '';
+const EMPTY_TITLE_ISSUE = {
+  message: 'title can only be empty when subtitle is empty too (clear screen)',
+  path: ['title'],
+};
+
+const displaySchema = z
+  .strictObject(displayContentShape)
+  .refine(emptyTitleOnlyToClear, EMPTY_TITLE_ISSUE);
 
 // `reason` is coupled to `result` so that firmware never sees ambiguous cases.
 const scanResultPayloadSchema = z.discriminatedUnion('result', [
@@ -161,11 +178,9 @@ export const alarmSetSchema = message(
 
 export const displayMessageSchema = message(
   'display.message',
-  z.strictObject({
-    line1: z.string(),
-    line2: z.string(),
-    durationSec: positiveInt,
-  }),
+  z
+    .strictObject({ ...displayContentShape, durationSec: positiveInt })
+    .refine(emptyTitleOnlyToClear, EMPTY_TITLE_ISSUE),
 );
 
 export const offlineSnapshotSchema = message(

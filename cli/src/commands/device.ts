@@ -1,4 +1,8 @@
-import { DISPLAY_DEFAULTS, validateDisplayLines } from '@gymtime/shared';
+import {
+  DISPLAY_TONES,
+  validateDisplayMessage,
+  type DisplayTone,
+} from '@gymtime/shared';
 import { CliError, UsageError } from '../errors.js';
 import { formatBogota } from '../time.js';
 import { formatTable, yesNo } from '../output.js';
@@ -81,35 +85,53 @@ function parseSeconds(value: unknown): number | undefined {
   return seconds;
 }
 
+function parseTone(value: unknown): DisplayTone {
+  if (value === undefined) return 'info';
+  if (DISPLAY_TONES.includes(value as DisplayTone)) return value as DisplayTone;
+  throw new UsageError(`--tone must be one of: ${DISPLAY_TONES.join(', ')}`);
+}
+
 const messageCommand: Command = {
   group: 'device',
   action: 'message',
-  summary: 'Show a message on the reader LCD (16x2, accents are removed)',
-  usage: 'device message <line1> [line2] [--seconds N] [--device ID]',
+  summary:
+    'Show a title, an optional subtitle (use \\n for a line break) and a tone on the reader screen',
+  usage:
+    'device message <title> [subtitle] [--tone success|error|warning|info] [--seconds N] [--device ID]',
   options: {
+    tone: { type: 'string' },
     seconds: { type: 'string' },
     device: { type: 'string' },
   },
   async run({ http, io, values, positionals }) {
-    if (positionals.length === 0) {
-      throw new UsageError('expected the text of line 1');
+    const [title, subtitle, ...extra] = positionals;
+    if (title === undefined) throw new UsageError('expected the title');
+    if (extra.length > 0) {
+      throw new UsageError(`unexpected argument "${extra[0]}"`);
     }
-    // The server enforces the real DISPLAY_COLS/ROWS; this fails fast with
-    // the default size and the same normalization.
-    const checked = validateDisplayLines(positionals, DISPLAY_DEFAULTS);
+    const tone = parseTone(values['tone']);
+    // The server enforces the real limits; this fails fast with the defaults
+    // and the same normalization.
+    const checked = validateDisplayMessage({
+      title,
+      subtitle: subtitle?.replace(/\\n/g, '\n'),
+      tone,
+    });
     if (!checked.ok) {
       throw new CliError(checked.errors.map((e) => e.message).join('; '));
     }
-    const [line1, line2] = checked.lines;
-    if (line1 === '') throw new UsageError('line 1 cannot be empty');
+    if (checked.message.title === '') {
+      throw new UsageError('the title cannot be empty');
+    }
     const device = values['device'];
     const result = await http.request<MessageResult>(
       'POST',
       '/devices/messages',
       {
         deviceId: typeof device === 'string' ? device : undefined,
-        line1,
-        line2,
+        title: checked.message.title,
+        subtitle: checked.message.subtitle || undefined,
+        tone,
         durationSec: parseSeconds(values['seconds']),
       },
     );

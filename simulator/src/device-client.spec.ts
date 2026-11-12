@@ -18,6 +18,22 @@ const config = (port: number) => ({
   },
 });
 
+/** Display content as the server sends it, with the deprecated aliases. */
+const content = (
+  title: string,
+  subtitle: string,
+  tone: 'success' | 'error' | 'warning' | 'info',
+) => ({
+  title,
+  subtitle,
+  tone,
+  line1: title,
+  line2: subtitle,
+  color: { success: 'green', error: 'red', warning: 'orange', info: 'white' }[
+    tone
+  ],
+});
+
 const frame = (
   type: string,
   payload: object,
@@ -133,8 +149,7 @@ describe('DeviceClient', () => {
     const client = newClient();
     await vi.waitFor(() => expect(client.state).toBe('online'));
     const msg = frame('display.message', {
-      line1: 'a',
-      line2: 'b',
+      ...content('a', 'b', 'info'),
       durationSec: 3,
     });
     sockets[0].send(JSON.stringify(msg));
@@ -157,8 +172,7 @@ describe('DeviceClient', () => {
     const client = newClient();
     await vi.waitFor(() => expect(client.state).toBe('online'));
     const msg = frame('display.message', {
-      line1: 'Tiempo cumplido',
-      line2: 'Registre salida',
+      ...content('Tiempo cumplido', 'Registre su salida\nGracias', 'warning'),
       durationSec: 1800,
     });
     sockets[0].send(JSON.stringify(msg));
@@ -167,12 +181,11 @@ describe('DeviceClient', () => {
         received.filter((m) => m.type === 'ack' && m.ref === msg.id),
       ).toHaveLength(1);
       expect(logs).toContain(
-        'display.message: "Tiempo cumplido" / "Registre salida" (1800s)',
+        'display.message: "Tiempo cumplido" / "Registre su salida ↵ Gracias" [warning] (1800s)',
       );
     });
     const clear = frame('display.message', {
-      line1: '',
-      line2: '',
+      ...content('', '', 'info'),
       durationSec: 1,
     });
     sockets[0].send(JSON.stringify(clear));
@@ -184,7 +197,7 @@ describe('DeviceClient', () => {
   it('answers an invalid message with an error ack when the id is recoverable', async () => {
     const client = newClient();
     await vi.waitFor(() => expect(client.state).toBe('online'));
-    const bad = frame('display.message', { line1: 1 });
+    const bad = frame('display.message', { title: 1 });
     sockets[0].send(JSON.stringify(bad));
     await vi.waitFor(() =>
       expect(received).toContainEqual(
@@ -531,7 +544,9 @@ describe('DeviceClient', () => {
       sockets[0].send(JSON.stringify(msg));
 
       await vi.waitFor(() => expect(ackFor(msg.id)).toHaveLength(1));
-      expect(logs.some((l) => l.includes('ALARM ON (END_BEEP) 1 s'))).toBe(true);
+      expect(logs.some((l) => l.includes('ALARM ON (END_BEEP) 1 s'))).toBe(
+        true,
+      );
       await vi.waitFor(
         () =>
           expect(
@@ -557,9 +572,11 @@ describe('DeviceClient', () => {
       await vi.waitFor(() =>
         expect(received.some((m) => m.type === 'fingerprint.scan')).toBe(true),
       );
-      expect(received.find((m) => m.type === 'fingerprint.scan')).toMatchObject({
-        payload: { slot: 7, confidence: 90 },
-      });
+      expect(received.find((m) => m.type === 'fingerprint.scan')).toMatchObject(
+        {
+          payload: { slot: 7, confidence: 90 },
+        },
+      );
     });
 
     it('sends button.pressed', async () => {
@@ -583,11 +600,7 @@ describe('DeviceClient', () => {
           result: 'denied',
           studentName: 'Ana',
           reason: 'NOT_IN_SCHEDULE',
-          display: {
-            line1: 'Ana',
-            line2: 'No es su horario',
-            color: 'red',
-          },
+          display: content('Ana', 'No es su horario', 'error'),
         },
         { ref: randomUUID() },
       );
@@ -600,8 +613,7 @@ describe('DeviceClient', () => {
           logs.some(
             (l) =>
               l.includes('scan.result denied: Ana (NOT_IN_SCHEDULE)') &&
-              l.includes('Ana / No es su horario') &&
-              l.includes('red'),
+              l.includes('Ana / No es su horario [error]'),
           ),
         ).toBe(true);
       });

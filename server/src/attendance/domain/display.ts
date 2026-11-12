@@ -1,112 +1,125 @@
-import { DISPLAY_DEFAULTS, type RejectReason } from '@gymtime/shared';
+import {
+  buildDisplayPayload,
+  type DisplayMessageContent,
+  type DisplayPayload,
+  type DisplayTone,
+  type RejectReason,
+} from '@gymtime/shared';
 
 /** What the reader shows after a scan (`scan.result.payload.display`). */
-export interface ScanDisplay {
-  line1: string;
-  line2: string;
-  /** Free text in protocol v0: `green` for accepted, `red` otherwise. */
-  color: string;
+export type ScanDisplay = DisplayPayload;
+
+interface CatalogEntry {
+  /** `null` means the student's display name. */
+  title: string | null;
+  subtitle: string;
+  tone: DisplayTone;
 }
 
-/** Screen size; the texts are cut to it as a last defence. */
-export interface DisplayLayout {
-  cols: number;
-  rows: number;
-}
-
-export const DISPLAY_COLORS = { accepted: 'green', rejected: 'red' } as const;
-
-const DEFAULT_LAYOUT: DisplayLayout = {
-  cols: DISPLAY_DEFAULTS.cols,
-  rows: DISPLAY_DEFAULTS.rows,
-};
+const SUCCESS_TONE: DisplayTone = 'success';
 
 /**
- * Anexo B of the iteration 2 backlog: ASCII only (no accents) and at most 16
- * characters per line. `null` in `line1` means the student's display name.
+ * Message catalogue (docs/mensajes_pantalla.md). Accents are kept: the screen
+ * is a TFT with the full font. The tone is fixed per case; the firmware picks
+ * the RGB.
  */
-/** Shown to an unrecognised fingerprint (`unknown`) and to an unknown slot. */
-export const UNKNOWN_LINES = {
-  line1: 'No reconocida',
-  line2: 'Intente de nuevo',
-} as const;
+const ENTRY: CatalogEntry = {
+  title: null,
+  subtitle: 'Entrada registrada',
+  tone: SUCCESS_TONE,
+};
+const EXIT: CatalogEntry = {
+  title: null,
+  subtitle: 'Salida registrada',
+  tone: SUCCESS_TONE,
+};
 
-const REJECT_LINES: Record<
+/** Shown to an unrecognised fingerprint (`unknown`) and to an unknown slot. */
+export const UNKNOWN_MESSAGE: DisplayMessageContent = {
+  title: 'Huella no reconocida',
+  subtitle: 'Intente de nuevo',
+  tone: 'error',
+};
+
+const REJECT_CATALOG: Record<
   RejectReason,
-  { line1: string | null; line2: string }
+  CatalogEntry | DisplayMessageContent
 > = {
-  UNKNOWN_SLOT: UNKNOWN_LINES,
-  NOT_IN_SCHEDULE: { line1: null, line2: 'No es su horario' },
-  NO_ACTIVE_SCHEDULE: { line1: 'Sin horario', line2: 'en este momento' },
+  UNKNOWN_SLOT: UNKNOWN_MESSAGE,
+  NOT_IN_SCHEDULE: { title: null, subtitle: 'No es su horario', tone: 'error' },
+  NO_ACTIVE_SCHEDULE: {
+    title: 'Sin horario',
+    subtitle: 'No hay un horario activo en este momento',
+    tone: 'warning',
+  },
   // "Ingreso abre a las HH:MM" is reserved: `decide()` cannot tell "before
   // the window opens" apart yet (see docs/mensajes_pantalla.md).
-  OUTSIDE_ENTRY_WINDOW: { line1: 'Ingreso cerrado', line2: '' },
-  ALREADY_EXITED: { line1: null, line2: 'Ya marco salida' },
-  STUDENT_INACTIVE: { line1: null, line2: 'No habilitado' },
+  OUTSIDE_ENTRY_WINDOW: {
+    title: 'Ingreso cerrado',
+    subtitle: 'El ingreso a este horario ya terminó',
+    tone: 'warning',
+  },
+  ALREADY_EXITED: {
+    title: null,
+    subtitle: 'Ya registró su salida',
+    tone: 'warning',
+  },
+  STUDENT_INACTIVE: {
+    title: null,
+    subtitle: 'No está habilitado',
+    tone: 'error',
+  },
 };
 
 /** Reserved for the day the server can answer a scan with an error. */
-export const SYSTEM_ERROR_LINES = {
-  line1: 'Error de sistema',
-  line2: 'Llame asistente',
-} as const;
+export const SYSTEM_ERROR_MESSAGE: DisplayMessageContent = {
+  title: 'Error del sistema',
+  subtitle: 'Llame al asistente',
+  tone: 'error',
+};
 
 /** Alarm while someone has not registered their exit (`PENDING_EXIT`). */
-export const ALARM_LINES = {
-  line1: 'Tiempo cumplido',
-  line2: 'Registre salida',
-} as const;
+export const ALARM_MESSAGE: DisplayMessageContent = {
+  title: 'Tiempo cumplido',
+  subtitle: 'Registre su salida',
+  tone: 'warning',
+};
+
+/** Empties the screen when the alarm message is withdrawn. */
+export const CLEAR_MESSAGE: DisplayMessageContent = {
+  title: '',
+  subtitle: '',
+  tone: 'info',
+};
 
 const FALLBACK_NAME = 'Estudiante';
 
 function compose(
-  line1: string,
-  line2: string,
-  color: string,
-  layout: DisplayLayout,
+  entry: CatalogEntry | DisplayMessageContent,
+  displayName: string | null,
 ): ScanDisplay {
-  return {
-    line1: line1.slice(0, layout.cols),
-    line2: layout.rows < 2 ? '' : line2.slice(0, layout.cols),
-    color,
-  };
+  return buildDisplayPayload({
+    title: entry.title ?? displayName ?? FALLBACK_NAME,
+    subtitle: entry.subtitle,
+    tone: entry.tone,
+  });
 }
 
-export function entryDisplay(
-  displayName: string,
-  layout: DisplayLayout = DEFAULT_LAYOUT,
-): ScanDisplay {
-  return compose(displayName, 'Entrada OK', DISPLAY_COLORS.accepted, layout);
+export function entryDisplay(displayName: string): ScanDisplay {
+  return compose(ENTRY, displayName);
 }
 
-export function exitDisplay(
-  displayName: string,
-  layout: DisplayLayout = DEFAULT_LAYOUT,
-): ScanDisplay {
-  return compose(displayName, 'Salida OK', DISPLAY_COLORS.accepted, layout);
+export function exitDisplay(displayName: string): ScanDisplay {
+  return compose(EXIT, displayName);
 }
 
 export function deniedDisplay(
   reason: RejectReason,
   displayName: string | null,
-  layout: DisplayLayout = DEFAULT_LAYOUT,
 ): ScanDisplay {
-  const lines = REJECT_LINES[reason];
-  return compose(
-    lines.line1 ?? displayName ?? FALLBACK_NAME,
-    lines.line2,
-    DISPLAY_COLORS.rejected,
-    layout,
-  );
+  return compose(REJECT_CATALOG[reason], displayName);
 }
 
-export function unknownDisplay(
-  layout: DisplayLayout = DEFAULT_LAYOUT,
-): ScanDisplay {
-  return compose(
-    UNKNOWN_LINES.line1,
-    UNKNOWN_LINES.line2,
-    DISPLAY_COLORS.rejected,
-    layout,
-  );
+export function unknownDisplay(): ScanDisplay {
+  return compose(UNKNOWN_MESSAGE, null);
 }

@@ -284,7 +284,10 @@ export class PanelAdminService {
               : null,
           text:
             e.type === 'display.message_sent'
-              ? [asString(detail.line1), asString(detail.line2)]
+              ? [
+                  asString(detail.title) ?? asString(detail.line1),
+                  asString(detail.subtitle) ?? asString(detail.line2),
+                ]
                   .filter(Boolean)
                   .join(' / ')
               : null,

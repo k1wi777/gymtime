@@ -67,7 +67,7 @@ const add: Command = {
         document,
         name,
         program: values['program'] ?? null,
-        // Optional contact data and LCD name: omitted when not given.
+        // Optional contact data and screen name: omitted when not given.
         email: values['email'],
         phone: values['phone'],
         displayName: values['display-name'],
@@ -145,7 +145,7 @@ const edit: Command = {
   group: 'student',
   action: 'edit',
   summary:
-    'Edit a student (name, program, contact data, LCD name) or record their consent',
+    'Edit a student (name, program, contact data, screen name) or record their consent',
   usage:
     'student edit <document> [--name <name>] [--program <program>] [--email <email>] [--phone <phone>] [--display-name <text>] [--consented]',
   options: {

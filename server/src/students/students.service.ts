@@ -2,7 +2,8 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   DISPLAY_DEFAULTS,
   generateDisplayName,
-  validateDisplayLines,
+  toAscii,
+  validateDisplayMessage,
 } from '@gymtime/shared';
 import { currentActor } from '../common/audit/actor.js';
 import { EventLogService } from '../common/audit/event-log.service.js';
@@ -101,7 +102,7 @@ export class StudentsService {
   async create(input: CreateStudentInput): Promise<Student> {
     const displayName = input.displayName
       ? this.checkDisplayName(input.displayName)
-      : generateDisplayName(input.name, this.display.cols);
+      : generateDisplayName(input.name, this.display.nameMax);
     const { consented, ...fields } = input;
     const student = await this.repository.create({
       ...fields,
@@ -133,7 +134,7 @@ export class StudentsService {
         ...input,
         displayName: input.displayName
           ? this.checkDisplayName(input.displayName)
-          : generateDisplayName(input.name, this.display.cols),
+          : generateDisplayName(input.name, this.display.nameMax),
         importBatchId,
       })),
     );
@@ -195,7 +196,7 @@ export class StudentsService {
     if (patch.displayName !== undefined) {
       data.displayName = this.checkDisplayName(patch.displayName);
     } else if (patch.name !== undefined && this.isGenerated(before)) {
-      data.displayName = generateDisplayName(patch.name, this.display.cols);
+      data.displayName = generateDisplayName(patch.name, this.display.nameMax);
     }
     let student =
       Object.keys(data).length > 0
@@ -342,23 +343,37 @@ export class StudentsService {
   }
 
   private checkDisplayName(value: string): string {
-    const checked = validateDisplayLines([value], {
-      cols: this.display.cols,
-      rows: 1,
-    });
-    if (!checked.ok) throw new DisplayValidationError(checked.errors);
-    if (checked.lines[0] === '') {
+    const checked = validateDisplayMessage(
+      { title: value },
+      { titleMax: this.display.nameMax, subtitleMax: 0, subtitleLines: 0 },
+    );
+    if (!checked.ok) {
+      throw new DisplayValidationError(
+        checked.errors.map((error) => ({
+          ...error,
+          message: error.message.replace('el título', 'el nombre en pantalla'),
+        })),
+      );
+    }
+    if (checked.message.title === '') {
       throw new DisplayValidationError([
-        { line: 1, limit: null, message: 'displayName cannot be empty' },
+        { field: 'title', limit: null, message: 'displayName cannot be empty' },
       ]);
     }
-    return checked.lines[0];
+    return checked.message.title;
   }
 
-  /** Stored names built before DISPLAY_COLS changed use the default width. */
+  /**
+   * Names generated before the TFT (16 characters, ASCII) or with another
+   * DISPLAY_NAME_MAX still count as generated, so a rename refreshes them.
+   */
   private isGenerated(student: Student): boolean {
-    return [this.display.cols, DISPLAY_DEFAULTS.cols].some(
-      (cols) => student.displayName === generateDisplayName(student.name, cols),
-    );
+    return [this.display.nameMax, DISPLAY_DEFAULTS.nameMax, 16].some((max) => {
+      const generated = generateDisplayName(student.name, max);
+      return (
+        student.displayName === generated ||
+        student.displayName === toAscii(generated)
+      );
+    });
   }
 }

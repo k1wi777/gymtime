@@ -10,7 +10,14 @@ import {
 const ID = '3f1c2a4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b';
 const REF = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
 const TEMPLATE = 'AAECAwQFBgcICQoLDA0ODw==';
-const DISPLAY = { line1: 'Hola', line2: 'Ana', color: 'green' };
+const DISPLAY = {
+  title: 'Ana',
+  subtitle: 'Entrada registrada',
+  tone: 'success',
+  line1: 'Ana',
+  line2: 'Entrada registrada',
+  color: 'green',
+};
 
 function envelope(type: string, payload: object, ref: string | null = null) {
   return { v: 1, id: ID, type, ts: 1760000000, ref, payload };
@@ -119,8 +126,8 @@ const serverCases: Case[] = [
   },
   {
     type: 'display.message',
-    payload: { line1: 'a', line2: 'b', durationSec: 5 },
-    bad: { line1: 'a', line2: 'b' },
+    payload: { ...DISPLAY, durationSec: 5 },
+    bad: { ...DISPLAY, tone: 'purple', durationSec: 5 },
   },
   {
     type: 'ack',
@@ -318,6 +325,35 @@ describe('templates.sync limits (R8)', () => {
     expect(
       sync({ index: 1, total: 1 }, [{ slot: 1, template: '***' }]),
     ).toMatchObject({ ok: false });
+  });
+});
+
+describe('display payload (R1, R2, R3)', () => {
+  const show = (payload: object) =>
+    parseServerMessage(envelope('display.message', payload));
+
+  it('rejects an empty title unless the screen is being cleared', () => {
+    const clear = { ...DISPLAY, title: '', subtitle: '', line1: '', line2: '' };
+    expect(show({ ...clear, durationSec: 3 })).toMatchObject({ ok: true });
+    expect(
+      show({ ...clear, subtitle: 'x', line2: 'x', durationSec: 3 }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it('keeps the deprecated aliases required during the transition', () => {
+    const { line1: _l1, ...withoutLine1 } = DISPLAY;
+    expect(show({ ...withoutLine1, durationSec: 3 })).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it('rejects unknown fields and tones', () => {
+    expect(show({ ...DISPLAY, durationSec: 3, extra: 1 })).toMatchObject({
+      ok: false,
+    });
+    expect(show({ ...DISPLAY, tone: 'blue', durationSec: 3 })).toMatchObject({
+      ok: false,
+    });
   });
 });
 

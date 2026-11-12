@@ -25,14 +25,22 @@ type Simulator = InstanceType<typeof DeviceClient>;
 
 /** Order that changes no product state: the reader only prints it. */
 const display = (
-  line1: string,
+  title: string,
 ): Extract<ServerMessage, { type: 'display.message' }> => ({
   v: PROTOCOL_VERSION,
   id: randomUUID(),
   type: 'display.message',
   ts: Math.floor(Date.now() / 1000),
   ref: null,
-  payload: { line1, line2: 'GymTime', durationSec: 3 },
+  payload: {
+    title,
+    subtitle: 'GymTime',
+    tone: 'info',
+    line1: title,
+    line2: 'GymTime',
+    color: 'white',
+    durationSec: 3,
+  },
 });
 
 describe('Device command queue (e2e: ack, idempotency and replay)', () => {

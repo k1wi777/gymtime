@@ -706,7 +706,7 @@ describe('enrollment (R17)', () => {
 });
 
 describe('orders (R18)', () => {
-  it('counts characters per line and refuses more than 16', async () => {
+  it('counts characters, refuses texts that do not fit and sends title, subtitle, tone and seconds', async () => {
     const user = userEvent.setup();
     const fake = installFakeApi({
       'GET /auth/me': account(),
@@ -715,23 +715,39 @@ describe('orders (R18)', () => {
         json({ commandId: 'c1', deviceId: 'd', status: 'acked' }),
     });
     app(<Ordenes />);
-    const line1 = await screen.findByLabelText(/Línea 1/);
-    expect(screen.getAllByText('0/16 caracteres')).toHaveLength(2);
-    await user.type(line1, 'Hola equipo');
-    expect(screen.getByText('11/16 caracteres')).toBeTruthy();
-    await user.type(line1, ' de la tarde');
+    const title = await screen.findByLabelText(/Título/);
+    expect(screen.getByText(/^0\/32 caracteres/)).toBeTruthy();
+    expect(screen.getByText(/^0\/80 caracteres/)).toBeTruthy();
+    await user.type(title, 'Cierre anticipado por mantenimiento');
+    expect(screen.getByText(/^35\/32 caracteres/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
-    expect(screen.getByText(/Máximo 16 caracteres/)).toBeTruthy();
+    expect(screen.getByText(/Máximo 32 caracteres/)).toBeTruthy();
     expect(fake.calls('POST /devices/messages')).toHaveLength(0);
 
-    await user.clear(line1);
-    await user.type(line1, 'Cierre en 5 min');
+    await user.clear(title);
+    await user.type(title, 'Atención, mañana');
+    await user.type(screen.getByLabelText(/Subtítulo/), 'a{Enter}b{Enter}c');
+    await user.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
+    expect(screen.getByText(/Máximo 2 líneas/)).toBeTruthy();
+    expect(fake.calls('POST /devices/messages')).toHaveLength(0);
+
+    await user.clear(screen.getByLabelText(/Subtítulo/));
+    await user.type(screen.getByLabelText(/Subtítulo/), 'Cierre en 5 min');
+    await user.selectOptions(
+      screen.getByLabelText(/Tipo de mensaje/),
+      'warning',
+    );
+    await user.type(screen.getByLabelText(/Segundos/), '8');
+    expect(screen.getByRole('img', { name: /Aviso \(naranja\)/ })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Enviar mensaje' }));
     expect(
       await screen.findByText('Mensaje mostrado en el lector.'),
     ).toBeTruthy();
     expect(await fake.calls('POST /devices/messages')[0]?.json()).toEqual({
-      line1: 'Cierre en 5 min',
+      title: 'Atención, mañana',
+      subtitle: 'Cierre en 5 min',
+      tone: 'warning',
+      durationSec: 8,
     });
   });
 

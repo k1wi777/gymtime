@@ -77,7 +77,7 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
 - Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector. Las horas de los horarios son de America/Bogota (UTC-5 fijo).
 - Alarma: `ALARM_BEEP_SECONDS` (5) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
-- Pantalla del lector: `DISPLAY_COLS` (16) y `DISPLAY_ROWS` (2) fijan el tamaño del LCD y `DISPLAY_RESULT_SECONDS` (3) el tiempo por defecto de un mensaje. Los textos van sin tildes y de 16 caracteres como máximo; ver [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md).
+- Pantalla del lector (TFT 3,5"): `DISPLAY_TITLE_MAX` (32), `DISPLAY_SUBTITLE_MAX` (80), `DISPLAY_SUBTITLE_LINES` (2) y `DISPLAY_NAME_MAX` (24) fijan los límites de texto y `DISPLAY_RESULT_SECONDS` (3) el tiempo por defecto de un mensaje. Los mensajes llevan título, subtítulo y tono, con tildes; ver [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md).
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).
 - `GET /events` (SSE con `x-api-key` o con la cookie de sesión): eventos en vivo de conexiones, escaneos, órdenes y alarma; el operador los ve con `gym watch`.
@@ -120,7 +120,7 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 
 | Comando | Efecto |
 |---|---|
-| `gym student add --document <doc> --name <nombre> [--program <carrera>] [--email <correo>] [--phone <teléfono>] [--display-name <texto>] [--consented]` | Registra un estudiante. `--document` es la cédula y `--program` la carrera; correo y teléfono son opcionales (Ley 1581: solo se guardan si se indican, no van a los logs ni al lector). `--display-name` (máx. 16 caracteres ASCII) es el nombre que muestra el LCD; si se omite se genera. |
+| `gym student add --document <doc> --name <nombre> [--program <carrera>] [--email <correo>] [--phone <teléfono>] [--display-name <texto>] [--consented]` | Registra un estudiante. `--document` es la cédula y `--program` la carrera; correo y teléfono son opcionales (Ley 1581: solo se guardan si se indican, no van a los logs ni al lector). `--display-name` (máx. 24 caracteres, con tildes) es el nombre que muestra la pantalla; si se omite se genera. |
 | `gym student edit <documento> [--name] [--program] [--email] [--phone] [--display-name]` | Modifica los datos indicados. |
 | `gym student list [--active true\|false]` | Tabla de estudiantes. |
 | `gym student remove <documento>` | Desactiva al estudiante (borra su huella). |
@@ -138,7 +138,7 @@ Configuración, con esta precedencia: opción `--url`/`--api-key` > variables `G
 | `gym alarm status` | Muestra si la sirena está encendida, su motivo, la ocurrencia, la duración y las sesiones abiertas. |
 | `gym alarm on` / `gym alarm test` | Enciende la sirena de forma continua (`MANUAL`) o con el pitido corto de prueba (`TEST`); 409 si no hay dispositivo en línea. |
 | `gym alarm off` | Silencia la sirena, marca como `no_registrada` las sesiones abiertas de la ocurrencia alarmada e informa cuántas cerró; 409 si no estaba encendida. |
-| `gym device message "línea 1" ["línea 2"] [--seconds N] [--device ID]` | Muestra un mensaje en el LCD del lector (sin tildes; máx. 2 líneas de 16 caracteres; 1 a 60 s). Con el lector desconectado queda en cola y se entrega al reconectar; sale con error si no lo confirma. |
+| `gym device message "título" ["subtítulo"] [--tone success\|error\|warning\|info] [--seconds N] [--device ID]` | Muestra un mensaje en la pantalla del lector (título hasta 32 caracteres; subtítulo hasta 80 y 2 líneas, `\n` para el salto; con tildes; 1 a 60 s). Con el lector desconectado queda en cola y se entrega al reconectar; sale con error si no lo confirma. |
 | `gym device status` | Tabla de dispositivos: en línea, última conexión en Bogotá, versión de firmware y órdenes pendientes de confirmar. |
 | `gym watch` | Muestra en vivo los eventos del servidor (conexiones, escaneos, órdenes y alarma) con hora de Bogotá; se reconecta solo y se corta con Ctrl+C. |
 

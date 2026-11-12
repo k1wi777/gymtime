@@ -14,7 +14,7 @@ const data = (document = '100') => ({
   consented: true,
 });
 
-const LONG_NAME = 'Ana María Gómez Pérez';
+const LONG_NAME = 'Ana María Gómez Pérez de la Hoz Castro'; // over 24 characters
 
 describe('StudentsService', () => {
   let service: StudentsService;
@@ -95,9 +95,9 @@ describe('StudentsService', () => {
   });
 
   describe('display name (R8, R9)', () => {
-    it('uses the full name when it fits, without accents', async () => {
+    it('uses the full name when it fits, keeping accents', async () => {
       const student = await service.create({ ...data(), name: 'María Núñez' });
-      expect(student.displayName).toBe('Maria Nunez');
+      expect(student.displayName).toBe('María Núñez');
     });
 
     it('shortens a long name to the first name and the next initial', async () => {
@@ -110,16 +110,16 @@ describe('StudentsService', () => {
         ...data(),
         displayName: 'Ñoño',
       });
-      expect(student.displayName).toBe('Nono');
+      expect(student.displayName).toBe('Ñoño');
     });
 
     it('rejects a display name that does not fit the screen', async () => {
       await expect(
-        service.create({ ...data(), displayName: 'x'.repeat(17) }),
+        service.create({ ...data(), displayName: 'x'.repeat(25) }),
       ).rejects.toBeInstanceOf(DisplayValidationError);
       const { id } = await service.create(data());
       await expect(
-        service.update(id, { displayName: 'x'.repeat(17) }),
+        service.update(id, { displayName: 'x'.repeat(25) }),
       ).rejects.toBeInstanceOf(DisplayValidationError);
       await expect(
         service.update(id, { displayName: '   ' }),
@@ -129,7 +129,7 @@ describe('StudentsService', () => {
     it('regenerates it when the name changes and it was not customised', async () => {
       const { id } = await service.create({ ...data(), name: LONG_NAME });
       const updated = await service.update(id, {
-        name: 'Luis Alberto Mora Ruiz',
+        name: 'Luis Alberto Mora Ruiz de la Torre Gómez',
       });
       expect(updated?.displayName).toBe('Luis A.');
     });

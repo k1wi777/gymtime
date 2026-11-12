@@ -6,9 +6,13 @@ import { describeError, issuesByField } from '@/api/errors';
 import { useLive } from '@/live/live-provider';
 import type { CommandEntry } from '@/live/reducers';
 import {
-  DISPLAY_LINE_MAX,
-  DISPLAY_LINES,
-  displayLineHelp,
+  DISPLAY_SUBTITLE_MAX,
+  DISPLAY_TITLE_MAX,
+  DISPLAY_TONES,
+  DISPLAY_TONE_INFO,
+  displaySubtitleHelp,
+  displayTitleHelp,
+  type DisplayTone,
 } from '@/lib/display';
 import { COMMAND_STATUS_LABELS, commandTypeLabel } from '@/lib/labels';
 import { formatTimeSeconds } from '@/lib/time';
@@ -18,7 +22,13 @@ import { validateMessage } from '@/lib/validators';
 import { useLiveEvents, useResync } from '@/live/live-provider';
 import { Badge, type BadgeTone } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
-import { SubmitButton, TextField, useForm } from '@/ui/Form';
+import {
+  SelectField,
+  SubmitButton,
+  TextAreaField,
+  TextField,
+  useForm,
+} from '@/ui/Form';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
@@ -174,7 +184,7 @@ function MessageForm() {
   const [failure, setFailure] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const form = useForm({
-    initial: { line1: '', line2: '' },
+    initial: { title: '', subtitle: '', tone: 'info', seconds: '' },
     validate: validateMessage,
     onSubmit: async (values) => {
       setFailure(null);
@@ -183,8 +193,14 @@ function MessageForm() {
         const result = await call(
           getApi().client.POST('/devices/messages', {
             body: {
-              line1: values.line1,
-              ...(values.line2.trim() !== '' ? { line2: values.line2 } : {}),
+              title: values.title.trim(),
+              tone: values.tone as DisplayTone,
+              ...(values.subtitle.trim() !== ''
+                ? { subtitle: values.subtitle.trim() }
+                : {}),
+              ...(values.seconds.trim() !== ''
+                ? { durationSec: Number(values.seconds) }
+                : {}),
             },
           }),
         );
@@ -201,9 +217,8 @@ function MessageForm() {
       }
     },
   });
-  const lines = ['line1', 'line2'] as const;
-  const previewLine = (value: string) =>
-    value.slice(0, DISPLAY_LINE_MAX).padEnd(DISPLAY_LINE_MAX, ' ');
+  const tone = form.values.tone as DisplayTone;
+  const toneInfo = DISPLAY_TONE_INFO[tone] ?? DISPLAY_TONE_INFO.info;
   return (
     <form
       className={`card ${styles.message}`}
@@ -214,16 +229,14 @@ function MessageForm() {
       <h2>Mensaje en la pantalla del lector</h2>
       <div
         role="img"
-        aria-label={`Vista previa de la pantalla de ${DISPLAY_LINES} líneas de ${DISPLAY_LINE_MAX} caracteres`}
-        className={styles.lcd}
+        aria-label={`Vista previa de la pantalla: ${toneInfo.label}`}
+        className={styles.tft}
+        style={{ backgroundColor: toneInfo.color }}
       >
-        <div className={styles.screen}>
-          {lines.map((key) => (
-            <div key={key} className={styles.lcdLine}>
-              {previewLine(form.values[key])}
-            </div>
-          ))}
+        <div className={styles.tftTitle}>
+          {form.values.title.trim() || 'Título'}
         </div>
+        <div className={styles.tftSubtitle}>{form.values.subtitle.trim()}</div>
       </div>
       {failure && (
         <Notice kind="error" onDismiss={() => setFailure(null)}>
@@ -239,22 +252,52 @@ function MessageForm() {
         </Notice>
       )}
       <div className={styles.lines}>
-        {lines.map((key, index) => (
-          <div key={key} className={styles.line}>
-            <TextField
-              label={`Línea ${index + 1}${index === 0 ? ' (obligatoria)' : ''}`}
-              value={form.values[key]}
-              onChange={(value) => form.setValue(key, value)}
-              onBlur={() => form.blur(key)}
-              error={form.errors[key]}
-              help={`${form.values[key].length}/${DISPLAY_LINE_MAX} caracteres`}
-            />
-          </div>
-        ))}
+        <div className={styles.line}>
+          <TextField
+            label="Título (obligatorio)"
+            value={form.values.title}
+            onChange={(value) => form.setValue('title', value)}
+            onBlur={() => form.blur('title')}
+            error={form.errors.title}
+            help={`${form.values.title.length}/${DISPLAY_TITLE_MAX} caracteres. ${displayTitleHelp}`}
+          />
+        </div>
+        <div className={styles.line}>
+          <TextAreaField
+            label="Subtítulo (opcional)"
+            rows={2}
+            value={form.values.subtitle}
+            onChange={(value) => form.setValue('subtitle', value)}
+            onBlur={() => form.blur('subtitle')}
+            error={form.errors.subtitle}
+            help={`${form.values.subtitle.length}/${DISPLAY_SUBTITLE_MAX} caracteres. ${displaySubtitleHelp}`}
+          />
+        </div>
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        {DISPLAY_LINES} líneas. {displayLineHelp}
-      </p>
+      <div className={styles.lines}>
+        <div className={styles.line}>
+          <SelectField
+            label="Tipo de mensaje (color)"
+            value={form.values.tone}
+            onChange={(value) => form.setValue('tone', value)}
+            error={form.errors.tone}
+            options={DISPLAY_TONES.map((value) => ({
+              value,
+              label: DISPLAY_TONE_INFO[value].label,
+            }))}
+          />
+        </div>
+        <div className={styles.line}>
+          <TextField
+            label="Segundos en pantalla (opcional)"
+            value={form.values.seconds}
+            onChange={(value) => form.setValue('seconds', value)}
+            onBlur={() => form.blur('seconds')}
+            error={form.errors.seconds}
+            help="De 1 a 60; si se deja vacío se usa el tiempo por defecto."
+          />
+        </div>
+      </div>
       <div>
         <SubmitButton busy={form.submitting}>Enviar mensaje</SubmitButton>
       </div>

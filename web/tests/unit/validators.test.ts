@@ -1,4 +1,10 @@
-import { DISPLAY_LINE_MAX, displayLineHelp } from '@/lib/display';
+import {
+  DISPLAY_SUBTITLE_MAX,
+  DISPLAY_TITLE_MAX,
+  DISPLAY_TONES,
+  displaySubtitleHelp,
+  displayTitleHelp,
+} from '@/lib/display';
 import {
   safeNext,
   validateLogin,
@@ -72,22 +78,45 @@ describe('validators', () => {
     ).toEqual({});
   });
 
-  it('message lines are limited to 16 characters and line 1 is required', () => {
-    expect(validateMessage({ line1: '', line2: '' }).line1).toContain(
-      'obligatoria',
+  const message = { title: 'Hola', subtitle: '', tone: 'info', seconds: '' };
+
+  it('message: the title is required and limited, the subtitle has a size and line limit', () => {
+    expect(validateMessage({ ...message, title: ' ' }).title).toContain(
+      'obligatorio',
     );
-    expect(validateMessage({ line1: 'x'.repeat(16), line2: '' })).toEqual({});
+    expect(validateMessage({ ...message, title: 'ñ'.repeat(32) })).toEqual({});
     expect(
-      validateMessage({ line1: 'x'.repeat(17), line2: 'y'.repeat(20) }),
+      validateMessage({
+        ...message,
+        title: 'x'.repeat(33),
+        subtitle: 'y'.repeat(81),
+      }),
     ).toEqual({
-      line1: 'Máximo 16 caracteres (lleva 17).',
-      line2: 'Máximo 16 caracteres (lleva 20).',
+      title: 'Máximo 32 caracteres (lleva 33).',
+      subtitle: 'Máximo 80 caracteres (lleva 81).',
     });
+    expect(validateMessage({ ...message, subtitle: 'a\nb' })).toEqual({});
+    expect(validateMessage({ ...message, subtitle: 'a\nb\nc' }).subtitle).toBe(
+      'Máximo 2 líneas (lleva 3).',
+    );
   });
 
-  it('the help text of the lines is built from the same constant', () => {
-    expect(DISPLAY_LINE_MAX).toBe(16);
-    expect(displayLineHelp).toContain(String(DISPLAY_LINE_MAX));
+  it('message: the tone must be known and the seconds a whole number from 1 to 60', () => {
+    for (const tone of DISPLAY_TONES) {
+      expect(validateMessage({ ...message, tone })).toEqual({});
+    }
+    expect(validateMessage({ ...message, tone: 'purple' }).tone).toBeDefined();
+    for (const seconds of ['0', '61', '1.5', 'abc']) {
+      expect(validateMessage({ ...message, seconds }).seconds).toBeDefined();
+    }
+    expect(validateMessage({ ...message, seconds: '60' })).toEqual({});
+  });
+
+  it('the help texts are built from the same constants', () => {
+    expect(DISPLAY_TITLE_MAX).toBe(32);
+    expect(DISPLAY_SUBTITLE_MAX).toBe(80);
+    expect(displayTitleHelp).toContain(String(DISPLAY_TITLE_MAX));
+    expect(displaySubtitleHelp).toContain(String(DISPLAY_SUBTITLE_MAX));
   });
 
   it('only follows redirects that stay inside the panel', () => {
