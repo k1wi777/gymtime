@@ -167,6 +167,8 @@ export function Ahora() {
   // The browser clock may be off: the countdown runs against the server's
   // `serverNow`, recalibrated with every snapshot.
   const [clockOffset, setClockOffset] = useState(0);
+  // The failed refresh the user already closed; a new failure is a new object.
+  const [dismissedError, setDismissedError] = useState<unknown>(null);
   const snapshot = useResource(async (signal) => {
     const data = await call(getApi().client.GET('/panel/now', { signal }));
     setClockOffset(Date.parse(data.serverNow) - Date.now());
@@ -225,8 +227,12 @@ export function Ahora() {
     <>
       <PageHeader eyebrow={eyebrow} title="Ahora" aside={<LivePill />} />
       <div className={styles.body}>
-        {snapshot.error ? (
-          <Notice kind="warning" title="No se pudo actualizar">
+        {snapshot.error && snapshot.error !== dismissedError ? (
+          <Notice
+            kind="warning"
+            title="No se pudo actualizar"
+            onDismiss={() => setDismissedError(snapshot.error)}
+          >
             {describeError(snapshot.error)} Se muestra el último estado
             conocido.
           </Notice>

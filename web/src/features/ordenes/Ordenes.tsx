@@ -12,6 +12,7 @@ import {
 } from '@/lib/display';
 import { COMMAND_STATUS_LABELS, commandTypeLabel } from '@/lib/labels';
 import { formatTimeSeconds } from '@/lib/time';
+import { useBeepExpiry } from '@/lib/use-beep-expiry';
 import { useResource } from '@/lib/use-resource';
 import { validateMessage } from '@/lib/validators';
 import { useLiveEvents, useResync } from '@/live/live-provider';
@@ -44,6 +45,7 @@ function AlarmControls() {
     if (event.type === 'alarm') status.reload();
   });
   useResync(status.reload);
+  useBeepExpiry(status.data, status.reload);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -98,8 +100,16 @@ function AlarmControls() {
         Suena sola cuando termina un horario y todavía hay personas adentro.
         También puede encenderla o apagarla usted.
       </p>
-      {failure && <Notice kind="error">{failure}</Notice>}
-      {note && <Notice kind="success">{note}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
+      {note && (
+        <Notice kind="success" onDismiss={() => setNote(null)}>
+          {note}
+        </Notice>
+      )}
       <div className={styles.buttons}>
         <button
           type="button"
@@ -215,9 +225,16 @@ function MessageForm() {
           ))}
         </div>
       </div>
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       {note && (
-        <Notice kind={note.startsWith('El lector no') ? 'warning' : 'success'}>
+        <Notice
+          kind={note.startsWith('El lector no') ? 'warning' : 'success'}
+          onDismiss={() => setNote(null)}
+        >
           {note}
         </Notice>
       )}

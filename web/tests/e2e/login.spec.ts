@@ -50,13 +50,13 @@ test.describe('login (R8, R9, R10)', () => {
     await expect(
       page.getByRole('alert').filter({ hasText: 'Usuario' }),
     ).toHaveText(
-      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.',
+      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.×',
     );
     await login(page, 'nadie', 'otra-clave-distinta');
     await expect(
       page.getByRole('alert').filter({ hasText: 'Usuario' }),
     ).toHaveText(
-      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.',
+      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.×',
     );
     await expect(page).toHaveURL(/\/login/);
   });

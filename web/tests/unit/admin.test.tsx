@@ -936,6 +936,9 @@ describe('students (R12, R13, R16, R17)', () => {
       screen.getByRole('button', { name: 'Importar 2 estudiante(s)' }),
     );
     expect(await screen.findByText('Importación terminada')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+    expect(screen.queryByText('Importación terminada')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cerrar' })).toBeTruthy();
     const sent = (await fake.calls('POST /students/import')[0]?.json()) as {
       filename: string;
       mapping: Record<string, number | null>;

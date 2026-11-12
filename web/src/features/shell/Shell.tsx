@@ -110,6 +110,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 key={device.deviceId}
                 kind="error"
                 title="Lector sin conexión"
+                autoClose={false}
               >
                 El lector «{device.deviceId}» lleva más de{' '}
                 {device.alertThresholdMinutes} min fuera de línea
@@ -126,13 +127,18 @@ export function Shell({ children }: { children: ReactNode }) {
                 key={device.deviceId}
                 kind="warning"
                 title="Lector fuera de línea"
+                autoClose={false}
               >
                 El lector «{device.deviceId}» no está conectado. Las huellas no
                 se registrarán hasta que vuelva a conectarse.
               </Notice>
             ))}
             {state === 'disconnected' && (
-              <Notice kind="warning" title="Sin conexión en vivo">
+              <Notice
+                kind="warning"
+                title="Sin conexión en vivo"
+                autoClose={false}
+              >
                 Los datos de la pantalla pueden estar desactualizados. El panel
                 sigue intentando reconectar.
               </Notice>

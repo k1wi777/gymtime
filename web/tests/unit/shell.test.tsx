@@ -305,6 +305,35 @@ describe('shell (R10, R11, R19)', () => {
     expect(document.title).toContain('Lector fuera de línea');
   });
 
+  it('keeps the offline and live-link notices visible with time (R11)', async () => {
+    installFakeApi({
+      ...base,
+      'GET /auth/me': account(),
+      'GET /devices/status': [
+        {
+          deviceId: 'esp32-01',
+          online: false,
+          lastConnectedAt: null,
+          firmwareVersion: '1',
+          pendingCommands: 0,
+        },
+      ],
+    });
+    panel();
+    await screen.findByText('contenido');
+    const source = await liveSource();
+    act(() => source.open());
+    expect(await screen.findByText('Lector fuera de línea')).toBeTruthy();
+    vi.useFakeTimers();
+    try {
+      act(() => void vi.advanceTimersByTime(120_000));
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByText('Lector fuera de línea')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cerrar aviso' })).toBeNull();
+  });
+
   it('keeps an alert while the reader stays offline past the threshold and clears it on reconnection (H11)', async () => {
     installFakeApi({
       ...base,

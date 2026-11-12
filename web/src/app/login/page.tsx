@@ -29,6 +29,7 @@ function LoginForm() {
   const [failure, setFailure] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const notice = NOTICES[params.get('aviso') ?? ''];
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   const form = useForm({
     initial: { username: '', password: '' },
@@ -109,8 +110,19 @@ function LoginForm() {
                 Ingrese con la cuenta que le asignó el administrador.
               </p>
             </div>
-            {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
-            {failure && <Notice kind="error">{failure}</Notice>}
+            {notice && !noticeDismissed && (
+              <Notice
+                kind={notice.kind}
+                onDismiss={() => setNoticeDismissed(true)}
+              >
+                {notice.text}
+              </Notice>
+            )}
+            {failure && (
+              <Notice kind="error" onDismiss={() => setFailure(null)}>
+                {failure}
+              </Notice>
+            )}
             <TextField
               label="Usuario"
               name="username"

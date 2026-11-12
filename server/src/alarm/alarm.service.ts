@@ -436,6 +436,14 @@ export class AlarmService implements AlarmPort {
     if (!this.current.on || this.current.expiresAt === null) return;
     if (this.current.expiresAt > now) return;
     this.current = offState();
+    // Panels learn about the end through the event; the reader stops by itself
+    // after the beep, so no CLEARED order is sent (unlike `clearAlarm`).
+    this.systemEvents.emit('alarm', {
+      on: false,
+      reason: 'CLEARED',
+      closedBy: null,
+      sessionsClosed: 0,
+    });
     this.logger.log({ event: 'alarm_beep_expired' });
   }
 

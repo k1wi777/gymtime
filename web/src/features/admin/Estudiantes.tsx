@@ -109,7 +109,11 @@ function StudentForm({
       noValidate
       aria-label={creating ? 'Nuevo estudiante' : `Editar ${student.name}`}
     >
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       {fields.map((field) => (
         <TextField
           key={field.key}

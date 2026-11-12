@@ -38,6 +38,10 @@ test.describe('registro manual (R4)', () => {
     await expect(
       page.getByText(/Entrada registrada para Beto Ruiz/),
     ).toBeVisible();
+    // The confirmation closes by itself (R12).
+    await expect(
+      page.getByText(/Entrada registrada para Beto Ruiz/),
+    ).toBeHidden({ timeout: 10_000 });
 
     await page.getByRole('link', { name: 'Ahora' }).click();
     await expect(

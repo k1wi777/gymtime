@@ -366,7 +366,11 @@ function Orders() {
       {first.error ? (
         <Notice kind="error">{describeError(first.error)}</Notice>
       ) : null}
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       {first.data && (
         <BoardCard
           label="Órdenes"

@@ -45,6 +45,8 @@ export function EnrollPanel({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
+  // Enrollment whose final notice was closed; a new enrollment shows its own.
+  const [closedNoticeId, setClosedNoticeId] = useState<string | null>(null);
 
   const running = enrollment !== null && !isFinal(enrollment.status);
 
@@ -267,35 +269,55 @@ export function EnrollPanel({
                 </button>
               </>
             )}
-            {enrollment.status === 'done' && (
-              <div className={styles.wide}>
-                <Notice kind="success" title="Huella registrada">
-                  {student.name} ya puede marcar con su huella en los horarios a
-                  los que esté asignado. Se cargará en el lector antes del
-                  próximo horario.
-                </Notice>
-              </div>
-            )}
-            {enrollment.status === 'failed' && (
-              <div className={styles.wide}>
-                <Notice kind="error" title="El enrolamiento falló">
-                  {failureLabel(enrollment.failureReason)}
-                </Notice>
-              </div>
-            )}
-            {enrollment.status === 'expired' && (
-              <div className={styles.wide}>
-                <Notice kind="warning" title="Se acabó el tiempo">
-                  El lector no recibió la huella a tiempo. Puede intentarlo de
-                  nuevo.
-                </Notice>
-              </div>
-            )}
-            {enrollment.status === 'cancelled' && (
-              <div className={styles.wide}>
-                <Notice kind="info" title="Enrolamiento cancelado" />
-              </div>
-            )}
+            {enrollment.status === 'done' &&
+              closedNoticeId !== enrollment.id && (
+                <div className={styles.wide}>
+                  <Notice
+                    kind="success"
+                    title="Huella registrada"
+                    onDismiss={() => setClosedNoticeId(enrollment.id)}
+                  >
+                    {student.name} ya puede marcar con su huella en los horarios
+                    a los que esté asignado. Se cargará en el lector antes del
+                    próximo horario.
+                  </Notice>
+                </div>
+              )}
+            {enrollment.status === 'failed' &&
+              closedNoticeId !== enrollment.id && (
+                <div className={styles.wide}>
+                  <Notice
+                    kind="error"
+                    title="El enrolamiento falló"
+                    onDismiss={() => setClosedNoticeId(enrollment.id)}
+                  >
+                    {failureLabel(enrollment.failureReason)}
+                  </Notice>
+                </div>
+              )}
+            {enrollment.status === 'expired' &&
+              closedNoticeId !== enrollment.id && (
+                <div className={styles.wide}>
+                  <Notice
+                    kind="warning"
+                    title="Se acabó el tiempo"
+                    onDismiss={() => setClosedNoticeId(enrollment.id)}
+                  >
+                    El lector no recibió la huella a tiempo. Puede intentarlo de
+                    nuevo.
+                  </Notice>
+                </div>
+              )}
+            {enrollment.status === 'cancelled' &&
+              closedNoticeId !== enrollment.id && (
+                <div className={styles.wide}>
+                  <Notice
+                    kind="info"
+                    title="Enrolamiento cancelado"
+                    onDismiss={() => setClosedNoticeId(enrollment.id)}
+                  />
+                </div>
+              )}
             {isFinal(enrollment.status) && (
               <button
                 type="button"

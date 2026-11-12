@@ -177,7 +177,11 @@ function AddStudentsBody({
 
   return (
     <div className={styles.body}>
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <div className={styles.top}>
         <div className={styles.search}>
           <StudentSearch

@@ -110,7 +110,11 @@ function UserForm({
       noValidate
       aria-label={creating ? 'Nuevo usuario' : `Editar ${user.name}`}
     >
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <TextField
         label="Nombre"
         value={form.values.name}

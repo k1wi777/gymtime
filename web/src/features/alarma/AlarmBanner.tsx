@@ -5,6 +5,7 @@ import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import { useLiveEvents, useResync } from '@/live/live-provider';
 import { ALARM_REASON_LABELS } from '@/lib/labels';
+import { useBeepExpiry } from '@/lib/use-beep-expiry';
 import { useResource } from '@/lib/use-resource';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Icon } from '@/ui/icons';
@@ -40,6 +41,7 @@ export function AlarmBanner() {
     }
   });
   useResync(status.reload);
+  useBeepExpiry(status.data, status.reload);
 
   const turnOff = async (): Promise<void> => {
     setBusy(true);

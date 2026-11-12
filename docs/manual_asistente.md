@@ -44,8 +44,11 @@ La huella se carga en el lector antes del próximo horario del estudiante.
 
 ## Alarma y mensajes
 
+> **Avisos que se cierran solos:** las confirmaciones y advertencias del panel desaparecen tras unos segundos (más tiempo si el texto es largo) y una barrita en el borde muestra el tiempo restante. Se detienen mientras el puntero o el foco estén sobre el aviso, y siempre se pueden cerrar con «×». Los errores y los estados que siguen vigentes (lector sin conexión, sin conexión en vivo, cambio de contraseña obligatorio) no se cierran solos.
+
 - **Encender / Probar / Apagar alarma:** al apagar con gente adentro, las sesiones abiertas se cierran como «no registrada» (sin hora de salida); el panel pide confirmación.
 - Cuando la alarma suena aparece un aviso rojo en todas las pantallas con el motivo y cuántas personas siguen dentro.
+- **Probar alarma:** el aviso rojo se muestra unos 5 segundos (lo que dura el pitido) y se oculta solo en todas las pestañas; la tarjeta de Alarma vuelve a «Apagada».
 - **Mensaje en pantalla:** hasta dos líneas de 16 caracteres, sin tildes especiales. Si el lector está sin conexión, el mensaje queda en cola y se muestra al reconectarse.
 - «Órdenes recientes» muestra si el lector confirmó cada orden.
 

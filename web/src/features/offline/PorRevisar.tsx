@@ -244,7 +244,11 @@ function ResolveDialog({
             {formatDateTime(item.ts)}
           </p>
           <p className="muted">{reviewReasonLabel(item.reviewReason)}</p>
-          {failure && <Notice kind="error">{failure}</Notice>}
+          {failure && (
+            <Notice kind="error" onDismiss={() => setFailure(null)}>
+              {failure}
+            </Notice>
+          )}
           <SelectField
             label="Acción"
             value={action}

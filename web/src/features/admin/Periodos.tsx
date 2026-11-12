@@ -100,7 +100,11 @@ function PeriodForm({
         submitLabel === 'Crear periodo' ? 'Nuevo periodo' : 'Editar periodo'
       }
     >
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <TextField
         label="Nombre"
         value={form.values.name}
@@ -176,7 +180,11 @@ function ExceptionForm({
             : 'Un día o un rango de fechas dentro de este periodo.'}
         </p>
       </div>
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <DateRangePicker
         fromLabel="Desde"
         toLabel="Hasta"

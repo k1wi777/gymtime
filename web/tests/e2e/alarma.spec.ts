@@ -37,6 +37,28 @@ test.describe('alarma y mensajes (R7)', () => {
     await expect(page.getByText(/cerr/i).first()).toBeVisible();
   });
 
+  test('the test beep shows the banner for a few seconds, hides it by itself and the card goes off (R17)', async ({
+    page,
+    request,
+    world,
+  }) => {
+    void world;
+    await loginAndWait(page);
+    await page.getByRole('link', { name: 'Alarma y mensajes' }).click();
+    await page.getByRole('button', { name: 'Probar alarma' }).click();
+    const banner = page
+      .getByRole('alert')
+      .filter({ hasText: 'ALARMA SONANDO' });
+    await expect(banner).toBeVisible();
+    // The server clock is manual in this world: let the 5 s beep run out.
+    await control(request, 'clock', { time: '10:00:30' });
+    await expect(banner).toBeHidden({ timeout: 12_000 });
+    await expect(
+      page.getByRole('button', { name: 'Encender alarma' }),
+    ).toBeEnabled();
+    await expect(page.getByText('Apagada').first()).toBeVisible();
+  });
+
   test('sends a message to the reader and lists the order', async ({
     page,
     world,

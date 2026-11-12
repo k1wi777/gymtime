@@ -16,6 +16,7 @@ import { Enrolar } from '@/features/enrolar/Enrolar';
 import { Horarios } from '@/features/horarios/Horarios';
 import { Ordenes } from '@/features/ordenes/Ordenes';
 import { Registro } from '@/features/registro/Registro';
+import { useBeepExpiry } from '@/lib/use-beep-expiry';
 import { LiveProvider } from '@/live/live-provider';
 import { nav } from './navigation-mock';
 import {
@@ -1062,5 +1063,183 @@ describe('enroll preselection (R18)', () => {
     expect(
       screen.queryByRole('button', { name: 'Cambiar estudiante' }),
     ).toBeNull();
+  });
+});
+
+describe('self-closing notices on the screens (R12, R19-R21)', () => {
+  afterEach(() => vi.useRealTimers());
+  const later = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+
+  it('Ordenes: the order note closes with the button and by itself', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /alarm/status': alarmOff,
+      'POST /alarm/test': alarmOff,
+    });
+    app(<Ordenes />);
+    const text = 'Orden de prueba enviada: sonará un pitido corto.';
+    await user.click(
+      await screen.findByRole('button', { name: 'Probar alarma' }),
+    );
+    await screen.findByText(text);
+    await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+    expect(screen.queryByText(text)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Probar alarma' }));
+    await screen.findByText(text);
+    later(4_900);
+    expect(screen.getByText(text)).toBeTruthy();
+    later(200);
+    expect(screen.queryByText(text)).toBeNull();
+  });
+
+  it('Ahora: the refresh warning closes and a new failure shows it again', async () => {
+    const user = userEvent.setup();
+    const fake = installFakeApi({
+      'GET /auth/me': account(),
+      'GET /panel/now': snapshot(),
+    });
+    app(<Ahora />);
+    await screen.findByText('Grupo A');
+    await open();
+    fake.route('GET /panel/now', () =>
+      json({ statusCode: 500, message: 'x' }, 500),
+    );
+    (await liveSource()).hiccup();
+    (await liveSource()).open();
+    await screen.findByText('No se pudo actualizar');
+    await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+    expect(screen.queryByText('No se pudo actualizar')).toBeNull();
+    expect(screen.getByText('Grupo A')).toBeTruthy();
+
+    await emit('attendance', {});
+    expect(await screen.findByText('No se pudo actualizar')).toBeTruthy();
+  });
+
+  it('EnrollPanel: the final notice closes without losing the next step', async () => {
+    const user = userEvent.setup();
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /students': [
+        {
+          id: 'a',
+          name: 'Ana Gómez',
+          document: '1',
+          active: true,
+          consented: true,
+          displayName: 'ANA',
+          email: null,
+          phone: null,
+          program: null,
+        },
+      ],
+      'GET /panel/fingerprints': { studentIds: [] },
+      'POST /students/a/enrollments': () =>
+        json(
+          {
+            id: 'e1',
+            studentId: 'a',
+            deviceId: 'esp32',
+            status: 'in_progress',
+            step: null,
+            failureReason: null,
+            expiresAt: '2026-11-02T15:30:00.000Z',
+          },
+          201,
+        ),
+    });
+    app(<Enrolar />);
+    await screen.findByText('Ana Gómez');
+    await user.click(
+      screen.getByRole('button', { name: 'Elegir a Ana Gómez' }),
+    );
+    await open();
+    await user.click(
+      screen.getByRole('button', { name: 'Iniciar enrolamiento' }),
+    );
+    await screen.findByText('Esperando al lector…');
+    await emit('enrollment', {
+      enrollmentId: 'e1',
+      studentId: 'a',
+      deviceId: 'esp32',
+      status: 'expired',
+      step: null,
+      failureReason: null,
+    });
+    await screen.findByText('Se acabó el tiempo', { selector: 'strong' });
+    await user.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+    expect(
+      screen.queryByText('Se acabó el tiempo', { selector: 'strong' }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Intentar de nuevo' }),
+    ).toBeTruthy();
+  });
+});
+
+describe('alarm beep end (R15, R16)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('reloads the status when the known beep time runs out', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-02T15:20:00.000Z'));
+    const reload = vi.fn();
+    function Probe() {
+      useBeepExpiry(
+        { on: true, durationSec: 5, startedAt: '2026-11-02T15:20:00.000Z' },
+        reload,
+      );
+      return null;
+    }
+    render(<Probe />);
+    vi.advanceTimersByTime(5_300);
+    expect(reload).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing for a continuous alarm or when it is off', () => {
+    vi.useFakeTimers();
+    const reload = vi.fn();
+    function Probe() {
+      useBeepExpiry(
+        { on: true, durationSec: null, startedAt: '2026-11-02T15:20:00.000Z' },
+        reload,
+      );
+      useBeepExpiry({ on: false, durationSec: 5, startedAt: null }, reload);
+      return null;
+    }
+    render(<Probe />);
+    vi.advanceTimersByTime(600_000);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('banner hides itself on the expiry event without a «Alarma apagada» notice', async () => {
+    const fake = installFakeApi({
+      'GET /auth/me': account(),
+      'GET /alarm/status': {
+        ...alarmOff,
+        on: true,
+        reason: 'TEST',
+        durationSec: 5,
+        startedAt: new Date().toISOString(),
+      },
+    });
+    app(<AlarmBanner />);
+    expect(await screen.findByText('ALARMA SONANDO')).toBeTruthy();
+    await open();
+    fake.route('GET /alarm/status', alarmOff);
+    await emit('alarm', {
+      on: false,
+      reason: 'CLEARED',
+      closedBy: null,
+      sessionsClosed: 0,
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('ALARMA SONANDO')).toBeNull(),
+    );
+    expect(screen.queryByText(/Alarma apagada/)).toBeNull();
   });
 });

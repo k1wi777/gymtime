@@ -530,3 +530,64 @@ describe('AlarmService events (R11, R13)', () => {
     ]);
   });
 });
+
+describe('AlarmService beep expiry (R13, R14)', () => {
+  function collect(f: ReturnType<typeof buildAlarmFixture>) {
+    const received: { on: unknown; closedBy: unknown }[] = [];
+    f.systemEvents.events.subscribe((event) => {
+      if (event.type === 'alarm') {
+        received.push({ on: event.data.on, closedBy: event.data.closedBy });
+      }
+    });
+    return received;
+  }
+
+  it('emits alarm off once when the test beep ends, without a new order', async () => {
+    const f = buildAlarmFixture(bogota('09:00'));
+    await f.markOnline();
+    const received = collect(f);
+    await f.service.turnOn('TEST');
+    await vi.waitFor(() => expect(f.alarms()).toHaveLength(1));
+
+    f.setNow(bogota('09:00:04'));
+    await f.service.tick(f.clock.now());
+    expect(received).toEqual([{ on: true, closedBy: null }]);
+
+    f.setNow(bogota('09:00:06'));
+    await f.service.tick(f.clock.now());
+    await f.service.tick(f.clock.now());
+
+    expect(received).toEqual([
+      { on: true, closedBy: null },
+      { on: false, closedBy: null },
+    ]);
+    expect((await f.service.status()).on).toBe(false);
+    expect(f.alarms()).toHaveLength(1);
+  });
+
+  it('also emits it when the end-of-occurrence beep ends', async () => {
+    const { f } = await withSchedule(async (f) => {
+      await f.weekly('A', '10:00', '11:00');
+      return { instanceId: '' };
+    });
+    const [instance] = await f.instancesOf();
+    f.setNow(bogota('11:00'));
+    await f.service.onInstanceEnded(instance, f.clock.now());
+    const received = collect(f);
+
+    f.setNow(bogota('11:00:06'));
+    await f.service.tick(f.clock.now());
+
+    expect(received).toEqual([{ on: false, closedBy: null }]);
+    expect(f.alarms()).toHaveLength(1);
+  });
+
+  it('emits nothing when the alarm was already off', async () => {
+    const f = buildAlarmFixture(bogota('09:00'));
+    await f.markOnline();
+    const received = collect(f);
+    f.setNow(bogota('09:10'));
+    await f.service.tick(f.clock.now());
+    expect(received).toEqual([]);
+  });
+});

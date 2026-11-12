@@ -5,6 +5,36 @@
   padding: 0.85rem 1.1rem;
   border-radius: var(--radius);
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Time left before the notice closes itself; decorative. */
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.45;
+  transform-origin: left;
+  animation: notice-countdown linear forwards;
+}
+
+@keyframes notice-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress {
+    display: none;
+  }
 }
 
 .body {

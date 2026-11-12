@@ -89,6 +89,7 @@ export function ImportWizard({
   const [mapping, setMapping] = useState<Mapping>({});
   const [result, setResult] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [doneClosed, setDoneClosed] = useState<ImportResult | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   const run = async (action: () => Promise<void>) => {
@@ -169,7 +170,11 @@ export function ImportWizard({
           </li>
         ))}
       </ol>
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
 
       {step === 0 && (
         <div className="stack">
@@ -288,11 +293,17 @@ export function ImportWizard({
 
       {step === 3 && result && (
         <div className="stack">
-          <Notice kind="success" title="Importación terminada">
-            Se crearon {result.created} de {result.total} filas.
-            {result.invalidRows.length > 0 &&
-              ` ${result.invalidRows.length} filas no se importaron.`}
-          </Notice>
+          {doneClosed !== result && (
+            <Notice
+              kind="success"
+              title="Importación terminada"
+              onDismiss={() => setDoneClosed(result)}
+            >
+              Se crearon {result.created} de {result.total} filas.
+              {result.invalidRows.length > 0 &&
+                ` ${result.invalidRows.length} filas no se importaron.`}
+            </Notice>
+          )}
           {result.invalidRows.length > 0 && (
             <RowErrors rows={result.invalidRows} fields={fields} />
           )}

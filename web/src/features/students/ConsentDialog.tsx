@@ -73,7 +73,11 @@ function ConsentDialogBody({ student, onClose, onRecorded }: Props) {
       onConfirm={() => void record()}
       onCancel={onClose}
     >
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       {text && (
         <>
           <p className={styles.text}>{text.text}</p>

@@ -1,4 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChangePasswordPage from '@/app/cambiar-contrasena/page';
 import LoginPage from '@/app/login/page';
@@ -120,7 +127,7 @@ describe('login (R9)', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe(
-      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.',
+      'Usuario o contraseña incorrectos, o la cuenta está bloqueada.×',
     );
     expect(
       (screen.getByLabelText('Contraseña') as HTMLInputElement).value,
@@ -140,6 +147,26 @@ describe('login (R9)', () => {
     nav.search = 'aviso=<script>alert(1)</script>';
     wrap(<LoginPage />);
     expect(screen.queryByText(/script/)).toBeNull();
+  });
+
+  it('lets the session notice be closed, by the button and by itself (R19)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      installFakeApi();
+      nav.search = 'aviso=cerrada';
+      wrap(<LoginPage />);
+      const text = 'Cerró sesión correctamente.';
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+      expect(screen.queryByText(text)).toBeNull();
+      cleanup();
+
+      wrap(<LoginPage />);
+      expect(screen.getByText(text)).toBeTruthy();
+      act(() => void vi.advanceTimersByTime(8_100));
+      expect(screen.queryByText(text)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('stores nothing in the browser (R9)', async () => {
@@ -190,6 +217,12 @@ describe('password change (R9)', () => {
     });
     wrap(<ChangePasswordPage />);
     expect(await screen.findByText(/debe elegir una nueva/)).toBeTruthy();
+    // A persistent state: it stays while the change is pending (R11).
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    act(() => void vi.advanceTimersByTime(120_000));
+    vi.useRealTimers();
+    expect(screen.getByText(/debe elegir una nueva/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Cerrar aviso' })).toBeNull();
 
     await user.type(screen.getByLabelText('Contraseña actual'), 'temporal-123');
     await user.type(screen.getByLabelText('Nueva contraseña'), 'corta');
@@ -252,7 +285,7 @@ describe('password change (R9)', () => {
       screen.getByRole('button', { name: 'Guardar contraseña' }),
     );
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'La contraseña actual no es correcta.',
+      'La contraseña actual no es correcta.×',
     );
   });
 });

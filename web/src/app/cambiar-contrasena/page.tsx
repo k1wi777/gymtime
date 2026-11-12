@@ -60,12 +60,16 @@ export default function ChangePasswordPage() {
       >
         <h1>Cambiar contraseña</h1>
         {account.mustChangePassword && (
-          <Notice kind="warning">
+          <Notice kind="warning" autoClose={false}>
             Es su primer ingreso o un administrador restableció su contraseña:
             debe elegir una nueva para continuar.
           </Notice>
         )}
-        {failure && <Notice kind="error">{failure}</Notice>}
+        {failure && (
+          <Notice kind="error" onDismiss={() => setFailure(null)}>
+            {failure}
+          </Notice>
+        )}
         <TextField
           label="Contraseña actual"
           type="password"

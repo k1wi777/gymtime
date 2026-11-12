@@ -133,7 +133,11 @@ function ScheduleForm({
       noValidate
       aria-label={schedule ? `Editar ${schedule.name}` : 'Nuevo horario'}
     >
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <TextField
         label="Nombre"
         value={form.values.name}
@@ -227,7 +231,11 @@ function AssignPanel({
 
   return (
     <div className={view.assign}>
-      {failure && <Notice kind="error">{failure}</Notice>}
+      {failure && (
+        <Notice kind="error" onDismiss={() => setFailure(null)}>
+          {failure}
+        </Notice>
+      )}
       <div className={view.assignHead}>
         <span className={view.assignCount}>
           <strong>{count}</strong>{' '}
