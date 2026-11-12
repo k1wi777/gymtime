@@ -34,7 +34,8 @@ interface Props {
   open: boolean;
   title: string;
   onClose: () => void;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'w560' | 'w600';
+  description?: string;
   children: ReactNode;
 }
 
@@ -43,7 +44,14 @@ interface Props {
  * «Cancelar» and the X all go through `onClose` of the form content, here
  * guarded by a confirmation when the content reports it is dirty.
  */
-export function FormModal({ open, title, onClose, size, children }: Props) {
+export function FormModal({
+  open,
+  title,
+  onClose,
+  size,
+  description,
+  children,
+}: Props) {
   const [state, setState] = useState({ dirty: false, busy: false });
   const [asking, setAsking] = useState(false);
   const guard = useMemo<ModalGuard>(() => ({ report: setState }), []);
@@ -59,6 +67,7 @@ export function FormModal({ open, title, onClose, size, children }: Props) {
       open={open}
       title={title}
       size={size}
+      {...(description ? { description } : {})}
       busy={state.busy}
       onClose={request}
     >

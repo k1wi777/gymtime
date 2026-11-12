@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import type {
@@ -24,14 +25,15 @@ import { Badge } from '@/ui/Badge';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { DatePicker } from '@/ui/DatePicker';
 import { DayFilter } from '@/ui/DayFilter';
-import { FormModal, useModalGuard } from '@/ui/FormModal';
-import { useInModal } from '@/ui/Modal';
-import { ScheduleSelect } from '@/ui/ScheduleSelect';
+import { FormModal, useCloseRequest } from '@/ui/FormModal';
+import { useInModal, useModalFooter } from '@/ui/Modal';
+import { Avatar } from '@/ui/Avatar';
 import { FormActions, SelectField, TextField, useForm } from '@/ui/Form';
 import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
+import { AddStudentsModal } from './AddStudentsModal';
 import { RowMenu } from './RowMenu';
 import { RegenerationNotice } from './RegenerationNotice';
 import styles from './Admin.module.css';
@@ -69,21 +71,6 @@ export function validateSchedule(
     errors.end = 'La hora de fin debe ser posterior a la de inicio.';
   }
   return errors;
-}
-
-/** Document numbers pasted or read from a text file: one per line, comma or semicolon. */
-export function parseDocuments(text: string): string[] {
-  const seen = new Set<string>();
-  for (const part of text.split(/[\s,;]+/)) {
-    const document = part.trim();
-    if (document) seen.add(document);
-  }
-  return [...seen];
-}
-
-/** `validFrom` for the API: nothing for "now", midnight Bogota for a later day. */
-export function validFromOf(day: string, today = bogotaDay(new Date())) {
-  return day && day > today ? `${day}T00:00:00-05:00` : undefined;
 }
 
 function ScheduleForm({
@@ -199,38 +186,28 @@ function ScheduleForm({
 
 function AssignPanel({
   schedule,
-  others,
   students,
   onChanged,
 }: {
   schedule: Schedule;
-  others: readonly Schedule[];
   students: readonly Student[];
   onChanged: () => void;
 }) {
-  const [studentId, setStudentId] = useState('');
-  const [validFrom, setValidFrom] = useState('');
-  const [bulk, setBulk] = useState('');
-  const [copyFrom, setCopyFrom] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [bulkResult, setBulkResult] = useState<BulkAssignResult | null>(null);
+  const [adding, setAdding] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Pasted documents not yet assigned are the only thing worth asking about.
-  useModalGuard(bulk.trim() !== '');
+  const footer = useModalFooter();
+  const requestClose = useCloseRequest();
 
-  const assignedIds = useMemo(
-    () => new Set(schedule.students.map((s) => s.id)),
-    [schedule.students],
-  );
-  const candidates = students.filter((s) => s.active && !assignedIds.has(s.id));
-
-  const run = async (action: () => Promise<void>) => {
+  const remove = async (student: Schedule['students'][number]) => {
     setBusy(true);
     setFailure(null);
-    setMessage(null);
     try {
-      await action();
+      await call(
+        getApi().client.DELETE('/schedules/{id}/students/{studentId}', {
+          params: { path: { id: schedule.id, studentId: student.id } },
+        }),
+      );
       onChanged();
     } catch (error) {
       setFailure(describeError(error));
@@ -239,42 +216,51 @@ function AssignPanel({
     }
   };
 
-  const readFile = async (file: File | undefined) => {
-    if (file) setBulk(await file.text());
-  };
+  const close = (
+    <div className="row">
+      <button type="button" className="btn" onClick={requestClose ?? undefined}>
+        Cerrar
+      </button>
+    </div>
+  );
+  const count = schedule.students.length;
 
   return (
-    <div className="stack">
+    <div className={view.assign}>
       {failure && <Notice kind="error">{failure}</Notice>}
-      {message && <Notice kind="success">{message}</Notice>}
-      <h3>Estudiantes asignados ({schedule.students.length})</h3>
-      {schedule.students.length === 0 ? (
-        <p className="muted">Nadie asignado todavía.</p>
+      <div className={view.assignHead}>
+        <span className={view.assignCount}>
+          <strong>{count}</strong>{' '}
+          {count === 1 ? 'estudiante asignado' : 'estudiantes asignados'}
+        </span>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setAdding(true)}
+        >
+          <Icon name="mas" size={15} strokeWidth={2.2} />
+          Agregar estudiantes
+        </button>
+      </div>
+      {count === 0 ? (
+        <p className={view.assignEmpty}>Nadie asignado todavía.</p>
       ) : (
-        <ul className={styles.chips}>
+        <ul className={view.assignList}>
           {schedule.students.map((s) => (
-            <li key={s.id}>
-              {s.name} <span className="muted">{s.document}</span>{' '}
-              {!s.active && <Badge tone="warning">De baja</Badge>}{' '}
+            <li key={s.id} className={view.assignRow}>
+              <Avatar name={s.name} id={s.id} size={34} fontSize={12} />
+              <div className={view.assignWho}>
+                <div className={view.assignName}>
+                  {s.name} {!s.active && <Badge tone="warning">De baja</Badge>}
+                </div>
+                <div className={view.assignDoc}>{s.document}</div>
+              </div>
               <button
                 type="button"
-                className="btn btn-s"
+                className={`btn ${view.remove}`}
                 aria-label={`Quitar a ${s.name}`}
                 disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    await call(
-                      getApi().client.DELETE(
-                        '/schedules/{id}/students/{studentId}',
-                        {
-                          params: {
-                            path: { id: schedule.id, studentId: s.id },
-                          },
-                        },
-                      ),
-                    );
-                  })
-                }
+                onClick={() => void remove(s)}
               >
                 Quitar
               </button>
@@ -282,134 +268,14 @@ function AssignPanel({
           ))}
         </ul>
       )}
-
-      <div className="row" style={{ alignItems: 'flex-end' }}>
-        <SelectField
-          label="Asignar un estudiante"
-          placeholder="Elija un estudiante"
-          value={studentId}
-          onChange={setStudentId}
-          options={candidates.map((s) => ({
-            value: s.id,
-            label: `${s.name} · ${s.document}`,
-          }))}
-        />
-        <DatePicker
-          label="Desde (opcional)"
-          value={validFrom}
-          onChange={setValidFrom}
-          clearable
-          help="Vacío = desde ahora"
-        />
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy || studentId === ''}
-          onClick={() =>
-            void run(async () => {
-              const from = validFromOf(validFrom);
-              await call(
-                getApi().client.PUT('/schedules/{id}/students/{studentId}', {
-                  params: { path: { id: schedule.id, studentId } },
-                  body: from ? { validFrom: from } : {},
-                }),
-              );
-              setStudentId('');
-              setMessage('Estudiante asignado.');
-            })
-          }
-        >
-          Asignar
-        </button>
-      </div>
-
-      <div className="stack">
-        <label htmlFor={`bulk-${schedule.id}`}>
-          <strong>Asignar varios por documento</strong>
-        </label>
-        <textarea
-          id={`bulk-${schedule.id}`}
-          rows={4}
-          value={bulk}
-          onChange={(event) => setBulk(event.target.value)}
-          placeholder="Un documento por línea (o separados por coma)"
-          className={styles.textarea}
-        />
-        <div className="row">
-          <label>
-            <span className="visually-hidden">Cargar archivo de texto</span>
-            <input
-              type="file"
-              accept=".txt,.csv,text/plain"
-              onChange={(event) => void readFile(event.target.files?.[0])}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn"
-            disabled={busy || parseDocuments(bulk).length === 0}
-            onClick={() =>
-              void run(async () => {
-                const result = await call(
-                  getApi().client.POST('/schedules/{id}/students/bulk', {
-                    params: { path: { id: schedule.id } },
-                    body: { documents: parseDocuments(bulk) },
-                  }),
-                );
-                setBulkResult(result);
-                setBulk('');
-              })
-            }
-          >
-            Asignar lista
-          </button>
-        </div>
-        {bulkResult && (
-          <Notice kind="info" title="Resultado de la asignación">
-            <ul>
-              <li>Asignados: {bulkResult.assigned.length}</li>
-              <li>Ya estaban asignados: {bulkResult.alreadyAssigned.length}</li>
-              <li>
-                De baja (no se asignaron):{' '}
-                {bulkResult.inactive.map((s) => s.document).join(', ') || '0'}
-              </li>
-              <li>No existen: {bulkResult.notFound.join(', ') || '0'}</li>
-            </ul>
-          </Notice>
-        )}
-      </div>
-
-      <div className="row" style={{ alignItems: 'flex-end' }}>
-        <ScheduleSelect
-          label="Copiar estudiantes de otro horario"
-          placeholder="Elija un horario"
-          schedules={others}
-          exclude={schedule.id}
-          value={copyFrom}
-          onChange={setCopyFrom}
-        />
-        <button
-          type="button"
-          className="btn"
-          disabled={busy || copyFrom === ''}
-          onClick={() =>
-            void run(async () => {
-              const result = await call(
-                getApi().client.POST('/schedules/{id}/students/copy', {
-                  params: { path: { id: schedule.id } },
-                  body: { fromScheduleId: copyFrom },
-                }),
-              );
-              setMessage(
-                `Copiados: ${result.assigned}. Ya asignados: ${result.alreadyAssigned}. De baja omitidos: ${result.skippedInactive}.`,
-              );
-              setCopyFrom('');
-            })
-          }
-        >
-          Copiar
-        </button>
-      </div>
+      <AddStudentsModal
+        open={adding}
+        schedule={schedule}
+        students={students}
+        onClose={() => setAdding(false)}
+        onAdded={onChanged}
+      />
+      {footer ? createPortal(close, footer) : close}
     </div>
   );
 }
@@ -715,14 +581,18 @@ export function HorariosAdmin() {
             </FormModal>
             <FormModal
               open={assigning !== undefined}
-              title={`Estudiantes de ${assigning?.name ?? ''}`}
-              size="lg"
+              title="Estudiantes del horario"
+              description={
+                assigning
+                  ? `${assigning.name} · Quién puede entrar en este horario.`
+                  : ''
+              }
+              size="w560"
               onClose={() => setStudentsOf(null)}
             >
               {assigning && (
                 <AssignPanel
                   schedule={assigning}
-                  others={mine}
                   students={students.data ?? []}
                   onChanged={schedules.reload}
                 />

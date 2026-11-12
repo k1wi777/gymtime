@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import type { Student } from '@/api/types';
 import { useResync } from '@/live/live-provider';
@@ -28,6 +29,17 @@ export function Enrolar() {
     [],
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // `?estudiante=<id>` (from the card in «Ahora») chooses the student once;
+  // an unknown or inactive id is ignored.
+  const preselect = useSearchParams().get('estudiante');
+  const applied = useRef(false);
+  useEffect(() => {
+    if (applied.current || !preselect || !students.data) return;
+    applied.current = true;
+    if (students.data.some((s) => s.id === preselect)) {
+      setSelectedId(preselect);
+    }
+  }, [preselect, students.data]);
   const [running, setRunning] = useState(false);
   useResync(() => {
     students.reload();

@@ -12,26 +12,19 @@ test.describe('registro manual (R4)', () => {
       page.getByRole('heading', { name: 'Registro manual' }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /Registrar entrada/ }).click();
+    // Nothing can be sent until a student is chosen.
     await expect(
-      page
-        .getByText('Elija a un estudiante.')
-        .or(page.getByRole('alert').filter({ hasText: /estudiante/i }))
-        .first(),
-    ).toBeVisible();
-    await expect(
-      page
-        .getByText(/motivo/i)
-        .and(page.getByRole('alert'))
-        .first(),
-    ).toBeVisible();
+      page.getByRole('button', { name: 'Registrar entrada', exact: true }),
+    ).toBeDisabled();
+    await expect(page.getByText('Elija primero un estudiante.')).toBeVisible();
 
-    await page.getByPlaceholder('Buscar por nombre o documento').fill('1002');
+    await page.getByRole('combobox').fill('1002');
+    await page.getByRole('option', { name: /Beto Ruiz/ }).click();
+    await expect(page.getByText('Estudiante seleccionado')).toBeVisible();
+    await page.getByLabel(/Motivo/).fill('El lector no reconoce la huella');
     await page
-      .getByLabel('Estudiante: resultados')
-      .selectOption({ label: 'Beto Ruiz · 1002' });
-    await page.getByLabel('Motivo').fill('El lector no reconoce la huella');
-    await page.getByRole('button', { name: /Registrar entrada/ }).click();
+      .getByRole('button', { name: 'Registrar entrada de Beto' })
+      .click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Beto Ruiz')).toBeVisible();

@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, loginAndWait, pickDay, popover, test } from './support';
+import { expect, loginAndWait, pickDay, test } from './support';
 
 const SHOTS = process.env.E2E_SHOTS;
 const shot = async (page: Page, name: string) => {
@@ -148,7 +148,7 @@ test.describe('modales y filtro por día', () => {
     await expect(opener).toBeFocused();
   });
 
-  test('un selector abierto en la modal queda por encima y Escape lo cierra primero', async ({
+  test('la modal de agregar queda sobre la de estudiantes y Escape cierra primero la lista, luego cada modal', async ({
     page,
     world,
   }) => {
@@ -157,76 +157,42 @@ test.describe('modales y filtro por día', () => {
     await createPeriod(page);
     await openMenu(page, 'Gestión de horarios');
     await createSchedule(page, 'Lunes mañana', '1', '06:00', '07:00');
-    await createSchedule(page, 'Lunes tarde', '1', '18:00', '19:00');
 
-    await page.setViewportSize({ width: 1100, height: 430 });
+    const pageScroll = await page.evaluate(() => window.scrollY);
     const studentsButton = page
       .getByRole('region', { name: 'Horario Lunes mañana' })
       .getByRole('button', { name: 'Estudiantes' });
-    await studentsButton.scrollIntoViewIfNeeded();
-    const pageScroll = await page.evaluate(() => window.scrollY);
     await studentsButton.click();
-    const modal = page.getByRole('dialog', {
-      name: 'Estudiantes de Lunes mañana',
-    });
-    await expect(modal).toBeVisible();
-    const body = modal.locator('xpath=./div[1]');
-
-    // The modal body scrolls inside; the page behind does not.
-    const scrolls = await body.evaluate((node) => ({
-      overflows: node.scrollHeight > node.clientHeight,
-      overflowY: getComputedStyle(node).overflowY,
-    }));
-    expect(scrolls).toEqual({ overflows: true, overflowY: 'auto' });
-    await body.evaluate((node) => {
-      node.scrollTop = 120;
-    });
-    const kept = await body.evaluate((node) => node.scrollTop);
-    expect(kept).toBeGreaterThan(0);
-    expect(await page.evaluate(() => window.scrollY)).toBe(pageScroll);
-
-    // Date popover: above the modal, whole in the viewport, Escape closes it only.
-    await modal.getByLabel('Desde (opcional)').click();
-    const panel = popover(page);
-    await expect(panel).toBeVisible();
-    const box = (await panel.boundingBox())!;
-    const size = page.viewportSize()!;
-    expect(box.x).toBeGreaterThanOrEqual(0);
-    expect(box.y).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(size.width);
-    expect(box.y + box.height).toBeLessThanOrEqual(size.height);
-    const onTop = await page.evaluate(
-      ([x, y]) =>
-        !!document
-          .elementFromPoint(x!, y!)
-          ?.closest('body > [role="dialog"][data-side]'),
-      [box.x + box.width / 2, box.y + 20],
-    );
-    expect(onTop).toBe(true);
-    await shot(page, 'popover-fecha-sobre-modal');
-    await page.keyboard.press('Escape');
-    await expect(panel).toHaveCount(0);
-    await expect(modal).toBeVisible();
-    await expect(modal.getByLabel('Desde (opcional)')).toBeFocused();
-    expect(await body.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
-
-    // Schedule popover: a click inside the modal (outside it) closes only it.
-    await modal.getByLabel('Copiar estudiantes de otro horario').click();
-    const list = popover(page);
+    const list = page.getByRole('dialog', { name: 'Estudiantes del horario' });
     await expect(list).toBeVisible();
-    await shot(page, 'popover-horario-sobre-modal');
-    const listBox = (await list.boundingBox())!;
-    expect(listBox.y + listBox.height).toBeLessThanOrEqual(size.height);
-    await modal
-      .getByRole('heading', { name: 'Estudiantes de Lunes mañana' })
-      .click();
-    await expect(list).toHaveCount(0);
-    await expect(modal).toBeVisible();
-    expect(await body.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    await expect(
+      list.getByRole('button', { name: 'Cerrar', exact: true }).last(),
+    ).toBeVisible();
+    await expect(list.getByText('Asignar por documento')).toHaveCount(0);
+    await expect(list.getByText('Copiar estudiantes')).toHaveCount(0);
+    await shot(page, 'modal-estudiantes-del-horario');
 
-    // A second Escape closes the modal and the focus returns to the button.
+    const addButton = list.getByRole('button', { name: 'Agregar estudiantes' });
+    await addButton.click();
+    const add = page.getByRole('dialog', { name: 'Agregar estudiantes' });
+    await expect(add).toBeVisible();
+    expect(await focusInside(add)).toBe(true);
+    await expect(
+      add.getByRole('button', { name: 'Cargar desde archivo' }),
+    ).toBeVisible();
+
+    // Escape closes the open result list first, then the modal.
+    await add.getByRole('combobox').fill('a');
+    await shot(page, 'modal-agregar-estudiantes');
     await page.keyboard.press('Escape');
-    await expect(modal).toHaveCount(0);
+    await expect(add).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(add).toHaveCount(0);
+    await expect(addButton).toBeFocused();
+
+    // A second Escape closes the list modal and the focus returns to the card.
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
     await expect(studentsButton).toBeFocused();
     expect(await page.evaluate(() => window.scrollY)).toBe(pageScroll);
   });

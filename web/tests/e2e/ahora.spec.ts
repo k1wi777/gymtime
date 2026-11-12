@@ -39,6 +39,35 @@ test.describe('«Ahora» en vivo (R1, R2, R3)', () => {
     ).toBe(true);
   });
 
+  test('the student card opens from a row and leads to «Enrolar huella» with the student chosen', async ({
+    page,
+    world,
+  }) => {
+    void world;
+    await loginAndWait(page);
+    // Ana already has a fingerprint, so the card offers to register it again.
+    const row = region(page, 'Faltan').getByRole('button', {
+      name: 'Ver ficha de Ana Gómez',
+    });
+    await row.click();
+    const sheet = page.getByRole('dialog', { name: 'Ficha de Ana Gómez' });
+    await expect(sheet.getByText('Aún no llega')).toBeVisible();
+    await expect(sheet.getByText('Registrada')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(row).toBeFocused();
+
+    await row.click();
+    await sheet
+      .getByRole('button', { name: 'Volver a registrar huella' })
+      .click();
+    await expect(page).toHaveURL(/\/enrolar\?estudiante=/);
+    await expect(
+      page.getByRole('button', { name: 'Cambiar estudiante' }),
+    ).toBeVisible();
+    await expect(page.getByText(/ya tiene una huella/)).toBeVisible();
+  });
+
   test('shows the schedule times in Bogotá even if the browser is elsewhere', async ({
     page,
     world,

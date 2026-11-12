@@ -35,6 +35,15 @@
   width: min(44rem, 100%);
 }
 
+/* Widths of the «Modales» board: schedule students (560) and add students (600). */
+.w560 {
+  width: min(560px, 100%);
+}
+
+.w600 {
+  width: min(600px, 100%);
+}
+
 .head {
   flex: none;
   display: flex;
@@ -43,6 +52,16 @@
   gap: 1rem;
   padding: 1.1rem 1.5rem;
   border-bottom: 1px solid var(--border);
+}
+
+.heading {
+  min-width: 0;
+}
+
+.description {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .title {
@@ -98,7 +117,9 @@
   }
 
   .panel,
-  .lg {
+  .lg,
+  .w560,
+  .w600 {
     width: 100%;
     height: 100dvh;
     max-height: none;
@@ -109,4 +130,45 @@
 
 .footer > * {
   justify-content: flex-end;
+}
+
+/* Side sheet: full height on the right, 400px (the «Ficha» board). */
+.sideBackdrop {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+  background: rgba(20, 35, 22, 0.45);
+}
+
+.side {
+  width: min(400px, 100%);
+  max-height: none;
+  height: 100dvh;
+  border-radius: 0;
+  border: 0;
+  box-shadow: -24px 0 50px -24px rgba(10, 25, 12, 0.45);
+}
+
+.side .head {
+  border-bottom: 0;
+  padding: 20px 24px 0;
+}
+
+.side .title {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.side .body {
+  padding: 0;
+  gap: 0;
+}
+
+.side .footer {
+  border-top: 0;
+  padding: 0;
 }

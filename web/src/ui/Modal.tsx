@@ -66,7 +66,13 @@ interface Props {
   onClose: () => void;
   /** Saving: nothing closes the modal meanwhile. */
   busy?: boolean;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'w560' | 'w600';
+  /** `side`: a sheet anchored to the right edge (the student's card). */
+  placement?: 'center' | 'side';
+  /** Line under the title (for example the schedule the modal is about). */
+  description?: string;
+  /** Accessible name when the visible title is only a caption. */
+  ariaLabel?: string;
   children: ReactNode;
 }
 
@@ -85,6 +91,9 @@ function ModalBody({
   onClose,
   busy = false,
   size = 'md',
+  placement = 'center',
+  description,
+  ariaLabel,
   children,
 }: Props) {
   const titleId = useId();
@@ -159,7 +168,7 @@ function ModalBody({
   return createPortal(
     <div
       ref={backdrop}
-      className={styles.backdrop}
+      className={`${styles.backdrop} ${placement === 'side' ? styles.sideBackdrop : ''}`}
       onPointerDown={(event) => {
         pressedOnBackdrop.current = event.target === backdrop.current;
       }}
@@ -175,15 +184,19 @@ function ModalBody({
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={ariaLabel ? undefined : titleId}
+        aria-label={ariaLabel}
         tabIndex={-1}
-        className={`${styles.panel} ${size === 'lg' ? styles.lg : ''}`}
+        className={`${styles.panel} ${size === 'md' ? '' : styles[size]} ${placement === 'side' ? styles.side : ''}`}
         onKeyDown={onKeyDown}
       >
         <header className={styles.head}>
-          <h2 id={titleId} className={styles.title}>
-            {title}
-          </h2>
+          <div className={styles.heading}>
+            <h2 id={titleId} className={styles.title}>
+              {title}
+            </h2>
+            {description && <p className={styles.description}>{description}</p>}
+          </div>
           <button
             type="button"
             className={styles.close}

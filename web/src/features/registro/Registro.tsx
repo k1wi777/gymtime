@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { call, getApi } from '@/api/client';
 import { describeError, issuesByField } from '@/api/errors';
 import type { Student } from '@/api/types';
-import { StudentPicker } from '@/features/students/StudentPicker';
+import { StudentSearch } from '@/features/students/StudentSearch';
+import { Avatar } from '@/ui/Avatar';
 import { formatTime } from '@/lib/time';
 import { useResource } from '@/lib/use-resource';
 import { validateManual, REASON_MAX } from '@/lib/validators';
@@ -18,6 +19,7 @@ import styles from './Registro.module.css';
 
 type Kind = 'entry' | 'exit';
 const KIND_LABELS: Record<Kind, string> = { entry: 'Entrada', exit: 'Salida' };
+const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?? name;
 
 export function Registro() {
   const students = useResource(
@@ -50,6 +52,10 @@ export function Registro() {
     },
   });
 
+  const searchInput = useRef<HTMLInputElement>(null);
+  const chosen: Student | undefined = students.data?.find(
+    (student) => student.id === form.values.studentId,
+  );
   const selected: Student | undefined = students.data?.find(
     (student) => student.id === pending?.studentId,
   );
@@ -120,9 +126,19 @@ export function Registro() {
             onSubmit={form.submit}
             noValidate
           >
-            <h2 className={styles.formTitle}>Nuevo registro</h2>
+            <div>
+              <h2 className={styles.formTitle}>Nuevo registro</h2>
+              <p className={styles.formLead}>
+                Tres pasos: qué registrar, a quién y por qué.
+              </p>
+            </div>
             <fieldset className={styles.fieldset}>
-              <legend className={styles.legend}>¿Qué desea registrar?</legend>
+              <legend className={styles.legend}>
+                <span aria-hidden="true" className={styles.num}>
+                  1
+                </span>
+                ¿Qué desea registrar?
+              </legend>
               <div className={styles.choices}>
                 {(['entry', 'exit'] as const).map((value) => (
                   <label
@@ -139,33 +155,85 @@ export function Registro() {
                     />
                     <Icon
                       name={value === 'entry' ? 'entrada' : 'salida'}
-                      size={26}
+                      size={22}
                     />
                     {KIND_LABELS[value]}
                   </label>
                 ))}
               </div>
             </fieldset>
-            <StudentPicker
-              students={students.data ?? []}
-              value={form.values.studentId}
-              onChange={(id) => form.setValue('studentId', id)}
-              onBlur={() => form.blur('studentId')}
-              error={form.errors.studentId}
-            />
-            <TextAreaField
-              label="Motivo"
-              help="Obligatorio. Por ejemplo: «el lector no reconoce la huella»."
-              maxLength={REASON_MAX}
-              value={form.values.reason}
-              onChange={(value) => form.setValue('reason', value)}
-              onBlur={() => form.blur('reason')}
-              error={form.errors.reason}
-            />
-            <div>
-              <SubmitButton busy={false}>
+            <div className={styles.step}>
+              <label htmlFor="registro-student" className={styles.stepLabel}>
+                <span aria-hidden="true" className={styles.num}>
+                  2
+                </span>
+                Estudiante
+              </label>
+              {chosen ? (
+                <div role="status" className={styles.chosen}>
+                  <span className={styles.chosenAvatar}>
+                    <Avatar
+                      name={chosen.name}
+                      id={chosen.id}
+                      size={48}
+                      fontSize={17}
+                    />
+                    <span aria-hidden="true" className={styles.tick}>
+                      <Icon name="check" size={11} strokeWidth={3.4} />
+                    </span>
+                  </span>
+                  <span className={styles.chosenText}>
+                    <span className={styles.chosenKicker}>
+                      Estudiante seleccionado
+                    </span>
+                    <span className={styles.chosenName}>{chosen.name}</span>
+                    <span className={styles.chosenSub}>
+                      {chosen.document}
+                      {chosen.program ? ` · ${chosen.program}` : ''}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.change}
+                    onClick={() => {
+                      form.setValue('studentId', '');
+                      setTimeout(() => searchInput.current?.focus(), 0);
+                    }}
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <StudentSearch
+                  students={students.data ?? []}
+                  inputId="registro-student"
+                  inputRef={searchInput}
+                  hint="Empiece a escribir y aparecerán los estudiantes que coincidan. Toque uno para elegirlo."
+                  onSelect={(student) => form.setValue('studentId', student.id)}
+                />
+              )}
+            </div>
+            <div className={styles.step}>
+              <TextAreaField
+                label="Motivo (obligatorio)"
+                help="Por ejemplo: «el lector no reconoce la huella»."
+                maxLength={REASON_MAX}
+                value={form.values.reason}
+                onChange={(value) => form.setValue('reason', value)}
+                onBlur={() => form.blur('reason')}
+                error={form.errors.reason}
+              />
+            </div>
+            <div className={styles.actions}>
+              <SubmitButton busy={false} disabled={!chosen}>
                 Registrar {KIND_LABELS[kind].toLowerCase()}
+                {chosen ? ` de ${firstName(chosen.name)}` : ''}
               </SubmitButton>
+              <span className={styles.help}>
+                {chosen
+                  ? 'Quedará anotado con su usuario y el motivo.'
+                  : 'Elija primero un estudiante.'}
+              </span>
             </div>
           </form>
         )}

@@ -17,6 +17,7 @@ import { Horarios } from '@/features/horarios/Horarios';
 import { Ordenes } from '@/features/ordenes/Ordenes';
 import { Registro } from '@/features/registro/Registro';
 import { LiveProvider } from '@/live/live-provider';
+import { nav } from './navigation-mock';
 import {
   liveSource,
   account,
@@ -369,27 +370,51 @@ describe('manual registration (R16)', () => {
       'POST /attendance/entry': () => json(session, 201),
     });
     app(<Registro />);
-    await screen.findByRole('button', { name: /Registrar entrada/ });
+    const submit = await screen.findByRole('button', {
+      name: 'Registrar entrada',
+    });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Elija primero un estudiante.')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: /Registrar entrada/ }));
-    expect(screen.getByText('Elija un estudiante.')).toBeTruthy();
-    expect(screen.getByText('El motivo es obligatorio.')).toBeTruthy();
-
-    await user.type(screen.getByLabelText('Estudiante'), 'beto');
+    await user.type(screen.getByRole('combobox'), 'zzz');
+    expect(screen.getByText(/Nadie coincide con «zzz»/)).toBeTruthy();
+    await user.clear(screen.getByRole('combobox'));
+    await user.type(screen.getByRole('combobox'), 'beto');
     expect(screen.queryByRole('option', { name: /Ana/ })).toBeNull();
-    await user.clear(screen.getByLabelText('Estudiante'));
-    await user.selectOptions(
-      screen.getByLabelText('Estudiante: resultados'),
-      'a',
+    await user.clear(screen.getByRole('combobox'));
+    await user.type(screen.getByRole('combobox'), 'gomez');
+    await user.click(screen.getByRole('option', { name: /Ana Gómez/ }));
+    const card = screen.getByRole('status');
+    expect(within(card).getByText('Estudiante seleccionado')).toBeTruthy();
+    expect(within(card).getByText('Ana Gómez')).toBeTruthy();
+    const named = screen.getByRole('button', {
+      name: 'Registrar entrada de Ana',
+    });
+    expect((named as HTMLButtonElement).disabled).toBe(false);
+    // «Cambiar» goes back to the search and disables the button again.
+    await user.click(within(card).getByRole('button', { name: 'Cambiar' }));
+    expect(screen.getByRole('combobox')).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Registrar entrada',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    await user.type(screen.getByRole('combobox'), '1');
+    await user.click(screen.getByRole('option', { name: /Ana Gómez/ }));
+    await user.type(screen.getByLabelText(/Motivo/), '   ');
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar entrada de Ana' }),
     );
-    await user.type(screen.getByLabelText('Motivo'), '   ');
-    await user.click(screen.getByRole('button', { name: /Registrar entrada/ }));
     expect(screen.getByText('El motivo es obligatorio.')).toBeTruthy();
     await user.type(
-      screen.getByLabelText('Motivo'),
+      screen.getByLabelText(/Motivo/),
       ' el lector no la reconoce ',
     );
-    await user.click(screen.getByRole('button', { name: /Registrar entrada/ }));
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar entrada de Ana' }),
+    );
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText(/el lector no la reconoce/)).toBeTruthy();
@@ -423,12 +448,12 @@ describe('manual registration (R16)', () => {
     });
     app(<Registro />);
     await user.click(await screen.findByRole('radio', { name: 'Salida' }));
-    await user.selectOptions(
-      screen.getByLabelText('Estudiante: resultados'),
-      'a',
+    await user.type(screen.getByRole('combobox'), 'ana');
+    await user.keyboard('{ArrowDown}{Enter}');
+    await user.type(screen.getByLabelText(/Motivo/), 'se fue sin marcar');
+    await user.click(
+      screen.getByRole('button', { name: 'Registrar salida de Ana' }),
     );
-    await user.type(screen.getByLabelText('Motivo'), 'se fue sin marcar');
-    await user.click(screen.getByRole('button', { name: /Registrar salida/ }));
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
         name: 'Registrar',
@@ -932,5 +957,110 @@ describe('schedule rosters (R21)', () => {
     await pickSchedule(user);
     expect(await screen.findByText(/no tiene una sesión el/)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('student card in «Ahora» (R14-R17)', () => {
+  const setup = () =>
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /panel/now': snapshot({ inside: [inside], missing: [beto] }),
+      'GET /students': [
+        {
+          id: 'b',
+          name: 'Beto Ruiz',
+          document: '2',
+          active: true,
+          program: 'Derecho',
+        },
+      ],
+    });
+
+  it('opens from a «Faltan» row, shows the fingerprint state and goes to enroll', async () => {
+    const user = userEvent.setup();
+    nav.push.mockReset();
+    setup();
+    app(<Ahora />);
+    const faltan = await screen.findByRole('region', { name: 'Faltan' });
+    const row = within(faltan).getByRole('button', {
+      name: 'Ver ficha de Beto Ruiz',
+    });
+    await user.click(row);
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Ficha de Beto Ruiz',
+    });
+    expect(within(sheet).getByText('Aún no llega')).toBeTruthy();
+    expect(within(sheet).getByText('Sin huella')).toBeTruthy();
+    expect(await within(sheet).findByText('Derecho')).toBeTruthy();
+    await user.click(
+      within(sheet).getByRole('button', { name: 'Asignar huella' }),
+    );
+    expect(nav.push).toHaveBeenCalledWith('/enrolar?estudiante=b');
+  });
+
+  it('offers to register again when there is a fingerprint, and returns the focus on Escape', async () => {
+    const user = userEvent.setup();
+    setup();
+    app(<Ahora />);
+    const dentro = await screen.findByRole('region', { name: 'Dentro' });
+    const row = within(dentro).getByRole('button', {
+      name: 'Ver ficha de Ana Gómez',
+    });
+    row.focus();
+    await user.keyboard('{Enter}');
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Ficha de Ana Gómez',
+    });
+    expect(within(sheet).getByText(/Dentro desde/)).toBeTruthy();
+    expect(
+      within(sheet).getByRole('button', { name: 'Volver a registrar huella' }),
+    ).toBeTruthy();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(row);
+  });
+});
+
+describe('enroll preselection (R18)', () => {
+  const students = [
+    {
+      id: 'a',
+      name: 'Ana Gómez',
+      document: '1',
+      active: true,
+      consented: true,
+      displayName: 'ANA',
+      email: null,
+      phone: null,
+      program: null,
+    },
+  ];
+  const setup = () =>
+    installFakeApi({
+      'GET /auth/me': account(),
+      'GET /students': students,
+      'GET /panel/fingerprints': { studentIds: [] },
+    });
+
+  it('shows the student already chosen when the id is valid', async () => {
+    nav.search = '?estudiante=a';
+    setup();
+    app(<Enrolar />);
+    expect(
+      await screen.findByRole('button', { name: 'Cambiar estudiante' }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: 'Iniciar enrolamiento' }),
+    ).toBeTruthy();
+  });
+
+  it('ignores an unknown id', async () => {
+    nav.search = '?estudiante=zzz';
+    setup();
+    app(<Enrolar />);
+    await screen.findByText('Ana Gómez');
+    expect(
+      screen.queryByRole('button', { name: 'Cambiar estudiante' }),
+    ).toBeNull();
   });
 });

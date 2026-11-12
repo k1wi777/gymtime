@@ -81,26 +81,34 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
       page.getByRole('cell', { name: 'Gina Torres', exact: true }),
     ).toBeVisible();
 
-    // Assign the imported students by document.
+    // Add the imported students from the search and from a file.
     await menu.getByRole('link', { name: 'Gestión de horarios' }).click();
     await page
       .getByRole('region', { name: 'Horario Lunes noche' })
       .getByRole('button', { name: 'Estudiantes' })
       .click();
     const assign = page.getByRole('dialog', {
-      name: 'Estudiantes de Lunes noche',
+      name: 'Estudiantes del horario',
     });
-    await assign
-      .getByLabel('Asignar varios por documento')
-      .fill('2001\n2003\n9999');
-    await assign.getByRole('button', { name: 'Asignar lista' }).click();
-    const result = assign.getByRole('status').filter({
-      hasText: 'Resultado de la asignación',
+    await assign.getByRole('button', { name: 'Agregar estudiantes' }).click();
+    const add = page.getByRole('dialog', { name: 'Agregar estudiantes' });
+    await add.getByRole('combobox').fill('Gina');
+    await add.getByRole('option', { name: /Gina Torres/ }).click();
+    await expect(add.getByText('Para agregar (1)')).toBeVisible();
+    await add.getByTestId('students-file').setInputFiles({
+      name: 'lunes.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('2003\n9999\n', 'utf-8'),
     });
-    await expect(result.getByText(/Asignados: 2/)).toBeVisible();
-    await expect(result.getByText(/No existen: 9999/)).toBeVisible();
+    await expect(add.getByText(/Del archivo «lunes.csv»/)).toBeVisible();
+    await expect(add.getByText(/1 no se encontró/)).toBeVisible();
+    await add.getByRole('button', { name: /^Agregar \d+ estudiante/ }).click();
+    await expect(add).toHaveCount(0);
     await expect(assign.getByText('Gina Torres')).toBeVisible();
-    await assign.getByRole('button', { name: 'Cerrar' }).click();
+    await assign
+      .getByRole('button', { name: 'Cerrar', exact: true })
+      .last()
+      .click();
     await expect(assign).toHaveCount(0);
     await expect(
       page

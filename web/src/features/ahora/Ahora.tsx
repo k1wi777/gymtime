@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { call, getApi } from '@/api/client';
 import type { PanelNow, PanelPerson } from '@/api/types';
@@ -24,21 +25,46 @@ import { Icon } from '@/ui/icons';
 import { PageHeader } from '@/ui/PageHeader';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
+import { PersonSheet } from './PersonSheet';
 import styles from './Ahora.module.css';
 
 /** Pause that groups the burst of events of one scan into a single refetch. */
 export const REFETCH_DEBOUNCE_MS = 300;
+
+function PersonRow({
+  person,
+  detail,
+}: {
+  person: PanelPerson;
+  detail: (person: PanelPerson) => React.ReactNode;
+}) {
+  return (
+    <>
+      <Avatar name={person.name} id={person.studentId} />
+      <div className={styles.who}>
+        <div className={styles.name}>{person.name}</div>
+        <div className={styles.sub}>{person.document}</div>
+      </div>
+      <div className={styles.detail}>{detail(person)}</div>
+    </>
+  );
+}
 
 function PersonList({
   title,
   people,
   empty,
   detail,
+  onSelect,
+  openId,
 }: {
   title: string;
   people: readonly PanelPerson[];
   empty: string;
   detail: (person: PanelPerson) => React.ReactNode;
+  /** When given, every row is a button that opens the student's card. */
+  onSelect?: (person: PanelPerson) => void;
+  openId?: string | null;
 }) {
   return (
     <section className={`card ${styles.listCard}`} aria-label={title}>
@@ -53,17 +79,21 @@ function PersonList({
       ) : (
         <ul className={styles.list}>
           {people.map((person) => (
-            <li
-              key={person.studentId}
-              className={styles.row}
-              data-testid="person"
-            >
-              <Avatar name={person.name} id={person.studentId} />
-              <div className={styles.who}>
-                <div className={styles.name}>{person.name}</div>
-                <div className={styles.sub}>{person.document}</div>
-              </div>
-              <div className={styles.detail}>{detail(person)}</div>
+            <li key={person.studentId} data-testid="person">
+              {onSelect ? (
+                <button
+                  type="button"
+                  className={`${styles.row} ${styles.rowButton} ${openId === person.studentId ? styles.rowOpen : ''}`}
+                  aria-label={`Ver ficha de ${person.name}`}
+                  onClick={() => onSelect(person)}
+                >
+                  <PersonRow person={person} detail={detail} />
+                </button>
+              ) : (
+                <div className={styles.row}>
+                  <PersonRow person={person} detail={detail} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -144,6 +174,9 @@ export function Ahora() {
   }, []);
   const [feed, setFeed] = useState<ScanEntry[]>([]);
   const { role } = useAuth();
+  const router = useRouter();
+  // The card follows the live snapshot; the last known data stay if the person leaves both lists.
+  const [sheet, setSheet] = useState<PanelPerson | null>(null);
 
   // The server decides who is expected and who is missing (assignments,
   // windows): refetch the snapshot instead of editing the lists here.
@@ -174,6 +207,12 @@ export function Ahora() {
   if (!snapshot.data) return <Spinner />;
 
   const { current, counts, inside, exited, missing } = snapshot.data;
+  const sheetPerson =
+    sheet === null
+      ? null
+      : ([...inside, ...missing, ...exited].find(
+          (p) => p.studentId === sheet.studentId,
+        ) ?? sheet);
   const eyebrow = `${role === 'admin' ? 'Administrador' : 'Asistente'} · ${formatLongDay(snapshot.data.serverNow)}`;
   const total = current
     ? Math.max(1, Date.parse(current.endsAt) - Date.parse(current.startsAt))
@@ -302,6 +341,8 @@ export function Ahora() {
             title="Dentro"
             people={inside}
             empty={current ? 'Nadie está dentro.' : 'Nadie sigue dentro.'}
+            onSelect={setSheet}
+            openId={sheet?.studentId ?? null}
             detail={(person) => (
               <>
                 {person.enteredAt && (
@@ -320,6 +361,8 @@ export function Ahora() {
               title="Faltan"
               people={missing}
               empty="Todos los esperados ya llegaron."
+              onSelect={setSheet}
+              openId={sheet?.studentId ?? null}
               detail={(person) =>
                 person.hasFingerprint ? null : (
                   <span className={styles.noPrint}>
@@ -348,8 +391,19 @@ export function Ahora() {
             />
           )}
         </div>
+        <p className={styles.footnote}>
+          Toque una persona para ver su ficha y, si hace falta, asignarle la
+          huella.
+        </p>
         <ScanFeed feed={feed} />
       </div>
+      <PersonSheet
+        person={sheetPerson}
+        onClose={() => setSheet(null)}
+        onAssign={(studentId) =>
+          router.push(`/enrolar?estudiante=${encodeURIComponent(studentId)}`)
+        }
+      />
     </>
   );
 }

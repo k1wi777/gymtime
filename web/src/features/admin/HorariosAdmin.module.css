@@ -201,3 +201,89 @@
   padding-inline: 8px;
   min-width: 0;
 }
+
+/* «Estudiantes del horario» modal (board Modales). */
+.assign {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.assignHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assignCount {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.assignCount strong {
+  color: var(--text);
+}
+
+.assignHead :global(.btn) {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.assignEmpty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.assignList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.assignRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 16px;
+  border-top: 1px solid #eeeae6;
+}
+
+.assignRow:first-child {
+  border-top: 0;
+}
+
+.assignWho {
+  flex: 1;
+  min-width: 0;
+}
+
+.assignName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.assignDoc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.remove {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  color: #9b1c1c;
+  border-color: #efc9c9;
+}
+
+.remove:hover:not(:disabled) {
+  background: #fdf0f0;
+  border-color: #efc9c9;
+}

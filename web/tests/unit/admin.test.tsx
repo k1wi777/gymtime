@@ -7,11 +7,8 @@ import { visibleItems } from '@/lib/nav';
 import { Auditoria } from '@/features/admin/Auditoria';
 import { Estudiantes } from '@/features/admin/Estudiantes';
 import { Historial } from '@/features/admin/Historial';
-import {
-  HorariosAdmin,
-  parseDocuments,
-  validFromOf,
-} from '@/features/admin/HorariosAdmin';
+import { parseDocuments } from '@/features/admin/documents';
+import { HorariosAdmin } from '@/features/admin/HorariosAdmin';
 import { Periodos, validatePeriod } from '@/features/admin/Periodos';
 import { Usuarios } from '@/features/admin/Usuarios';
 import { account, empty, installFakeApi, json, pinToday } from './helpers';
@@ -240,47 +237,128 @@ describe('schedules (R7-R11)', () => {
       'GET /students': [],
     });
 
-  it('parses pasted documents and the validity date', () => {
+  it('parses the documents of a file', () => {
     expect(parseDocuments('1001\n1002, 1001;  1003 \n')).toEqual([
       '1001',
       '1002',
       '1003',
     ]);
-    expect(validFromOf('2026-11-02', '2026-11-02')).toBeUndefined();
-    expect(validFromOf('2026-11-09', '2026-11-02')).toBe(
-      '2026-11-09T00:00:00-05:00',
-    );
   });
 
-  it('shows who was assigned, already assigned, inactive and not found', async () => {
-    const user = userEvent.setup();
-    const fake = setup();
-    fake.route('POST /schedules/s1/students/bulk', () =>
-      json({
-        assigned: [{ id: 'a', document: '1002', name: 'Luis' }],
-        alreadyAssigned: [{ id: 'st1', document: '1001', name: 'Ana' }],
-        inactive: [{ id: 'c', document: '1003', name: 'Eva' }],
-        notFound: ['9999'],
-      }),
-    );
-    app(<HorariosAdmin />);
+  const roster = [
+    {
+      id: 'st1',
+      document: '1001',
+      name: 'Ana',
+      active: true,
+      program: 'Derecho',
+    },
+    {
+      id: 'st2',
+      document: '1002',
+      name: 'Luis Mora',
+      active: true,
+      program: null,
+    },
+    { id: 'st3', document: '1003', name: 'Eva', active: false, program: null },
+    {
+      id: 'st4',
+      document: '1004',
+      name: 'María Pérez',
+      active: true,
+      program: 'Biología',
+    },
+  ];
+
+  const openAdd = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(
       await screen.findByRole('button', { name: 'Estudiantes' }),
     );
-    await user.type(
-      screen.getByLabelText('Asignar varios por documento'),
-      '1001{enter}1002{enter}1003{enter}9999',
+    const list = screen.getByRole('dialog', {
+      name: 'Estudiantes del horario',
+    });
+    expect(within(list).getByText('estudiante asignado')).toBeTruthy();
+    expect(within(list).queryByText('Asignar por documento')).toBeNull();
+    await user.click(
+      within(list).getByRole('button', { name: 'Agregar estudiantes' }),
     );
-    await user.click(screen.getByRole('button', { name: 'Asignar lista' }));
-    const result = await screen.findByText('Resultado de la asignación');
-    const box = result.closest('[role="status"]') as HTMLElement;
-    expect(within(box).getByText(/No existen/).textContent).toContain('9999');
-    expect(within(box).getByText(/De baja/).textContent).toContain('1003');
+    return screen.getByRole('dialog', { name: 'Agregar estudiantes' });
+  };
+
+  it('adds the chosen students with one bulk call and closes', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('GET /students', roster);
+    fake.route('POST /schedules/s1/students/bulk', () =>
+      json({ assigned: [], alreadyAssigned: [], inactive: [], notFound: [] }),
+    );
+    app(<HorariosAdmin />);
+    const modal = await openAdd(user);
+    const add = within(modal).getByRole('button', { name: 'Agregar' });
+    expect((add as HTMLButtonElement).disabled).toBe(true);
+    await user.type(within(modal).getByRole('combobox'), 'maria');
+    expect(within(modal).getByText('1 coincidencia')).toBeTruthy();
+    await user.click(within(modal).getByRole('option'));
+    expect(within(modal).getByText('Para agregar (1)')).toBeTruthy();
+    await user.clear(within(modal).getByRole('combobox'));
+    await user.type(within(modal).getByRole('combobox'), 'an');
+    // Ana is already in the schedule: shown, not pickable.
+    expect(within(modal).getByText('Ya está en este horario')).toBeTruthy();
+    await user.click(
+      within(modal).getByRole('button', { name: 'Agregar 1 estudiante' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Agregar estudiantes' }),
+      ).toBeNull(),
+    );
     expect(
       await fake.calls('POST /schedules/s1/students/bulk')[0]?.json(),
     ).toEqual({
-      documents: ['1001', '1002', '1003', '9999'],
+      documents: ['1004'],
     });
+  });
+
+  it('loads documents from a file and reports what did not match', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('GET /students', roster);
+    app(<HorariosAdmin />);
+    const modal = await openAdd(user);
+    const file = new File(['1002\n1003\n9999\n1001'], 'lunes.csv', {
+      type: 'text/csv',
+    });
+    await user.upload(within(modal).getByTestId('students-file'), file);
+    expect(await within(modal).findByText('Para agregar (1)')).toBeTruthy();
+    const note = within(modal).getByText(/Del archivo «lunes.csv»/);
+    expect(note.textContent).toContain('1 agregado a la lista');
+    expect(note.textContent).toContain('1 no se encontró');
+    expect(note.textContent).toContain('1 de baja');
+    expect(note.textContent).toContain('1 ya estaba');
+  });
+
+  it('keeps the list and shows the error when the assignment fails; asks before discarding', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    fake.route('GET /students', roster);
+    fake.route('POST /schedules/s1/students/bulk', () =>
+      json({ statusCode: 500, message: 'Falló' }, 500),
+    );
+    app(<HorariosAdmin />);
+    const modal = await openAdd(user);
+    await user.type(within(modal).getByRole('combobox'), 'luis');
+    await user.click(within(modal).getByRole('option'));
+    await user.click(
+      within(modal).getByRole('button', { name: 'Agregar 1 estudiante' }),
+    );
+    expect(await within(modal).findByRole('alert')).toBeTruthy();
+    expect(within(modal).getByText('Para agregar (1)')).toBeTruthy();
+    await user.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByText('¿Descartar los cambios?')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Agregar estudiantes' }),
+    ).toBeTruthy();
   });
 
   describe('day filter and weekly view (R17-R23)', () => {
@@ -410,7 +488,7 @@ describe('schedules (R7-R11)', () => {
         screen.getByRole('button', { name: 'Estudiantes martes 06:00–07:00' }),
       );
       expect(
-        screen.getByRole('dialog', { name: 'Estudiantes de Martes mañana' }),
+        screen.getByRole('dialog', { name: 'Estudiantes del horario' }),
       ).toBeTruthy();
     });
 
