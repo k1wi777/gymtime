@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import type userEvent from '@testing-library/user-event';
 import { createApi, setApi, type Api } from '@/api/client';
 
 export type Handler = (request: Request) => Response | Promise<Response>;
@@ -168,4 +169,30 @@ export const alarmOff = {
 export function pinToday(iso = '2026-11-06T17:00:00Z'): void {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(iso));
+}
+
+/** Opens a TimeSelect by its label, picks `HH:mm` and presses "Listo". */
+export async function pickTime(
+  user: ReturnType<typeof userEvent.setup>,
+  scope: ReturnType<typeof within>,
+  label: string,
+  time: string,
+): Promise<void> {
+  const [hour, minute] = time.split(':') as [string, string];
+  await user.click(scope.getByLabelText(label));
+  const panel = within(
+    screen.getByRole('dialog', { name: `Elegir ${label.toLowerCase()}` }),
+  );
+  await user.click(
+    within(panel.getByRole('listbox', { name: 'Horas' })).getByRole('option', {
+      name: hour,
+    }),
+  );
+  await user.click(
+    within(panel.getByRole('listbox', { name: 'Minutos' })).getByRole(
+      'option',
+      { name: minute },
+    ),
+  );
+  await user.click(panel.getByRole('button', { name: 'Listo' }));
 }

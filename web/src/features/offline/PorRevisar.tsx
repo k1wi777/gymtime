@@ -12,6 +12,7 @@ import {
   reviewReasonLabel,
 } from '@/lib/labels';
 import { bogotaDay, formatDate, formatDateTime, formatTime } from '@/lib/time';
+import { isTime } from '@/lib/time-select';
 import { useResource } from '@/lib/use-resource';
 import { REASON_MAX } from '@/lib/validators';
 import { Avatar } from '@/ui/Avatar';
@@ -19,13 +20,12 @@ import { Badge } from '@/ui/Badge';
 import { Icon } from '@/ui/icons';
 import { PageHeader } from '@/ui/PageHeader';
 import { ConfirmDialog } from '@/ui/ConfirmDialog';
-import { SelectField, TextAreaField, TextField } from '@/ui/Form';
+import { SelectField, TextAreaField } from '@/ui/Form';
 import { Notice } from '@/ui/Notice';
 import { Spinner } from '@/ui/Spinner';
+import { TimeSelect } from '@/ui/TimeSelect';
 import adminStyles from '@/features/admin/Admin.module.css';
 import styles from './PorRevisar.module.css';
-
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Bogota instant of `HH:mm` on the day of the event. */
 export const correctedInstant = (item: ReviewItem, time: string): string =>
@@ -192,14 +192,10 @@ function ResolveDialog({
   }
 
   const needsTime = action === 'corregir';
-  const timeError =
-    needsTime && time !== '' && !TIME.test(time)
-      ? 'Use el formato HH:mm.'
-      : undefined;
   const ready =
     action !== '' &&
     reason.trim() !== '' &&
-    (!needsTime || TIME.test(time)) &&
+    (!needsTime || isTime(time)) &&
     !busy;
 
   const send = async () => {
@@ -259,13 +255,11 @@ function ResolveDialog({
             }))}
           />
           {needsTime && (
-            <TextField
+            <TimeSelect
               label="Hora correcta"
               value={time}
               onChange={setTime}
-              help="HH:mm, del mismo día del evento"
-              error={timeError}
-              maxLength={5}
+              help="Del mismo día del evento"
             />
           )}
           <TextAreaField

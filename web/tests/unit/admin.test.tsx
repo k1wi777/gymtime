@@ -11,7 +11,14 @@ import { parseDocuments } from '@/features/admin/documents';
 import { HorariosAdmin } from '@/features/admin/HorariosAdmin';
 import { Periodos, validatePeriod } from '@/features/admin/Periodos';
 import { Usuarios } from '@/features/admin/Usuarios';
-import { account, empty, installFakeApi, json, pinToday } from './helpers';
+import {
+  account,
+  empty,
+  installFakeApi,
+  json,
+  pickTime,
+  pinToday,
+} from './helpers';
 
 const admin = account({
   id: 'admin-1',
@@ -532,6 +539,31 @@ describe('schedules (R7-R11)', () => {
     });
   });
 
+  it('warns when the end is not after the start and asks for missing times', async () => {
+    const user = userEvent.setup();
+    const fake = setup();
+    app(<HorariosAdmin />);
+    await user.click(
+      await screen.findByRole('button', { name: 'Nuevo horario' }),
+    );
+    const form = screen.getByRole('dialog', { name: 'Nuevo horario' });
+    await user.click(
+      within(form).getByRole('button', { name: 'Crear horario' }),
+    );
+    expect(
+      await within(form).findByText('Elija la hora de inicio.'),
+    ).toBeTruthy();
+    expect(within(form).getByText('Elija la hora de fin.')).toBeTruthy();
+    await pickTime(user, within(form), 'Hora de inicio', '19:00');
+    await pickTime(user, within(form), 'Hora de fin', '18:30');
+    expect(
+      within(form).getAllByText(
+        'La hora de fin debe ser posterior a la de inicio.',
+      ),
+    ).toHaveLength(1);
+    expect(fake.calls('POST /schedules')).toHaveLength(0);
+  });
+
   it('shows the server message when the schedule overlaps another', async () => {
     const user = userEvent.setup();
     const fake = setup();
@@ -555,8 +587,8 @@ describe('schedules (R7-R11)', () => {
       within(form).getByLabelText('Día de la semana'),
       '1',
     );
-    await user.type(within(form).getByLabelText('Inicio'), '18:30');
-    await user.type(within(form).getByLabelText('Fin'), '19:30');
+    await pickTime(user, within(form), 'Hora de inicio', '18:30');
+    await pickTime(user, within(form), 'Hora de fin', '19:30');
     await user.click(
       within(form).getByRole('button', { name: 'Crear horario' }),
     );

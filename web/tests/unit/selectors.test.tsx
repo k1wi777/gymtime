@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { DatePicker, DateRangePicker } from '@/ui/DatePicker';
 import { ScheduleSelect } from '@/ui/ScheduleSelect';
+import { TimeSelect } from '@/ui/TimeSelect';
 import type { DayRange } from '@/lib/calendar';
 
 const TODAY = '2026-11-07';
@@ -492,5 +493,118 @@ describe('ScheduleSelect', () => {
     await user.keyboard('{Enter}{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(field);
+  });
+});
+
+function Time({
+  onChange,
+  initial = '',
+  ...rest
+}: {
+  onChange: (value: string) => void;
+  initial?: string;
+  error?: string;
+  help?: string;
+  disabled?: boolean;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <TimeSelect
+      label="Hora de inicio"
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onChange(next);
+      }}
+      {...rest}
+    />
+  );
+}
+
+const optionIn = (list: string, name: string) =>
+  within(
+    within(screen.getByRole('dialog')).getByRole('listbox', { name: list }),
+  ).getByRole('option', { name });
+
+describe('TimeSelect', () => {
+  it('shows the placeholder, then the chosen time', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Time onChange={onChange} />);
+    const field = screen.getByLabelText('Hora de inicio');
+    expect(field.textContent).toContain('Elija la hora');
+    await user.click(field);
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getAllByRole('option', { name: /^\d\d$/ })).toHaveLength(36);
+    await user.click(optionIn('Horas', '18'));
+    expect(onChange).toHaveBeenLastCalledWith('18:00');
+    await user.click(optionIn('Minutos', '30'));
+    expect(onChange).toHaveBeenLastCalledWith('18:30');
+    // Stays open, with the big time, until "Listo".
+    expect(screen.getByRole('dialog').textContent).toContain('18:30');
+    await user.click(dialog.getByRole('button', { name: 'Listo' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(field.textContent).toContain('18:30');
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('works with the keyboard and Escape closes without changing', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Time onChange={onChange} initial="07:00" />);
+    await user.click(screen.getByLabelText('Hora de inicio'));
+    const hours = screen.getByRole('listbox', { name: 'Horas' });
+    expect(document.activeElement).toBe(hours);
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith('09:00');
+    await user.keyboard('{ArrowRight}{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith('09:05');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Minutos');
+    await user.keyboard('{ArrowLeft}');
+    expect(document.activeElement).toBe(hours);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByLabelText('Hora de inicio'),
+    );
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows and keeps an unusual minute while the hour changes', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Time onChange={onChange} initial="18:07" />);
+    const field = screen.getByLabelText('Hora de inicio');
+    expect(field.textContent).toContain('18:07');
+    await user.click(field);
+    expect(optionIn('Minutos', '07').getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    await user.click(optionIn('Horas', '19'));
+    expect(onChange).toHaveBeenLastCalledWith('19:07');
+    expect(optionIn('Minutos', '07').getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('links help and error, and does not open when disabled', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <TimeSelect label="Hora" value="" onChange={vi.fn()} help="Ayuda" />,
+    );
+    const field = screen.getByLabelText('Hora');
+    expect(field.getAttribute('aria-describedby')).toBe(
+      document.getElementById(field.getAttribute('aria-describedby')!)?.id,
+    );
+    expect(screen.getByText('Ayuda')).toBeTruthy();
+    rerender(
+      <TimeSelect label="Hora" value="" onChange={vi.fn()} error="Falta" />,
+    );
+    expect(screen.getByText('Falta').id).toBe(
+      field.getAttribute('aria-describedby'),
+    );
+    rerender(<TimeSelect label="Hora" value="" onChange={vi.fn()} disabled />);
+    await user.click(field);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

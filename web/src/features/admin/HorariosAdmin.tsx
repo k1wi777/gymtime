@@ -19,6 +19,7 @@ import {
   weekdayOf,
 } from '@/lib/schedule-groups';
 import { bogotaDay } from '@/lib/time';
+import { isTime } from '@/lib/time-select';
 import { useResource } from '@/lib/use-resource';
 import { type FieldErrors } from '@/lib/validators';
 import { Badge } from '@/ui/Badge';
@@ -33,6 +34,7 @@ import { Icon } from '@/ui/icons';
 import { Notice } from '@/ui/Notice';
 import { PageHeader } from '@/ui/PageHeader';
 import { Spinner } from '@/ui/Spinner';
+import { TimeSelect } from '@/ui/TimeSelect';
 import { AddStudentsModal } from './AddStudentsModal';
 import { RowMenu } from './RowMenu';
 import { RegenerationNotice } from './RegenerationNotice';
@@ -49,7 +51,7 @@ export const WEEKDAYS = [
   'Domingo',
 ] as const;
 
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const END_BEFORE_START = 'La hora de fin debe ser posterior a la de inicio.';
 const hhmm = (value: string): string => value.slice(0, 5);
 
 interface ScheduleValues {
@@ -65,10 +67,10 @@ export function validateSchedule(
   const errors: FieldErrors<ScheduleValues> = {};
   if (values.name.trim() === '') errors.name = 'Escriba el nombre.';
   if (values.weekday === '') errors.weekday = 'Elija el día de la semana.';
-  if (!TIME.test(values.start)) errors.start = 'Use la hora como HH:MM.';
-  if (!TIME.test(values.end)) errors.end = 'Use la hora como HH:MM.';
-  else if (TIME.test(values.start) && values.end <= values.start) {
-    errors.end = 'La hora de fin debe ser posterior a la de inicio.';
+  if (!isTime(values.start)) errors.start = 'Elija la hora de inicio.';
+  if (!isTime(values.end)) errors.end = 'Elija la hora de fin.';
+  else if (isTime(values.start) && values.end <= values.start) {
+    errors.end = END_BEFORE_START;
   }
   return errors;
 }
@@ -125,6 +127,11 @@ function ScheduleForm({
       }
     },
   });
+  // Warned as soon as both times are chosen, under the fields.
+  const endOrder =
+    isTime(form.values.start) &&
+    isTime(form.values.end) &&
+    form.values.end <= form.values.start;
   return (
     <form
       id={formId}
@@ -159,25 +166,25 @@ function ScheduleForm({
         }))}
       />
       <div className={view.times}>
-        <TextField
-          label="Inicio"
+        <TimeSelect
+          label="Hora de inicio"
           value={form.values.start}
           onChange={(v) => form.setValue('start', v)}
-          onBlur={() => form.blur('start')}
           error={form.errors.start}
-          help="HH:MM, hora de Colombia"
-          maxLength={5}
+          help="Hora de Colombia"
         />
-        <TextField
-          label="Fin"
+        <TimeSelect
+          label="Hora de fin"
           value={form.values.end}
           onChange={(v) => form.setValue('end', v)}
-          onBlur={() => form.blur('end')}
-          error={form.errors.end}
-          help="HH:MM"
-          maxLength={5}
+          error={endOrder ? undefined : form.errors.end}
         />
       </div>
+      {endOrder && (
+        <p className={view.order} role="alert">
+          {END_BEFORE_START}
+        </p>
+      )}
       <FormActions
         formId={formId}
         busy={form.submitting}

@@ -1,4 +1,4 @@
-import { expect, loginAndWait, pickDay, test } from './support';
+import { expect, loginAndWait, pickDay, pickTime, test } from './support';
 
 const CSV = [
   'cedula,nombre,correo',
@@ -53,8 +53,8 @@ test.describe('administrador: periodo, horario, importación y asignación (H9)'
     const form = page.getByRole('dialog', { name: 'Nuevo horario' });
     await form.getByLabel('Nombre').fill('Lunes noche');
     await form.getByLabel('Día de la semana').selectOption('1');
-    await form.getByLabel('Inicio').fill('18:00');
-    await form.getByLabel('Fin').fill('19:00');
+    await pickTime(form, 'Hora de inicio', '18:00');
+    await pickTime(form, 'Hora de fin', '19:00');
     await form.getByRole('button', { name: 'Crear horario' }).click();
     await expect(form).toHaveCount(0);
     const schedule = page.getByRole('region', { name: 'Horario Lunes noche' });

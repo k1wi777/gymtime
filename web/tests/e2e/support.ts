@@ -2,6 +2,7 @@ import {
   expect,
   test as base,
   type APIRequestContext,
+  type Locator,
   type Page,
 } from '@playwright/test';
 
@@ -114,3 +115,27 @@ export async function pickDay(page: Page, day: string) {
 }
 
 export { expect };
+
+/** Opens a TimeSelect by its label, picks `HH:mm` and closes it with "Listo". */
+export async function pickTime(
+  scope: Page | Locator,
+  label: string,
+  time: string,
+) {
+  const [hour, minute] = time.split(':') as [string, string];
+  await scope.getByLabel(label).click();
+  const page = 'goto' in scope ? scope : scope.page();
+  const panel = page.getByRole('dialog', {
+    name: `Elegir ${label.toLowerCase()}`,
+  });
+  await panel
+    .getByRole('listbox', { name: 'Horas' })
+    .getByRole('option', { name: hour, exact: true })
+    .click();
+  await panel
+    .getByRole('listbox', { name: 'Minutos' })
+    .getByRole('option', { name: minute, exact: true })
+    .click();
+  await panel.getByRole('button', { name: 'Listo' }).click();
+  await expect(panel).toHaveCount(0);
+}

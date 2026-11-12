@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { expect, loginAndWait, pickDay, test } from './support';
+import { expect, loginAndWait, pickDay, pickTime, test } from './support';
 
 const SHOTS = process.env.E2E_SHOTS;
 const shot = async (page: Page, name: string) => {
@@ -55,8 +55,8 @@ async function createSchedule(
   const modal = page.getByRole('dialog', { name: 'Nuevo horario' });
   await modal.getByLabel('Nombre').fill(name);
   await modal.getByLabel('Día de la semana').selectOption(weekday);
-  await modal.getByLabel('Inicio').fill(start);
-  await modal.getByLabel('Fin').fill(end);
+  await pickTime(modal, 'Hora de inicio', start);
+  await pickTime(modal, 'Hora de fin', end);
   await modal.getByRole('button', { name: 'Crear horario' }).click();
   await expect(modal).toHaveCount(0);
 }

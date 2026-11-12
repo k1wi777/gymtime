@@ -25,7 +25,7 @@ Un periodo (por ejemplo «2026-2») agrupa los horarios semanales de un semestre
 
 ## Gestión de horarios
 
-- **Nuevo horario**, **Editar** y **Estudiantes** se abren en ventanas modales. Nuevo horario: nombre, día de la semana, inicio y fin (hora de Colombia) dentro del periodo elegido. No puede cruzarse con otro del mismo día y periodo; horarios contiguos sí.
+- **Nuevo horario**, **Editar** y **Estudiantes** se abren en ventanas modales. Nuevo horario: nombre, día de la semana, hora de inicio y de fin (hora de Colombia, se eligen con el selector de hora, minutos de 5 en 5) dentro del periodo elegido. No puede cruzarse con otro del mismo día y periodo; horarios contiguos sí.
 - **Estudiantes**: asigne uno a uno (con fecha de inicio opcional), por lista de documentos (pegada o desde un archivo de texto; informa los que no existen, están de baja o ya estaban) o copiando los de otro horario (se elige con el selector de horario: primero el día y luego la hora).
 - **Filtro por día**: las pastillas «Día» (Todos, Lun a Dom, con el conteo de horarios) filtran las tarjetas de horarios; solo una puede estar activa. Sin ningún día activo solo se ve la vista semanal.
 - **Vista semanal**: la semana sin navegación entre fechas; cada franja muestra su rango horario, el botón **Estudiantes** y el menú **Más acciones** (Editar, Eliminar).

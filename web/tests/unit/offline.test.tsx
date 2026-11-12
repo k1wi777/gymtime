@@ -7,7 +7,14 @@ import { PorRevisar, correctedInstant } from '@/features/offline/PorRevisar';
 import { RequireAuth } from '@/features/shell/RequireAuth';
 import { Shell } from '@/features/shell/Shell';
 import { LiveProvider } from '@/live/live-provider';
-import { account, alarmOff, installFakeApi, json, liveSource } from './helpers';
+import {
+  account,
+  alarmOff,
+  installFakeApi,
+  json,
+  liveSource,
+  pickTime,
+} from './helpers';
 
 const item = (over: Record<string, unknown> = {}) => ({
   id: '33333333-3333-4333-8333-333333333333',
@@ -141,7 +148,7 @@ describe('Por revisar (R15, R16)', () => {
     await user.click(await screen.findByRole('button', { name: /Resolver/ }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByLabelText('Hora correcta')).toBeTruthy();
-    await user.type(within(dialog).getByLabelText('Hora correcta'), '10:15');
+    await pickTime(user, within(dialog), 'Hora correcta', '10:15');
     await user.type(
       within(dialog).getByLabelText('Motivo de la decisión'),
       'La hora estaba mal',
@@ -177,7 +184,7 @@ describe('Por revisar (R15, R16)', () => {
       within(dialog).getByLabelText('Motivo de la decisión'),
       'x',
     );
-    await user.type(within(dialog).getByLabelText('Hora correcta'), '10:15');
+    await pickTime(user, within(dialog), 'Hora correcta', '10:15');
     await user.click(within(dialog).getByRole('button', { name: 'Resolver' }));
     expect(
       await within(dialog).findByText('Otra persona ya resolvió este evento'),

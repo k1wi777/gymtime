@@ -59,7 +59,7 @@ Si el lector estuvo sin conexión, guardó cada entrada y salida con su hora y l
 Para cada una pulse **Resolver** y elija:
 
 - **Aprobar tal cual**: se registra con la hora que anotó el lector (solo si el motivo lo permite).
-- **Corregir la hora**: escriba la hora correcta (HH:mm, del mismo día).
+- **Corregir la hora**: elija la hora correcta en el selector (hora y minutos, de 5 en 5; del mismo día del evento).
 - **Descartar**: no se registra nada.
 
 El **motivo** de la decisión es obligatorio y queda en la auditoría con su usuario. Si otra persona ya la resolvió, el panel se lo indica.

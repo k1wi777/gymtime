@@ -287,3 +287,12 @@
   background: #fdf0f0;
   border-color: #efc9c9;
 }
+
+.order {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 13px;
+}
