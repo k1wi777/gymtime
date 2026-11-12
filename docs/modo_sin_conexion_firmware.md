@@ -251,7 +251,7 @@ Hasta que el equipo de firmware los confirme por escrito, **ninguno está acepta
 | C8 | Reglas locales de la sección 3 | Las de esta guía | Pendiente |
 | C9 | Un único evento `alarm` al terminar | Se pierde si hay reinicio durante la alarma | Pendiente |
 | C10 | Ignorar campos desconocidos del servidor | Ampliaciones aditivas | Pendiente |
-| C11 | Mensajes de LCD sin conexión | Sección 8 | Pendiente |
+| C11 | Mensajes de pantalla sin conexión | Sección 8 | Pendiente |
 
 ## 10. Esbozo de C++ (orientativo)
 

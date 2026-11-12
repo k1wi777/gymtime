@@ -22,7 +22,7 @@ import { RowMenu } from './RowMenu';
 import styles from './Admin.module.css';
 
 const PAGE = 20;
-const DISPLAY_MAX = 16;
+const DISPLAY_MAX = 24;
 
 type Values = Record<string, string>;
 

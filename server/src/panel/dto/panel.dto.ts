@@ -31,7 +31,7 @@ export class PanelPersonDto {
   name: string;
   @ApiProperty()
   document: string;
-  @ApiProperty({ description: 'Short name drawn on the reader LCD' })
+  @ApiProperty({ description: 'Short name drawn on the reader screen' })
   displayName: string;
   @ApiProperty()
   hasFingerprint: boolean;

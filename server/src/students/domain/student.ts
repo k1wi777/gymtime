@@ -7,7 +7,7 @@ export interface Student {
   /** Optional contact data; never logged and never sent to the reader. */
   email: string | null;
   phone: string | null;
-  /** Short ASCII name drawn on the reader LCD; always present in the domain. */
+  /** Short name drawn on the reader screen (accents kept); always present in the domain. */
   displayName: string;
   active: boolean;
   /** Derived: true while a consent is recorded (`consentVersion` is set). */

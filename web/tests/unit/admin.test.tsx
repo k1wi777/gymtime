@@ -681,13 +681,13 @@ describe('students (R12, R13, R16, R17)', () => {
     await user.type(within(form).getByLabelText('Nombre *'), 'Luis');
     await user.type(
       within(form).getByLabelText('Nombre en pantalla'),
-      'ABCDEFGHIJKLMNOPQ',
+      'ABCDEFGHIJKLMNOPQRSTUVWXY',
     );
     await user.click(
       within(form).getByRole('button', { name: 'Crear estudiante' }),
     );
     expect(
-      await within(form).findByText('Admite hasta 16 caracteres.'),
+      await within(form).findByText('Admite hasta 24 caracteres.'),
     ).toBeTruthy();
     expect(fake.calls('POST /students')).toHaveLength(0);
   });

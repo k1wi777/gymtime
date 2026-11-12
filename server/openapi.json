@@ -2237,7 +2237,7 @@
       "PanelPersonDto": {
         "properties": {
           "displayName": {
-            "description": "Short name drawn on the reader LCD",
+            "description": "Short name drawn on the reader screen",
             "type": "string"
           },
           "document": {
@@ -2320,7 +2320,7 @@
             "type": "boolean"
           },
           "displayName": {
-            "description": "Name drawn on the reader LCD",
+            "description": "Name drawn on the reader screen",
             "type": "string"
           },
           "document": {
@@ -3157,7 +3157,7 @@
             "type": "boolean"
           },
           "displayName": {
-            "description": "Short name drawn on the reader LCD",
+            "description": "Short name drawn on the reader screen",
             "type": "string"
           },
           "document": {
@@ -3690,7 +3690,7 @@
             "type": "boolean"
           },
           "displayName": {
-            "description": "Name drawn on the reader LCD",
+            "description": "Name drawn on the reader screen",
             "type": "string"
           },
           "document": {

@@ -160,7 +160,7 @@ export class StudentResponseDto {
   email: string | null;
   @ApiProperty({ nullable: true, type: String })
   phone: string | null;
-  @ApiProperty({ description: 'Name drawn on the reader LCD' })
+  @ApiProperty({ description: 'Name drawn on the reader screen' })
   displayName: string;
   @ApiProperty()
   active: boolean;

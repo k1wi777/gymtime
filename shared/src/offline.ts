@@ -45,7 +45,7 @@ export type OfflineReviewReason = z.infer<typeof offlineReviewReasonSchema>;
 
 const count = z.number().int().nonnegative();
 
-// Printable ASCII only: the LCD of the reader has no accents.
+// Printable ASCII only: the offline roster is ASCII (the reader screen shows it as is).
 const rosterNameSchema = z
   .string()
   .min(1)

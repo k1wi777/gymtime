@@ -113,7 +113,7 @@ model Student {
   // anonymised so sessions and reports keep adding up.
   anonymizedAt   DateTime? @map("anonymized_at") @db.Timestamptz()
   importBatchId  String?   @map("import_batch_id") @db.Uuid
-  // Short name for the reader LCD (ASCII, up to DISPLAY_COLS). NULL = generated
+  // Short name for the reader screen (accents kept, up to DISPLAY_NAME_MAX). NULL = generated
   // from `name` when read.
   displayName    String?   @map("display_name")
   // Optional contact data (Ley 1581: data minimisation). Never logged, never

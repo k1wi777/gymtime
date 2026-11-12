@@ -127,7 +127,7 @@ export const STUDENT_FIELDS: readonly StudentFieldDefinition[] = [
       'displayname',
     ],
     examples: ['', ''],
-    help: 'Hasta 16 caracteres ASCII; se genera del nombre si se deja vacío.',
+    help: 'Hasta 24 caracteres (con tildes); se genera del nombre si se deja vacío.',
   },
 ];
 

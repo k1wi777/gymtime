@@ -2049,7 +2049,7 @@ export interface components {
             serverNow: string;
         };
         PanelPersonDto: {
-            /** @description Short name drawn on the reader LCD */
+            /** @description Short name drawn on the reader screen */
             displayName: string;
             document: string;
             /** Format: date-time */
@@ -2077,7 +2077,7 @@ export interface components {
             consentVersion: string | null;
             /** @description True while a consent is recorded */
             consented: boolean;
-            /** @description Name drawn on the reader LCD */
+            /** @description Name drawn on the reader screen */
             displayName: string;
             document: string;
             email: string | null;
@@ -2330,7 +2330,7 @@ export interface components {
         RosterRowDto: {
             /** @description False for someone who attended without being assigned */
             assigned: boolean;
-            /** @description Short name drawn on the reader LCD */
+            /** @description Short name drawn on the reader screen */
             displayName: string;
             document: string;
             /** Format: date-time */
@@ -2506,7 +2506,7 @@ export interface components {
             consentVersion: string | null;
             /** @description True while a consent is recorded */
             consented: boolean;
-            /** @description Name drawn on the reader LCD */
+            /** @description Name drawn on the reader screen */
             displayName: string;
             document: string;
             email: string | null;

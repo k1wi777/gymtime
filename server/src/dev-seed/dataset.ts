@@ -203,7 +203,7 @@ export const DEMO_COUNTS = {
 const mondayOnOrBefore = (date: string): string =>
   addDays(date, -(weekdayOf(date) - 1));
 
-/** The reader LCD has no accents. */
+/** The offline roster is ASCII (no accents). */
 const ascii = (text: string): string =>
   text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
