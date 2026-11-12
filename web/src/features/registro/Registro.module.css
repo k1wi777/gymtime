@@ -5,7 +5,9 @@
 }
 
 .form {
+  width: 100%;
   max-width: 640px;
+  margin-inline: auto;
   padding: 28px;
   display: flex;
   flex-direction: column;
