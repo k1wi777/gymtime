@@ -43,7 +43,7 @@ Luego entra al panel con las cuentas de desarrollo de abajo y mira «Ahora» mie
 | `admin.demo` | administrador | `Demo-Admin-2026` |
 | `asistente.demo` | asistente | `Demo-Asistente-2026` |
 
-Son públicas y valen únicamente en bases locales de desarrollo: nunca las crees en un servidor real (en producción el servidor rechaza contraseñas que empiecen por `demo-`). Detalle de los datos de muestra: [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md). Manuales de uso: [`docs/manual_administrador.md`](docs/manual_administrador.md) y [`docs/manual_asistente.md`](docs/manual_asistente.md).
+Son públicas y valen únicamente en bases locales de desarrollo: nunca las crees en un servidor real (en producción el servidor rechaza contraseñas que empiecen por `demo-`). Detalle de los datos de muestra: [`docs/datos_de_muestra.md`](docs/datos_de_muestra.md). Manuales de uso con capturas (PDF): [administrador](docs/manuales/manual_administrador.pdf) y [asistente](docs/manuales/manual_asistente.pdf).
 
 ## Estructura
 
@@ -99,7 +99,7 @@ npm run dev:web              # panel en http://localhost:3000
 
 - `NEXT_PUBLIC_API_URL` (en `web/.env.local`) es la URL de la API; se incrusta en el build y nunca debe contener secretos.
 - Primer acceso: crea el administrador con `FIRST_ADMIN_USERNAME`/`FIRST_ADMIN_PASSWORD` (ver arriba) e inicia sesión en `http://localhost:3000`.
-- Manuales de uso: [`docs/manual_asistente.md`](docs/manual_asistente.md) y [`docs/manual_administrador.md`](docs/manual_administrador.md). Receta paso a paso en «Inicio rápido».
+- Manuales de uso (PDF con capturas): [asistente](docs/manuales/manual_asistente.pdf) y [administrador](docs/manuales/manual_administrador.pdf). Receta paso a paso en «Inicio rápido».
 - Los tipos de la API se generan de `server/openapi.json` (`npm --prefix web run gen:api`); si cambias los DTO del servidor, regenera con `npm --prefix server run openapi:export` y luego `gen:api`.
 - Pruebas del panel: `npm --prefix web test` (componentes, sin navegador) y `npm --prefix web run test:e2e` (Playwright con el Chrome del sistema contra un servidor en memoria; lento).
 
@@ -203,7 +203,7 @@ Imágenes (`server/Dockerfile`, `web/Dockerfile`), `deploy/docker-compose.prod.y
 
 ## Documentación
 
-- [`docs/manual_administrador.md`](docs/manual_administrador.md) y [`docs/manual_asistente.md`](docs/manual_asistente.md): manuales del panel.
+- [`docs/manuales/`](docs/manuales/): manuales del panel en PDF con capturas (asistente y administrador); [`docs/manual_asistente.md`](docs/manual_asistente.md) y [`docs/manual_administrador.md`](docs/manual_administrador.md) remiten a ellos. Permiso de uso del escudo de la universidad en los PDF: pendiente.
 - [`docs/despliegue.md`](docs/despliegue.md), [`docs/runbook.md`](docs/runbook.md), [`docs/guia_wss_firmware.md`](docs/guia_wss_firmware.md): despliegue, operación y `wss://` para el firmware.
 - [`docs/autenticacion.md`](docs/autenticacion.md): credenciales, roles, matriz de permisos, cookie, CORS, CSRF y primer administrador.
 - [`docs/escenarios.md`](docs/escenarios.md): escenarios A1–A12 y B1–B17 y prueba de carga.
