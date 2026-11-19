@@ -221,7 +221,7 @@ SIM_DEVICE_TOKEN=<DEVICE_TOKEN> npm run simulator
 | `SIM_ENROLL_MODE` | `--enroll-mode` | `ok` (`ok`, `fail` o `silent`) |
 | `SIM_ENROLL_STEP_MS` | `--enroll-step-ms` | `800` (pausa entre pasos, en ms) |
 | `SIM_ENROLL_FAIL_REASON` | `--enroll-fail-reason` | `simulated_failure` |
-| `SIM_TEMPLATE_BYTES` | `--template-bytes` | `512` (tamaño decodificado de la plantilla falsa) |
+| `SIM_TEMPLATE_BYTES` | `--template-bytes` | `768` (tamaño decodificado de la plantilla falsa) |
 
 Por ejemplo, desde otro equipo de la red: `npm run simulator -- --url ws://192.168.1.50:3000/device --token <DEVICE_TOKEN>`.
 
@@ -477,8 +477,8 @@ Triaje, en este orden: ¿abre el WebSocket? (8.1) ¿autentica con `hello`? (8.2)
 #### 8.7.4 Una plantilla no carga <a id="plantilla"></a>
 
 - **Síntoma** — el bloque se confirma con `ok: false` o el lector falla al decodificar, y ese estudiante no queda cargado.
-- **Causa probable** — base64 corrupto o plantilla mayor de lo que admite el AS608 (unos 512 B decodificados por plantilla).
-- **Verificación** — el `ref` del `ack` negativo es el `id` del bloque; `status.fingerprintCount` queda por debajo del esperado; compara el tamaño decodificado con 512 B.
+- **Causa probable** — base64 corrupto o plantilla mayor de lo que admite el AS608 (entre 512 y 768 B decodificados por plantilla; el AS608 real entrega 768 B).
+- **Verificación** — el `ref` del `ack` negativo es el `id` del bloque; `status.fingerprintCount` queda por debajo del esperado; compara el tamaño decodificado con el rango 512 a 768 B.
 - **Solución** — confirma el bloque con `ack` `ok: false` para no bloquear el resto y vuelve a lanzar la sincronización con `gym sync`: el servidor da el bloque por confirmado y no lo repite solo.
 
 #### 8.7.5 El horario no se aplica <a id="schedule-set"></a>

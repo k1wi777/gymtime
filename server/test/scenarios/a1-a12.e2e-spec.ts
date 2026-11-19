@@ -456,16 +456,16 @@ describe('A1–A12 scenarios with the simulator (e2e)', () => {
     );
     expect(beep.payload).toEqual({
       on: true,
-      durationSec: 5,
+      durationSec: 3,
       reason: 'END_BEEP',
     });
     expect(harness.device().alarm.current).toMatchObject({
       on: true,
-      durationSec: 5,
+      durationSec: 3,
       reason: 'END_BEEP',
     });
 
-    // The device turns the siren off by itself when the 5 s elapse.
+    // The device turns the siren off by itself when the 3 s elapse.
     await vi.waitFor(
       () => expect(harness.device().alarm.current?.on).toBe(false),
       { timeout: 7000, interval: 50 },

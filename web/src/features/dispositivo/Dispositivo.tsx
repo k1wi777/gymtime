@@ -1,11 +1,13 @@
 'use client';
 
-import { call, getApi } from '@/api/client';
+import { useState } from 'react';
+import { ApiError, call, getApi } from '@/api/client';
 import { describeError } from '@/api/errors';
 import { useLiveEvents, useResync } from '@/live/live-provider';
 import { useResource } from '@/lib/use-resource';
 import { formatDateTime } from '@/lib/time';
 import { Badge } from '@/ui/Badge';
+import { ConfirmDialog } from '@/ui/ConfirmDialog';
 import { Notice } from '@/ui/Notice';
 import { Icon } from '@/ui/icons';
 import { PageHeader } from '@/ui/PageHeader';
@@ -14,8 +16,56 @@ import { ConnectionPill } from '@/features/shell/ConnectionPill';
 import styles from './Dispositivo.module.css';
 import { useDevices } from './use-devices';
 
+const SYNC_ERROR_TEXT: Record<string, string> = {
+  PLAN_FAILED: 'No se pudo preparar la lista de huellas.',
+  CHUNK_FAILED: 'El lector no confirmó alguno de los bloques de huellas.',
+};
+
+interface SyncOutcome {
+  kind: 'success' | 'error';
+  text: string;
+}
+
 export function Dispositivo() {
   const { devices, loading, error, reload } = useDevices();
+  const [confirmSync, setConfirmSync] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncOutcome, setSyncOutcome] = useState<SyncOutcome | null>(null);
+  const resync = async (): Promise<void> => {
+    setSyncing(true);
+    setSyncOutcome(null);
+    try {
+      const result = await call(getApi().client.POST('/sync'));
+      if (result.status === 'ok') {
+        const omitted =
+          result.omitted > 0
+            ? ` ${result.omitted} quedaron fuera por falta de espacio en el lector.`
+            : '';
+        setSyncOutcome({
+          kind: 'success',
+          text: `Se cargaron ${result.templates} huellas en el lector.${omitted}`,
+        });
+        reload();
+      } else {
+        const cause = result.error ? SYNC_ERROR_TEXT[result.error] : undefined;
+        setSyncOutcome({
+          kind: 'error',
+          text: `La resincronización falló. ${cause ?? ''}`.trim(),
+        });
+      }
+    } catch (failure) {
+      setSyncOutcome({
+        kind: 'error',
+        text:
+          failure instanceof ApiError && failure.status === 409
+            ? 'No hay un lector en línea.'
+            : describeError(failure),
+      });
+    } finally {
+      setSyncing(false);
+      setConfirmSync(false);
+    }
+  };
   // Clock offset and offline capability of each reader (H12). It is extra
   // information: if it cannot be read the screen shows the rest as before.
   const clocks = useResource(
@@ -50,10 +100,40 @@ export function Dispositivo() {
             >
               Actualizar estado
             </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={syncing}
+              aria-busy={syncing}
+              onClick={() => setConfirmSync(true)}
+            >
+              {syncing ? 'Resincronizando…' : 'Resincronizar lector'}
+            </button>
           </>
         }
       />
+      <ConfirmDialog
+        open={confirmSync}
+        title="¿Resincronizar el lector?"
+        confirmLabel="Resincronizar"
+        busy={syncing}
+        onConfirm={() => void resync()}
+        onCancel={() => setConfirmSync(false)}
+      >
+        <p>
+          Se borrará la librería de huellas del lector y se volverá a cargar.
+          Durante unos segundos las huellas no se reconocerán.
+        </p>
+      </ConfirmDialog>
       <div className={styles.body}>
+        {syncOutcome && (
+          <Notice
+            kind={syncOutcome.kind}
+            onDismiss={() => setSyncOutcome(null)}
+          >
+            {syncOutcome.text}
+          </Notice>
+        )}
         {loading && <Spinner />}
         {error && !loading ? (
           <Notice

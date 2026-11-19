@@ -75,8 +75,8 @@ Tras el `build` también puedes usar `npm run start:prod -w server` (`node dist/
 
 - `ENCRYPTION_KEY` debe ser base64 de exactamente 32 bytes: `openssl rand -base64 32`.
 - Si el arranque falla, el mensaje lista cada variable de `.env` ausente o inválida.
-- Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector. Las horas de los horarios son de America/Bogota (UTC-5 fijo).
-- Alarma: `ALARM_BEEP_SECONDS` (5) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
+- Horarios y sincronización: `ENTRY_OPEN_MINUTES` (10) y `ENTRY_CLOSE_MINUTES` (5) fijan la ventana de ingreso por defecto (cada horario puede definir la suya) y `SYNC_LEAD_MINUTES` (15) cuánto antes del inicio se cargan las plantillas en el lector (debe cumplirse `SYNC_LEAD_MINUTES` >= `ENTRY_OPEN_MINUTES`: las plantillas tienen que estar cargadas antes de abrir la entrada). Las horas de los horarios son de America/Bogota (UTC-5 fijo).
+- Alarma: `ALARM_BEEP_SECONDS` (3) es el pitido corto cuando termina un horario vacío y `ALARM_TIMEOUT_MINUTES` (30) el plazo tras el fin para cerrar como `no_registrada` las sesiones que sigan abiertas.
 - Pantalla del lector (TFT 3,5"): `DISPLAY_TITLE_MAX` (32), `DISPLAY_SUBTITLE_MAX` (80), `DISPLAY_SUBTITLE_LINES` (2) y `DISPLAY_NAME_MAX` (24) fijan los límites de texto y `DISPLAY_RESULT_SECONDS` (3) el tiempo por defecto de un mensaje. Los mensajes llevan título, subtítulo y tono, con tildes; ver [`docs/mensajes_pantalla.md`](docs/mensajes_pantalla.md).
 - Si el puerto 5432 está ocupado, cambia `POSTGRES_PORT` y el puerto en `DATABASE_URL`.
 - `GET /health` (estado, uptime y base de datos; 503 si la base no responde).

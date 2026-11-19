@@ -208,7 +208,7 @@ export const envSchema = z
     // How long before a schedule starts its templates are loaded into the reader.
     SYNC_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(15),
     // Short beep when a schedule ends with nobody inside.
-    ALARM_BEEP_SECONDS: z.coerce.number().int().min(1).max(300).default(5),
+    ALARM_BEEP_SECONDS: z.coerce.number().int().min(1).max(300).default(3),
     // After a schedule ends, how long until abandoned sessions are closed.
     ALARM_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
     // Reader TFT: text limits (title one line, subtitle up to N lines) and

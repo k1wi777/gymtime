@@ -30,7 +30,7 @@ describe('AlarmScheduler (R1, R11)', () => {
 
     await vi.waitFor(() =>
       expect(f.alarms()).toEqual([
-        { on: true, durationSec: 5, reason: 'END_BEEP' },
+        { on: true, durationSec: 3, reason: 'END_BEEP' },
       ]),
     );
     expect((await f.service.status()).reason).toBe('END_BEEP');

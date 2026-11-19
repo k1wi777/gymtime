@@ -17,7 +17,7 @@ export const nonEmptyStringSchema = z.string().min(1);
 
 export const slotSchema = z.number().int().min(1).max(SLOT_MAX);
 
-// Strict base64 with padding; the AS608 template length is "~512 B", so no fixed length.
+// Strict base64 with padding; AS608 templates are 512-768 B, so no fixed length.
 const BASE64_PATTERN =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 

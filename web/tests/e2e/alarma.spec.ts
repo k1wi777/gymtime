@@ -50,7 +50,7 @@ test.describe('alarma y mensajes (R7)', () => {
       .getByRole('alert')
       .filter({ hasText: 'ALARMA SONANDO' });
     await expect(banner).toBeVisible();
-    // The server clock is manual in this world: let the 5 s beep run out.
+    // The server clock is manual in this world: let the 3 s beep run out.
     await control(request, 'clock', { time: '10:00:30' });
     await expect(banner).toBeHidden({ timeout: 12_000 });
     await expect(

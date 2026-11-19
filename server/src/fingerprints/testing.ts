@@ -71,6 +71,6 @@ export function buildEnrollmentFixture(
 }
 
 export const validTemplate = (fill = 7) =>
-  Buffer.alloc(defaultFingerprintsConfig.expectedTemplateBytes, fill).toString(
+  Buffer.alloc(defaultFingerprintsConfig.maxTemplateBytes, fill).toString(
     'base64',
   );

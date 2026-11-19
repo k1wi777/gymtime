@@ -149,7 +149,7 @@ Campos del payload: `enrollmentId` UUID; `step` uno de `place_finger`, `remove_f
 
 Enrolamiento terminado; entrega la plantilla.
 
-Campos del payload: `enrollmentId` UUID; `template` base64 válido no vacío (modelo AS608 de ~512 bytes; el ejemplo está acortado).
+Campos del payload: `enrollmentId` UUID; `template` base64 válido no vacío (modelo AS608 de 512 a 768 bytes decodificados; el AS608 real entrega 768; el servidor rechaza con `BAD_SIZE` lo que quede fuera de ese rango; el ejemplo está acortado).
 
 <!-- example: enroll.done -->
 ```json
@@ -455,7 +455,7 @@ Campos del payload: `on` booleano; `durationSec` entero > 0 o `null`; `reason` u
   "ref": null,
   "payload": {
     "on": true,
-    "durationSec": 30,
+    "durationSec": 3,
     "reason": "END_BEEP"
   }
 }
@@ -556,7 +556,7 @@ Ejemplo de `ack` negativo:
 
 - **`templates.sync`**: al recibirlo, el lector debe **borrar todas sus plantillas** y cargar las recibidas en los slots indicados. Cada bloque (`chunk`) se confirma por separado con su `ack`. El servidor envía bloques de **10 plantillas** como máximo para no desbordar la memoria del ESP32; el primer bloque (`chunk.index` = 1) inicia la carga y el último (`index` = `total`) la completa. Los bloques de una misma sincronización comparten `syncId`. Un único bloque 1 de 1 con `templates: []` significa «borrar todo y no cargar nada»: el lector debe vaciarse y confirmar con `ack` igualmente.
 - **`schedule.set`**: el servidor lo envía después del último bloque de una sincronización, cuando hay un horario en curso o próximo. El lector lo guarda como horario vigente (inicio, fin y límites de ingreso, en segundos Unix) y lo confirma con `ack`. Si no hay horario relevante, no se envía ninguno y el lector conserva el anterior.
-- **Plantilla**: es el modelo de ~512 bytes que genera el AS608, en base64.
+- **Plantilla**: es el modelo que genera el AS608, en base64: el lector real entrega 768 bytes (el servidor acepta de 512 a 768 decodificados). Un `templates.sync` de 10 plantillas de 768 bytes ocupa unos 10,8 KB por frame.
 - **`status`**: enviarlo cada `heartbeatSec` segundos (valor recibido en `hello.ok`).
 - **`alarm.set`**: con `durationSec` numérico, el dispositivo apaga la alarma por sí mismo al cumplirse ese tiempo y envía `alarm.state`. Con `durationSec` en `null`, la mantiene hasta recibir `alarm.set` con `on: false`. El botón físico la apaga en ambos casos y envía `button.pressed`.
 - **Enrolamiento**: `enroll.start` indica un `scratchSlot` temporal; el dispositivo informa `enroll.progress` en cada paso y termina con `enroll.done` o `enroll.failed`. `enroll.cancel` lo interrumpe.

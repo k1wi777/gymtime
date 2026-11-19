@@ -45,7 +45,7 @@ Son públicas y válidas únicamente en bases locales: el comando se niega a cor
 
 ## Huellas de muestra
 
-Cada plantilla son 512 bytes **aleatorios** cifrados con el mecanismo y la clave vigentes (`ENCRYPTION_KEY`): no hay biometría real y no coinciden con ningún dedo. Sirven para que el panel marque «con huella» y la sincronización cargue plantillas; en un lector real nunca producirán coincidencia.
+Cada plantilla son 768 bytes **aleatorios** cifrados con el mecanismo y la clave vigentes (`ENCRYPTION_KEY`): no hay biometría real y no coinciden con ningún dedo. Sirven para que el panel marque «con huella» y la sincronización cargue plantillas; en un lector real nunca producirán coincidencia.
 
 ## Dispositivo y token
 

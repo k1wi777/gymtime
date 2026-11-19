@@ -28,14 +28,14 @@ describe('AlarmService end of occurrence (R2, R3, R4)', () => {
 
     await vi.waitFor(() =>
       expect(f.alarms()).toEqual([
-        { on: true, durationSec: 5, reason: 'END_BEEP' },
+        { on: true, durationSec: 3, reason: 'END_BEEP' },
       ]),
     );
     expect(await f.service.status()).toMatchObject({
       on: true,
       reason: 'END_BEEP',
       instanceId,
-      durationSec: 5,
+      durationSec: 3,
     });
     expect(await f.events.findOpen()).toHaveLength(0);
   });
@@ -232,12 +232,12 @@ describe('AlarmService manual control (R7, R8, R9, R15)', () => {
     expect(tested).toMatchObject({
       on: true,
       reason: 'TEST',
-      durationSec: 5,
+      durationSec: 3,
       instanceId: null,
     });
     expect(f.alarms().at(-1)).toEqual({
       on: true,
-      durationSec: 5,
+      durationSec: 3,
       reason: 'TEST',
     });
 
@@ -565,11 +565,11 @@ describe('AlarmService beep expiry (R13, R14)', () => {
     await f.service.turnOn('TEST');
     await vi.waitFor(() => expect(f.alarms()).toHaveLength(1));
 
-    f.setNow(bogota('09:00:04'));
+    f.setNow(bogota('09:00:02'));
     await f.service.tick(f.clock.now());
     expect(received).toEqual([{ on: true, closedBy: null }]);
 
-    f.setNow(bogota('09:00:06'));
+    f.setNow(bogota('09:00:04'));
     await f.service.tick(f.clock.now());
     await f.service.tick(f.clock.now());
 

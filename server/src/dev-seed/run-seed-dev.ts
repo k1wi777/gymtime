@@ -251,7 +251,7 @@ async function main(): Promise<void> {
     const prepared = await prepareSecrets(dataset, {
       hasher: new Argon2idPasswordHasher(),
       cipher: new TemplateCipher(keyring),
-      templateBytes: defaultFingerprintsConfig.expectedTemplateBytes,
+      templateBytes: defaultFingerprintsConfig.maxTemplateBytes,
     });
     const outcome = await replaceWithDataset(prisma, dataset, prepared);
     console.log('\nBorrado:', outcome.removed);

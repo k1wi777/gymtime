@@ -73,7 +73,7 @@ const frame = (type: string, payload: object, ref: string | null = null) =>
     ref,
     payload,
   });
-const template = (fill: number, size = 512) =>
+const template = (fill: number, size = 768) =>
   Buffer.alloc(size, fill).toString('base64');
 
 /** Minimal test device: hello, then an inbox of server frames. */
@@ -266,8 +266,23 @@ describe('Enrollment flow (e2e, ws + REST, in-memory repositories)', () => {
     expect(
       cipher
         .decrypt({ data: stored!.template, iv: stored!.iv })
-        .equals(Buffer.alloc(512, 7)),
+        .equals(Buffer.alloc(768, 7)),
     ).toBe(true);
+  });
+
+  it('rejects a 1024-byte template as BAD_SIZE (beyond the firmware buffer)', async () => {
+    const device = await connectDevice(url, clients);
+    const studentId = await createStudent();
+    const id = await startEnrollment(studentId, device);
+    device.ws.send(
+      frame('enroll.done', { enrollmentId: id, template: template(3, 1024) }),
+    );
+    expect(await device.next()).toMatchObject({ payload: { ok: true } });
+    expect(await status(id)).toMatchObject({
+      status: 'failed',
+      failureReason: expect.stringContaining('BAD_SIZE'),
+    });
+    expect(fingerprints.all()).toHaveLength(0);
   });
 
   it('re-enrolling erases the previous fingerprint', async () => {

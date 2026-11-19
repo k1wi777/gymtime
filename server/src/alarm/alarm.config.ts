@@ -13,7 +13,7 @@ export const ALARM_CONFIG = Symbol('ALARM_CONFIG');
 export const ALARM_TICK_MS = 500;
 
 export const defaultAlarmConfig: AlarmConfig = {
-  beepSeconds: 5,
+  beepSeconds: 3,
   timeoutMinutes: 30,
   tickMs: ALARM_TICK_MS,
 };

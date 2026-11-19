@@ -35,7 +35,7 @@ memoria, reloj controlado). Comando: `npm run test:scenarios`. Entorno: memoria.
 | A8 | Sale el último con la alarma encendida | Alarma apagada |
 | A9 | Se apaga la alarma por botón o CLI | Alarma silenciada y sesiones `no_registrada` |
 | A10 | Conexión caída y mensaje duplicado | Órdenes entregadas al volver; el duplicado no se procesa dos veces |
-| A11 | Horario que termina con todos fuera | Aviso corto de 5 s y se apaga sola |
+| A11 | Horario que termina con todos fuera | Aviso corto de 3 s y se apaga sola |
 | A12 | Dos horarios seguidos | Cada grupo se registra en su horario |
 
 ## B1-B17 (iteración 2)

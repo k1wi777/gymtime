@@ -9,7 +9,7 @@ const cipherWith = (key: Buffer) => new TemplateCipher(Keyring.single(key));
 
 describe('TemplateCipher', () => {
   const cipher = cipherWith(randomBytes(32));
-  const plain = randomBytes(512);
+  const plain = randomBytes(768);
 
   it('round-trips a template and never stores it in clear', () => {
     const encrypted = cipher.encrypt(plain);

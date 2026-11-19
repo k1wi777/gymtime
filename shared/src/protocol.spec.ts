@@ -307,6 +307,21 @@ describe('templates.sync limits (R8)', () => {
     expect((over as { reason: string }).reason).toContain('chunk.index');
   });
 
+  it('accepts 10 real-size (768 B) templates and the frame stays under 12 KB', () => {
+    const big = Buffer.alloc(768, 9).toString('base64');
+    const list = Array.from({ length: 10 }, (_, i) => ({
+      slot: i + 1,
+      template: big,
+    }));
+    const raw = envelope('templates.sync', {
+      syncId: REF,
+      chunk: { index: 1, total: 1 },
+      templates: list,
+    });
+    expect(parseServerMessage(raw)).toMatchObject({ ok: true });
+    expect(Buffer.byteLength(JSON.stringify(raw))).toBeLessThan(12 * 1024);
+  });
+
   it('accepts an empty list only as a single 1-of-1 chunk (R15)', () => {
     expect(sync({ index: 1, total: 1 }, [])).toMatchObject({ ok: true });
     expect(sync({ index: 1, total: 2 }, [])).toMatchObject({ ok: false });

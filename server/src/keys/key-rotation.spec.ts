@@ -31,7 +31,7 @@ function seed(repo: InMemoryFingerprintsRepository, ring: Keyring, n: number) {
   const cipher = new TemplateCipher(ring);
   const plains = new Map<string, Buffer>();
   for (let i = 0; i < n; i++) {
-    const plain = randomBytes(512);
+    const plain = randomBytes(768);
     const sealed = cipher.encrypt(plain);
     repo.replaceActive(`s${i}`, sealed.data, sealed.iv, sealed.keyVersion);
     plains.set(`s${i}`, plain);

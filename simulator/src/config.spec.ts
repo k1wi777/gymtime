@@ -4,7 +4,7 @@ const DEFAULT_ENROLL = {
   mode: 'ok',
   stepMs: 800,
   failReason: 'simulated_failure',
-  templateBytes: 512,
+  templateBytes: 768,
 };
 
 describe('loadConfig', () => {

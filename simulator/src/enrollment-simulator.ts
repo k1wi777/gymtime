@@ -9,7 +9,7 @@ export interface EnrollmentOptions {
   /** Pause before each step and before the final result. */
   stepMs: number;
   failReason: string;
-  /** Decoded size of the fake template; the server expects 512. */
+  /** Decoded size of the fake template; the real AS608 delivers 768 (the server accepts 512-768). */
   templateBytes: number;
 }
 
@@ -17,7 +17,7 @@ export const DEFAULT_ENROLLMENT: EnrollmentOptions = {
   mode: 'ok',
   stepMs: 800,
   failReason: 'simulated_failure',
-  templateBytes: 512,
+  templateBytes: 768,
 };
 
 export type EnrollmentEmit = (

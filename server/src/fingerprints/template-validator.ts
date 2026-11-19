@@ -9,7 +9,7 @@ export type TemplateValidation =
 
 type SizeRules = Pick<
   FingerprintsConfig,
-  'expectedTemplateBytes' | 'templateToleranceBytes'
+  'minTemplateBytes' | 'maxTemplateBytes'
 >;
 
 /** Pure check of a template received from the device. Never echoes its content. */
@@ -28,13 +28,12 @@ export function validateTemplate(
     };
   }
   const bytes = Buffer.from(template, 'base64');
-  const { expectedTemplateBytes: expected, templateToleranceBytes: tolerance } =
-    rules;
-  if (Math.abs(bytes.length - expected) > tolerance) {
+  const { minTemplateBytes: min, maxTemplateBytes: max } = rules;
+  if (bytes.length < min || bytes.length > max) {
     return {
       ok: false,
       code: 'BAD_SIZE',
-      reason: `Template has ${bytes.length} bytes, expected ${expected} (±${tolerance})`,
+      reason: `Template has ${bytes.length} bytes, expected ${min}-${max}`,
     };
   }
   return { ok: true, bytes };

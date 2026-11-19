@@ -13,7 +13,7 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['test/scenarios/**/*.e2e-spec.ts', ...memoryTestFiles()],
-    // A11 waits the 5 s of the short beep; the rest moves a fake clock.
+    // A11 waits the 3 s of the short beep; the rest moves a fake clock.
     testTimeout: 20_000,
     hookTimeout: 20_000,
     // One file at a time: a failure is never confused with port contention.
